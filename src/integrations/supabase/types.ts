@@ -95,11 +95,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean }
+      function_exists: { Args: { p_fn_name: string }; Returns: boolean }
+      get_table_policies: { Args: { p_table_name: string }; Returns: string[] }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_site_admin: { Args: { _user_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
       is_teacher: { Args: { _user_id: string }; Returns: boolean }
+      policy_exists: {
+        Args: { p_policy_name: string; p_table_name: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "site_admin" | "admin" | "staff" | "teacher" | "student"
