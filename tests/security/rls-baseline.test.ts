@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { type SupabaseClient, createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Ground truth: expected security configuration from baseline migration
 const EXPECTED_RLS_TABLES = ['profiles', 'user_roles', 'teacher_students'];
