@@ -8,7 +8,7 @@
 -- ============================================================================
 
 -- ============================================================================
--- 1️⃣ AUTH USERS
+-- AUTH USERS
 -- ============================================================================
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at)
 VALUES
@@ -21,7 +21,7 @@ VALUES
   ('55555555-5555-5555-5555-555555555555', 'siteadmin@test.local', 'password', now());
 
 -- ============================================================================
--- 2️⃣ UPDATE PROFILES (SET DISPLAY NAMES)
+-- UPDATE PROFILES (SET DISPLAY NAMES)
 -- ============================================================================
 UPDATE profiles
 SET display_name = 'Student One'
@@ -52,7 +52,7 @@ SET display_name = 'Site Admin'
 WHERE user_id = '55555555-5555-5555-5555-555555555555';
 
 -- ============================================================================
--- 3️⃣ UPDATE ROLES (TRIGGER CREATES ALL AS 'student')
+-- UPDATE ROLES (TRIGGER CREATES ALL AS 'student')
 -- ============================================================================
 -- The handle_new_user trigger assigns 'student' role to all new users.
 -- We update the roles here to match our test user expectations.
@@ -72,7 +72,7 @@ UPDATE user_roles SET role = 'site_admin'
 WHERE user_id = '55555555-5555-5555-5555-555555555555';
 
 -- ============================================================================
--- 4️⃣ TEACHER-STUDENT LINKS
+-- TEACHER-STUDENT LINKS
 -- ============================================================================
 INSERT INTO teacher_students (teacher_id, student_id)
 VALUES
@@ -82,7 +82,7 @@ VALUES
 ON CONFLICT (teacher_id, student_id) DO NOTHING;
 
 -- ============================================================================
--- 5️⃣ NOTES
+-- NOTES
 -- ============================================================================
 -- 1. Do NOT insert directly into profiles or user_roles; triggers handle that.
 -- 2. Display names are updated via UPDATE statements above.
