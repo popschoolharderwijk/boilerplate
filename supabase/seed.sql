@@ -1,265 +1,118 @@
--- ============================================================================
--- SUPABASE SEED.SQL (TRIGGER-PROOF)
--- ============================================================================
--- Purpose: Seed test users compatible with RLS and New User Bootstrap trigger
--- ============================================================================
--- Note: This file assumes `auth.users` trigger automatically creates
---       profiles and user_roles for new users.
--- ============================================================================
+-- =============================================================================
+-- SEED DATA FOR RLS / CI TESTING
+-- =============================================================================
+-- NOTE:
+-- - These UUIDs do NOT exist in auth.users
+-- - They are used via Supabase User Impersonation
+-- - RLS policies rely on auth.uid() matching these values
+-- =============================================================================
 
--- ============================================================================
--- AUTH USERS (all passwords are 'password' in precomputed hash form)
--- ============================================================================
-INSERT INTO auth.users (
-  id,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  aud,
-  role,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at,
-  updated_at
-)
+-- -----------------------------------------------------------------------------
+-- TEST USERS (UUID MAP)
+-- -----------------------------------------------------------------------------
+-- site_admin
+--   00000000-0000-0000-0000-000000000001
+--
+-- admins
+--   00000000-0000-0000-0000-000000000010
+--   00000000-0000-0000-0000-000000000011
+--
+-- staff
+--   00000000-0000-0000-0000-000000000020
+--
+-- teachers
+--   00000000-0000-0000-0000-000000000030
+--   00000000-0000-0000-0000-000000000031
+--
+-- students
+--   00000000-0000-0000-0000-000000000100
+--   00000000-0000-0000-0000-000000000101
+--   00000000-0000-0000-0000-000000000102
+--   00000000-0000-0000-0000-000000000103
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE public.profiles
+DROP CONSTRAINT IF EXISTS profiles_user_id_fkey;
+
+ALTER TABLE public.user_roles
+DROP CONSTRAINT IF EXISTS user_roles_user_id_fkey;
+
+ALTER TABLE public.teacher_students
+DROP CONSTRAINT IF EXISTS teacher_students_teacher_id_fkey;
+
+ALTER TABLE public.teacher_students
+DROP CONSTRAINT IF EXISTS teacher_students_student_id_fkey;
+
+
+-- -----------------------------------------------------------------------------
+-- PROFILES
+-- -----------------------------------------------------------------------------
+INSERT INTO public.profiles (user_id, display_name)
 VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    'student1@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '11111111-1111-1111-1111-222222222222',
-    'student2@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '22222222-2222-2222-2222-222222222222',
-    'teacher1@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '22222222-2222-2222-2222-333333333333',
-    'teacher2@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '33333333-3333-3333-3333-333333333333',
-    'staff1@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '44444444-4444-4444-4444-444444444444',
-    'admin@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  ),
-  (
-    '55555555-5555-5555-5555-555555555555',
-    'siteadmin@test.local',
-    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
-    now(),
-    'authenticated',
-    'authenticated',
-    '{"provider": "email", "providers": ["email"]}',
-    '{}',
-    now(),
-    now()
-  );
+  -- site_admin
+  ('00000000-0000-0000-0000-000000000001', 'Site Admin'),
 
--- ============================================================================
--- AUTH IDENTITIES (required for signInWithPassword to work)
--- ============================================================================
-INSERT INTO auth.identities (
-  id,
-  provider_id,
-  user_id,
-  identity_data,
-  provider,
-  last_sign_in_at,
-  created_at,
-  updated_at
-)
+  -- admins
+  ('00000000-0000-0000-0000-000000000010', 'Admin One'),
+  ('00000000-0000-0000-0000-000000000011', 'Admin Two'),
+
+  -- staff
+  ('00000000-0000-0000-0000-000000000020', 'Staff Member'),
+
+  -- teachers
+  ('00000000-0000-0000-0000-000000000030', 'Teacher Alice'),
+  ('00000000-0000-0000-0000-000000000031', 'Teacher Bob'),
+
+  -- students
+  ('00000000-0000-0000-0000-000000000100', 'Student A'),
+  ('00000000-0000-0000-0000-000000000101', 'Student B'),
+  ('00000000-0000-0000-0000-000000000102', 'Student C'),
+  ('00000000-0000-0000-0000-000000000103', 'Student D')
+ON CONFLICT (user_id) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- USER ROLES (one role per user)
+-- -----------------------------------------------------------------------------
+INSERT INTO public.user_roles (user_id, role)
 VALUES
-  (
-    gen_random_uuid(),
-    '11111111-1111-1111-1111-111111111111',
-    '11111111-1111-1111-1111-111111111111',
-    jsonb_build_object('sub', '11111111-1111-1111-1111-111111111111', 'email', 'student1@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '11111111-1111-1111-1111-222222222222',
-    '11111111-1111-1111-1111-222222222222',
-    jsonb_build_object('sub', '11111111-1111-1111-1111-222222222222', 'email', 'student2@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '22222222-2222-2222-2222-222222222222',
-    '22222222-2222-2222-2222-222222222222',
-    jsonb_build_object('sub', '22222222-2222-2222-2222-222222222222', 'email', 'teacher1@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '22222222-2222-2222-2222-333333333333',
-    '22222222-2222-2222-2222-333333333333',
-    jsonb_build_object('sub', '22222222-2222-2222-2222-333333333333', 'email', 'teacher2@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '33333333-3333-3333-3333-333333333333',
-    '33333333-3333-3333-3333-333333333333',
-    jsonb_build_object('sub', '33333333-3333-3333-3333-333333333333', 'email', 'staff1@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '44444444-4444-4444-4444-444444444444',
-    '44444444-4444-4444-4444-444444444444',
-    jsonb_build_object('sub', '44444444-4444-4444-4444-444444444444', 'email', 'admin@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    gen_random_uuid(),
-    '55555555-5555-5555-5555-555555555555',
-    '55555555-5555-5555-5555-555555555555',
-    jsonb_build_object('sub', '55555555-5555-5555-5555-555555555555', 'email', 'siteadmin@test.local'),
-    'email',
-    now(),
-    now(),
-    now()
-  );
+  -- site_admin
+  ('00000000-0000-0000-0000-000000000001', 'site_admin'),
 
--- ============================================================================
--- UPDATE PROFILES (SET DISPLAY NAMES)
--- ============================================================================
-UPDATE profiles
-SET display_name = 'Student One'
-WHERE user_id = '11111111-1111-1111-1111-111111111111';
+  -- admins
+  ('00000000-0000-0000-0000-000000000010', 'admin'),
+  ('00000000-0000-0000-0000-000000000011', 'admin'),
 
-UPDATE profiles
-SET display_name = 'Student Two'
-WHERE user_id = '11111111-1111-1111-1111-222222222222';
+  -- staff
+  ('00000000-0000-0000-0000-000000000020', 'staff'),
 
-UPDATE profiles
-SET display_name = 'Teacher One'
-WHERE user_id = '22222222-2222-2222-2222-222222222222';
+  -- teachers
+  ('00000000-0000-0000-0000-000000000030', 'teacher'),
+  ('00000000-0000-0000-0000-000000000031', 'teacher'),
 
-UPDATE profiles
-SET display_name = 'Teacher Two'
-WHERE user_id = '22222222-2222-2222-2222-333333333333';
+  -- students
+  ('00000000-0000-0000-0000-000000000100', 'student'),
+  ('00000000-0000-0000-0000-000000000101', 'student'),
+  ('00000000-0000-0000-0000-000000000102', 'student'),
+  ('00000000-0000-0000-0000-000000000103', 'student')
+ON CONFLICT (user_id) DO NOTHING;
 
-UPDATE profiles
-SET display_name = 'Staff One'
-WHERE user_id = '33333333-3333-3333-3333-333333333333';
-
-UPDATE profiles
-SET display_name = 'Admin One'
-WHERE user_id = '44444444-4444-4444-4444-444444444444';
-
-UPDATE profiles
-SET display_name = 'Site Admin'
-WHERE user_id = '55555555-5555-5555-5555-555555555555';
-
--- ============================================================================
--- UPDATE ROLES (TRIGGER CREATES ALL AS 'student')
--- ============================================================================
--- The handle_new_user trigger assigns 'student' role to all new users.
--- We update the roles here to match our test user expectations.
-UPDATE user_roles SET role = 'teacher'
-WHERE user_id IN (
-  '22222222-2222-2222-2222-222222222222',
-  '22222222-2222-2222-2222-333333333333'
-);
-
-UPDATE user_roles SET role = 'staff'
-WHERE user_id = '33333333-3333-3333-3333-333333333333';
-
-UPDATE user_roles SET role = 'admin'
-WHERE user_id = '44444444-4444-4444-4444-444444444444';
-
-UPDATE user_roles SET role = 'site_admin'
-WHERE user_id = '55555555-5555-5555-5555-555555555555';
-
--- ============================================================================
--- TEACHER-STUDENT LINKS
--- ============================================================================
-INSERT INTO teacher_students (teacher_id, student_id)
+-- -----------------------------------------------------------------------------
+-- TEACHER ↔ STUDENT RELATIONSHIPS
+-- -----------------------------------------------------------------------------
+-- Teacher Alice teaches Student A & B
+INSERT INTO public.teacher_students (teacher_id, student_id)
 VALUES
-  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111'),
-  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-222222222222'),
-  ('22222222-2222-2222-2222-333333333333', '11111111-1111-1111-1111-222222222222')
-ON CONFLICT (teacher_id, student_id) DO NOTHING;
+  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000100'),
+  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000101')
+ON CONFLICT DO NOTHING;
 
--- ============================================================================
--- NOTES
--- ============================================================================
--- 1. Do NOT insert directly into profiles or user_roles; triggers handle that.
--- 2. Display names are updated via UPDATE statements above.
--- 3. Roles are updated after trigger creates default 'student' role.
--- 4. Teacher-student links are inserted here; duplicates are ignored via ON CONFLICT.
--- 5. Run `supabase db reset` before seeding to ensure a clean database.
+-- Teacher Bob teaches Student C & D
+INSERT INTO public.teacher_students (teacher_id, student_id)
+VALUES
+  ('00000000-0000-0000-0000-000000000031', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-000000000031', '00000000-0000-0000-0000-000000000103')
+ON CONFLICT DO NOTHING;
 
+-- =============================================================================
+-- END SEED
+-- =============================================================================
