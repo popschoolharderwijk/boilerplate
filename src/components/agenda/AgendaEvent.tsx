@@ -74,14 +74,21 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 						aria-hidden
 					/>
 				)}
-				{isLessonEvent && !isProjectEvent && (
+				{isLessonGroupEvent && (
+					<LuUsers
+						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
+						title="Groepsles"
+						aria-hidden
+					/>
+				)}
+				{isLessonEvent && !isProjectEvent && !isLessonGroupEvent && (
 					<LuMusic
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Les"
 						aria-hidden
 					/>
 				)}
-				{!isLessonEvent && !isProjectEvent && hasMultipleParticipants && (
+				{!isLessonEvent && !isProjectEvent && !isLessonGroupEvent && hasMultipleParticipants && (
 					<LuUsers
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Meerdere deelnemers"
