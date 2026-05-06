@@ -144,15 +144,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									/>
 								)}
 
-								{/* Student-only: My Profile */}
-								{isStudent && (
-									<NavItem
-										href="/students/my-profile"
-										label={NAV_LABELS.myProfile}
-										icon={NAV_ICONS.myProfile}
-										collapsed={collapsed}
-									/>
-								)}
 
 								{showStudentsNav && (
 									<NavItem
