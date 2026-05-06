@@ -226,6 +226,24 @@ export default function LessonGroupWizard() {
 		})();
 	}, [lessonTypeId]);
 
+	// load pending signup requests for this lesson type
+	useEffect(() => {
+		if (!lessonTypeId) {
+			setPendingRequests([]);
+			setSelectedRequestIds([]);
+			return;
+		}
+		(async () => {
+			const { data } = await supabase
+				.from('lesson_signup_requests')
+				.select('id, first_name, last_name, email')
+				.eq('lesson_type_id', lessonTypeId)
+				.eq('status', 'pending')
+				.order('created_at', { ascending: true });
+			setPendingRequests(data ?? []);
+		})();
+	}, [lessonTypeId]);
+
 	// compute slot statuses for chosen teacher (visualises agenda)
 	useEffect(() => {
 		if (step !== LGStep.Teacher || !teacherUserId || !startDate || !endDate) {
