@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { SignupRequestItem } from '@/components/students/SignupRequestItem';
+import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
@@ -334,9 +335,12 @@ export default function MyStudentProfile() {
 					{agreements.length === 0 ? (
 						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten gevonden</p>
 					) : (
-						<div className="space-y-2">
+						<div className="space-y-4">
 							{agreements.map((agreement) => (
-								<LessonAgreementItem key={agreement.id} agreement={agreement} />
+								<div key={agreement.id} className="space-y-2">
+									<LessonAgreementItem agreement={agreement} />
+									<SubscriptionCard lessonAgreementId={agreement.id} hideStartAction />
+								</div>
 							))}
 						</div>
 					)}

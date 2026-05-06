@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { SignupRequestItem } from '@/components/students/SignupRequestItem';
+import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -195,9 +196,12 @@ export default function StudentDetail() {
 					{agreements.length === 0 ? (
 						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten</p>
 					) : (
-						<div className="flex flex-wrap gap-2">
+						<div className="space-y-4">
 							{agreements.map((a) => (
-								<LessonAgreementItem key={a.id} agreement={a} />
+								<div key={a.id} className="space-y-2">
+									<LessonAgreementItem agreement={a} />
+									<SubscriptionCard lessonAgreementId={a.id} />
+								</div>
 							))}
 						</div>
 					)}
