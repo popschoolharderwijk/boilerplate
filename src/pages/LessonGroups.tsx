@@ -237,14 +237,21 @@ export default function LessonGroups() {
 				rowActions={{
 					onEdit: canEdit ? (g) => setFormDialog({ open: true, group: g }) : undefined,
 					onDelete: canEdit ? (g) => setDeleteDialog(g) : undefined,
-					custom: canEdit
-						? [
-								{
-									label: 'Plan in agenda',
-									icon: LuCalendarPlus,
-									onClick: handleScheduleInAgenda,
-								},
-							]
+					render: canEdit
+						? (g) => (
+								<Button
+									type="button"
+									size="sm"
+									variant="ghost"
+									onClick={(e) => {
+										e.stopPropagation();
+										handleScheduleInAgenda(g);
+									}}
+									title="Plan in agenda"
+								>
+									<LuCalendarPlus className="h-4 w-4" />
+								</Button>
+							)
 						: undefined,
 				}}
 			/>
