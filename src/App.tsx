@@ -20,8 +20,10 @@ import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
 import NotFound from './pages/NotFound';
 import Projects from './pages/Projects';
+import PublicSignup from './pages/PublicSignup';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import SignupRequests from './pages/SignupRequests';
 import Students from './pages/Students';
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
@@ -41,6 +43,7 @@ const App = () => (
 				<Routes>
 					<Route path="/login" element={<Login />} />
 					<Route path="/auth/callback" element={<AuthCallback />} />
+					<Route path="/aanmelden" element={<PublicSignup />} />
 
 					{/* Protected dashboard routes */}
 					<Route
@@ -62,6 +65,7 @@ const App = () => (
 						<Route path="/lesson-groups/:id" element={<LessonGroupWizard />} />
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
+						<Route path="/aanmeldingen" element={<SignupRequests />} />
 						<Route path="/settings" element={<Settings />} />
 						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />

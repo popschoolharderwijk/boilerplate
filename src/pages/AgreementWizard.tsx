@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
 import { PeriodStepContent } from '@/components/agreements/PeriodStepContent';
@@ -321,6 +321,10 @@ function useTeachers(step: WizardStep, lessonTypeId: string | null) {
 
 export default function AgreementWizard() {
 	const { id } = useParams<{ id: string }>();
+	const [searchParams] = useSearchParams();
+	const fromRequestId = searchParams.get('fromRequest');
+	const prefillStudentUserId = searchParams.get('studentUserId');
+	const prefillLessonTypeId = searchParams.get('lessonTypeId');
 	const navigate = useNavigate();
 	const { setBreadcrumbSuffix } = useBreadcrumb();
 
@@ -352,6 +356,33 @@ export default function AgreementWizard() {
 	const [partialConfirmOpen, setPartialConfirmOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const startDatePickerRef = useAutofocus<HTMLButtonElement>(step === WizardStep.Period);
+
+	// Prefill from public signup request (after staff clicked "Verwerken")
+	useEffect(() => {
+		if (isEditMode || !prefillStudentUserId) return;
+		(async () => {
+			const { data: profile } = await supabase
+				.from('profiles')
+				.select('user_id, first_name, last_name, email, avatar_url, phone_number')
+				.eq('user_id', prefillStudentUserId)
+				.maybeSingle();
+			setForm((f) => ({
+				...f,
+				studentUserId: prefillStudentUserId,
+				lessonTypeId: prefillLessonTypeId ?? f.lessonTypeId,
+				user: profile
+					? {
+							user_id: profile.user_id,
+							first_name: profile.first_name,
+							last_name: profile.last_name,
+							email: profile.email,
+							avatar_url: profile.avatar_url,
+							phone_number: profile.phone_number,
+						}
+					: f.user,
+			}));
+		})();
+	}, [isEditMode, prefillStudentUserId, prefillLessonTypeId]);
 
 	// Derived state
 	const teachers = useTeachers(step, form.lessonTypeId);
@@ -548,25 +579,43 @@ export default function AgreementWizard() {
 			end_date: form.endDate || null,
 		};
 
-		const { error } = agreement
-			? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id)
-			: await supabase.from('lesson_agreements').insert({
-					...payload,
-					student_user_id: form.studentUserId,
-					lesson_type_id: form.lessonTypeId,
-					duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
-					frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
-					price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
-					is_active: true,
-				});
+		const insertResult = agreement
+			? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id).select('id').maybeSingle()
+			: await supabase
+					.from('lesson_agreements')
+					.insert({
+						...payload,
+						student_user_id: form.studentUserId,
+						lesson_type_id: form.lessonTypeId,
+						duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
+						frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
+						price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
+						is_active: true,
+						signup_source: fromRequestId ? 'public_form' : 'staff',
+					})
+					.select('id')
+					.single();
 
 		setSaving(false);
-		if (error) {
-			toast.error(error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
+		if (insertResult.error) {
+			toast.error(insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
 			return;
 		}
+
+		// If coming from a public signup request, mark it approved
+		if (fromRequestId && !agreement && insertResult.data?.id) {
+			await supabase
+				.from('lesson_signup_requests')
+				.update({
+					status: 'approved',
+					processed_at: new Date().toISOString(),
+					created_agreement_id: insertResult.data.id,
+				})
+				.eq('id', fromRequestId);
+		}
+
 		toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
-		navigate('/agreements');
+		navigate(fromRequestId ? '/aanmeldingen' : '/agreements');
 	};
 
 	if (loadingAgreement) {

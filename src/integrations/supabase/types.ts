@@ -211,9 +211,11 @@ export type Database = {
           frequency: Database["public"]["Enums"]["lesson_frequency"]
           id: string
           is_active: boolean
+          lesson_group_id: string | null
           lesson_type_id: string
           notes: string | null
           price_per_lesson: number
+          signup_source: string | null
           start_date: string
           start_time: string
           student_user_id: string
@@ -230,9 +232,11 @@ export type Database = {
           frequency: Database["public"]["Enums"]["lesson_frequency"]
           id?: string
           is_active?: boolean
+          lesson_group_id?: string | null
           lesson_type_id: string
           notes?: string | null
           price_per_lesson: number
+          signup_source?: string | null
           start_date: string
           start_time: string
           student_user_id: string
@@ -249,9 +253,11 @@ export type Database = {
           frequency?: Database["public"]["Enums"]["lesson_frequency"]
           id?: string
           is_active?: boolean
+          lesson_group_id?: string | null
           lesson_type_id?: string
           notes?: string | null
           price_per_lesson?: number
+          signup_source?: string | null
           start_date?: string
           start_time?: string
           student_user_id?: string
@@ -260,6 +266,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lesson_agreements_lesson_group_id_fkey"
+            columns: ["lesson_group_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lesson_agreements_lesson_type_id_fkey"
             columns: ["lesson_type_id"]
@@ -389,6 +402,97 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teachers"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      lesson_signup_requests: {
+        Row: {
+          created_agreement_id: string | null
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          lesson_group_id: string | null
+          lesson_type_id: string
+          notes: string | null
+          parent_email: string | null
+          parent_name: string | null
+          parent_phone_number: string | null
+          phone_number: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: Database["public"]["Enums"]["signup_request_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_agreement_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          lesson_group_id?: string | null
+          lesson_type_id: string
+          notes?: string | null
+          parent_email?: string | null
+          parent_name?: string | null
+          parent_phone_number?: string | null
+          phone_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["signup_request_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_agreement_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          lesson_group_id?: string | null
+          lesson_type_id?: string
+          notes?: string | null
+          parent_email?: string | null
+          parent_name?: string | null
+          parent_phone_number?: string | null
+          phone_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["signup_request_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_signup_requests_created_agreement_id_fkey"
+            columns: ["created_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_signup_requests_lesson_group_id_fkey"
+            columns: ["lesson_group_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_signup_requests_lesson_type_id_fkey"
+            columns: ["lesson_type_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_types"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1008,6 +1112,7 @@ export type Database = {
       app_role: "site_admin" | "admin" | "staff"
       cancellation_type: "student" | "teacher"
       lesson_frequency: "daily" | "weekly" | "biweekly" | "monthly"
+      signup_request_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1144,6 +1249,7 @@ export const Constants = {
       app_role: ["site_admin", "admin", "staff"],
       cancellation_type: ["student", "teacher"],
       lesson_frequency: ["daily", "weekly", "biweekly", "monthly"],
+      signup_request_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
