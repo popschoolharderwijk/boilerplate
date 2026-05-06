@@ -180,10 +180,20 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				lessonGroupSourceIds.length > 0
 					? supabase
 							.from('lesson_groups')
-							.select('id, name, lesson_types(id, name, icon, color)')
+							.select(
+								'id, name, lesson_types(id, name, icon, color), lesson_group_members(student_user_id, left_date)',
+							)
 							.in('id', lessonGroupSourceIds)
 					: Promise.resolve<{
-							data: { id: string; name: string; lesson_types: { id: string; name: string; icon: string | null; color: string | null } | { id: string; name: string; icon: string | null; color: string | null }[] | null }[];
+							data: {
+								id: string;
+								name: string;
+								lesson_types:
+									| { id: string; name: string; icon: string | null; color: string | null }
+									| { id: string; name: string; icon: string | null; color: string | null }[]
+									| null;
+								lesson_group_members: { student_user_id: string; left_date: string | null }[] | null;
+							}[];
 							error: null;
 						}>({ data: [], error: null }),
 			]);
@@ -199,6 +209,9 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			const newLessonGroupsMap = new Map<string, LessonGroupInfo>(
 				(lessonGroupsResult.data ?? []).map((g) => {
 					const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
+					const members = (g.lesson_group_members ?? [])
+						.filter((m) => m.left_date === null)
+						.map((m) => m.student_user_id);
 					return [
 						g.id,
 						{
@@ -207,6 +220,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 							lessonTypeName: lt?.name ?? null,
 							lessonTypeIcon: lt?.icon ?? null,
 							lessonTypeColor: lt?.color ?? null,
+							memberUserIds: members,
 						},
 					] as const;
 				}),
