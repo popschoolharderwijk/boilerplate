@@ -197,8 +197,34 @@ export default function LessonGroups() {
 				key: 'members',
 				label: 'Deelnemers',
 				sortable: true,
-				sortValue: (g) => g.members_count,
-				render: (g) => <span className="text-muted-foreground">{g.members_count}</span>,
+				sortValue: (g) => g.members.length,
+				render: (g) => {
+					if (!g.members.length) {
+						return <span className="text-muted-foreground">—</span>;
+					}
+					return (
+						<div className="flex flex-wrap gap-1">
+							{g.members.map((m) => {
+								const label =
+									[m.first_name, m.last_name].filter(Boolean).join(' ') || m.email || 'Onbekend';
+								return (
+									<button
+										key={m.user_id}
+										type="button"
+										onClick={(e) => {
+											e.stopPropagation();
+											navigate(`/students?search=${encodeURIComponent(label)}`);
+										}}
+										className="rounded-md bg-muted px-2 py-0.5 text-xs hover:bg-muted/70 hover:underline"
+										title="Bekijk leerling"
+									>
+										{label}
+									</button>
+								);
+							})}
+						</div>
+					);
+				},
 			},
 			{
 				key: 'status',
