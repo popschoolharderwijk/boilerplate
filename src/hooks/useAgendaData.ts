@@ -19,6 +19,14 @@ export interface LessonAgreementWithTeacher extends LessonAgreementWithStudent {
 	} | null;
 }
 
+export interface LessonGroupInfo {
+	id: string;
+	name: string;
+	lessonTypeName: string | null;
+	lessonTypeIcon: string | null;
+	lessonTypeColor: string | null;
+}
+
 export interface UseAgendaDataResult {
 	agendaEvents: AgendaEventRow[];
 	deviations: AgendaEventDeviationRow[];
@@ -28,6 +36,7 @@ export interface UseAgendaDataResult {
 	participantCountByEventId: Map<string, number>;
 	participantNamesByEventId: Map<string, string[]>;
 	projectsMap: Map<string, ProjectInfo>;
+	lessonGroupsMap: Map<string, LessonGroupInfo>;
 	loading: boolean;
 	loadData: (showLoading?: boolean) => Promise<void>;
 	getEnrichedEvents: (currentDate: Date, effectiveUserId: string | undefined) => CalendarEvent[];
