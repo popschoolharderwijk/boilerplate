@@ -218,6 +218,7 @@ export type Database = {
           signup_source: string | null
           start_date: string
           start_time: string
+          stripe_price_id: string | null
           student_user_id: string
           teacher_user_id: string
           updated_at: string
@@ -239,6 +240,7 @@ export type Database = {
           signup_source?: string | null
           start_date: string
           start_time: string
+          stripe_price_id?: string | null
           student_user_id: string
           teacher_user_id: string
           updated_at?: string
@@ -260,6 +262,7 @@ export type Database = {
           signup_source?: string | null
           start_date?: string
           start_time?: string
+          stripe_price_id?: string | null
           student_user_id?: string
           teacher_user_id?: string
           updated_at?: string
@@ -745,6 +748,33 @@ export type Database = {
           },
         ]
       }
+      stripe_customers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          stripe_customer_id: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          stripe_customer_id: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          stripe_customer_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           created_at: string
@@ -795,6 +825,136 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      subscription_invoices: {
+        Row: {
+          amount_due: number
+          amount_paid: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          hosted_invoice_url: string | null
+          id: string
+          invoice_pdf: string | null
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          status: string
+          stripe_invoice_id: string
+          subscription_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          hosted_invoice_url?: string | null
+          id?: string
+          invoice_pdf?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status: string
+          stripe_invoice_id: string
+          subscription_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          hosted_invoice_url?: string | null
+          id?: string
+          invoice_pdf?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          stripe_invoice_id?: string
+          subscription_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at: string | null
+          canceled_at: string | null
+          created_at: string
+          created_by: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          default_payment_method_brand: string | null
+          id: string
+          latest_invoice_id: string | null
+          lesson_agreement_id: string
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cancel_at?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          default_payment_method_brand?: string | null
+          id?: string
+          latest_invoice_id?: string | null
+          lesson_agreement_id: string
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cancel_at?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          default_payment_method_brand?: string | null
+          id?: string
+          latest_invoice_id?: string | null
+          lesson_agreement_id?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_price_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_lesson_agreement_id_fkey"
+            columns: ["lesson_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teacher_availability: {
         Row: {
