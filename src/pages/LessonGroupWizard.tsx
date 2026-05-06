@@ -104,6 +104,7 @@ export default function LessonGroupWizard() {
 	const [partialOpen, setPartialOpen] = useState(false);
 
 	const [memberIds, setMemberIds] = useState<string[]>([]);
+	const [eligibleStudentIds, setEligibleStudentIds] = useState<string[]>([]);
 	const [scheduleInAgenda, setScheduleInAgenda] = useState(true);
 
 	// ----- reference data -----
