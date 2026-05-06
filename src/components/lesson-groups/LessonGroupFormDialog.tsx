@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SubmitButton } from '@/components/ui/submit-button';
 import { UserSelectMultiple, UserSelectSingle } from '@/components/ui/user-select';
 import { supabase } from '@/integrations/supabase/client';
-import { LESSON_FREQUENCIES } from '@/lib/frequencies';
+import { frequencyOptions } from '@/lib/frequencies';
 import type { LessonGroupRow } from '@/types/lesson-groups';
 
 interface LessonTypeOption {
