@@ -23,35 +23,32 @@ export const STEP_CONFIG: Record<WizardStep, { label: string; icon: IconType }> 
 	[WizardStep.Confirm]: { label: 'Overzicht', icon: LuClipboardCheck },
 };
 
-export interface WizardStepDef<TStep extends string> {
-	key: TStep;
+export interface WizardStepDef {
+	key: string;
 	label: string;
 	icon: IconType;
 }
 
-interface WizardStepIndicatorProps<TStep extends string = WizardStep> {
-	step: TStep;
+interface WizardStepIndicatorProps {
+	step: string;
 	stepIndex: number;
 	highestReachedStepIndex: number;
-	onStepChange: (step: TStep) => void;
+	// biome-ignore lint/suspicious/noExplicitAny: callers use enum-typed setters
+	onStepChange: (step: any) => void;
 	/** Optional custom step definitions; when omitted falls back to the agreement-wizard steps. */
-	steps?: WizardStepDef<TStep>[];
+	steps?: WizardStepDef[];
 }
 
-export function WizardStepIndicator<TStep extends string = WizardStep>({
+export function WizardStepIndicator({
 	step,
 	stepIndex,
 	highestReachedStepIndex,
 	onStepChange,
 	steps,
-}: WizardStepIndicatorProps<TStep>) {
-	const stepDefs: WizardStepDef<TStep>[] =
+}: WizardStepIndicatorProps) {
+	const stepDefs: WizardStepDef[] =
 		steps ??
-		(STEP_ORDER.map((k) => ({
-			key: k as unknown as TStep,
-			label: STEP_CONFIG[k].label,
-			icon: STEP_CONFIG[k].icon,
-		})) as WizardStepDef<TStep>[]);
+		STEP_ORDER.map((k) => ({ key: k, label: STEP_CONFIG[k].label, icon: STEP_CONFIG[k].icon }));
 
 	return (
 		<div className="flex items-center px-2 pt-2">
