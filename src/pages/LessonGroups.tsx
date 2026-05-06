@@ -29,13 +29,10 @@ export default function LessonGroups() {
 	const canView = isAdmin || isSiteAdmin || isPrivileged || isTeacher;
 	const canEdit = isAdmin || isSiteAdmin || isPrivileged;
 
+	const navigate = useNavigate();
 	const [rows, setRows] = useState<LessonGroupTableRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
-	const [formDialog, setFormDialog] = useState<{ open: boolean; group: LessonGroupRow | null }>({
-		open: false,
-		group: null,
-	});
 	const [deleteDialog, setDeleteDialog] = useState<LessonGroupRow | null>(null);
 
 	const load = useCallback(async () => {
@@ -227,14 +224,14 @@ export default function LessonGroups() {
 				initialSortDirection="asc"
 				headerActions={
 					canEdit ? (
-						<Button onClick={() => setFormDialog({ open: true, group: null })}>
+						<Button onClick={() => navigate('/lesson-groups/new')}>
 							<LuPlus className="mr-2 h-4 w-4" />
 							Nieuwe lesgroep
 						</Button>
 					) : undefined
 				}
 				rowActions={{
-					onEdit: canEdit ? (g) => setFormDialog({ open: true, group: g }) : undefined,
+					onEdit: canEdit ? (g) => navigate(`/lesson-groups/${g.id}`) : undefined,
 					render: canEdit
 						? (g) => (
 								<div className="flex items-center gap-1">
@@ -268,12 +265,6 @@ export default function LessonGroups() {
 							)
 						: undefined,
 				}}
-			/>
-			<LessonGroupFormDialog
-				open={formDialog.open}
-				onOpenChange={(open) => !open && setFormDialog({ open: false, group: null })}
-				group={formDialog.group}
-				onSaved={load}
 			/>
 			{deleteDialog && (
 				<ConfirmDeleteDialog
