@@ -144,7 +144,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									/>
 								)}
 
-
 								{showStudentsNav && (
 									<NavItem
 										href="/students"

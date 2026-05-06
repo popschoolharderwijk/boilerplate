@@ -3,7 +3,7 @@ import { LuClipboardList } from 'react-icons/lu';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { SignupRequestDialog, type SignupRequestDetail } from './SignupRequestDialog';
+import { type SignupRequestDetail, SignupRequestDialog } from './SignupRequestDialog';
 
 interface SignupRequestItemProps {
 	request: SignupRequestDetail;

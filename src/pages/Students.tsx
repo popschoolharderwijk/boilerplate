@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
-import { type SignupRequestDetail } from '@/components/students/SignupRequestDialog';
+import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -125,9 +125,7 @@ export default function Students() {
 			if (emails.length) {
 				const { data: reqData } = await supabase
 					.from('lesson_signup_requests')
-					.select(
-						'*, lesson_types(name), lesson_groups(name)',
-					)
+					.select('*, lesson_types(name), lesson_groups(name)')
 					.in('email', emails);
 				const map = new Map<string, SignupRequestDetail[]>();
 				for (const r of reqData ?? []) {
@@ -257,7 +255,7 @@ export default function Students() {
 				key: 'signup_requests',
 				label: 'Aanmeldingen',
 				render: (s) => {
-					const count = s.email ? requestsByEmail.get(s.email)?.length ?? 0 : 0;
+					const count = s.email ? (requestsByEmail.get(s.email)?.length ?? 0) : 0;
 					return (
 						<button
 							type="button"

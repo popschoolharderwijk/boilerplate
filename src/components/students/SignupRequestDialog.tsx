@@ -48,9 +48,7 @@ export function SignupRequestDialog({ open, onOpenChange, request }: SignupReque
 			<DialogContent className="max-w-xl">
 				<DialogHeader>
 					<DialogTitle>Aanmelding details</DialogTitle>
-					<DialogDescription>
-						Ontvangen op {formatDbDateLong(request.created_at)}
-					</DialogDescription>
+					<DialogDescription>Ontvangen op {formatDbDateLong(request.created_at)}</DialogDescription>
 				</DialogHeader>
 				<div className="space-y-4 py-2">
 					<div className="flex items-center gap-2">
