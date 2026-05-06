@@ -36,6 +36,7 @@ export default function MyStudentProfile() {
 	const [loading, setLoading] = useState(true);
 	const [profile, setProfile] = useState<StudentProfile | null>(null);
 	const [agreements, setAgreements] = useState<LessonAgreement[]>([]);
+	const [signupRequests, setSignupRequests] = useState<SignupRequestDetail[]>([]);
 
 	const loadProfile = useCallback(async () => {
 		if (!user) return;
