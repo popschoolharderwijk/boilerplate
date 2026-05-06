@@ -390,6 +390,29 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 					}
 				}
 
+				if (ev.resource.sourceType === 'lesson_group' && ev.resource.agreementId) {
+					const group = lessonGroupsMap.get(ev.resource.agreementId);
+					if (group) {
+						const count = participantCount ?? 0;
+						const title = count > 0 ? `${group.name} (${count})` : group.name;
+						return {
+							...enriched,
+							title,
+							resource: {
+								...enriched.resource,
+								lessonGroupId: group.id,
+								lessonGroupName: group.name,
+								lessonTypeName: group.lessonTypeName ?? group.name,
+								lessonTypeColor: enriched.resource.color ?? group.lessonTypeColor,
+								lessonTypeIcon: group.lessonTypeIcon,
+								studentName: group.name,
+								isGroupLesson: true,
+								studentCount: count,
+							},
+						};
+					}
+				}
+
 				if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return enriched;
 				const agreement = agreementsMap.get(ev.resource.agreementId);
 				if (!agreement) return enriched;
