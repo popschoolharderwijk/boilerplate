@@ -19,6 +19,7 @@ export function UserSelectSingle({
 	onChange,
 	filter = 'all',
 	excludeUserIds = [],
+	includeUserIds,
 	placeholder = 'Selecteer gebruiker...',
 	disabled = false,
 	className,
@@ -29,6 +30,7 @@ export function UserSelectSingle({
 	const { users, filteredUsers, loading, searchQuery, setSearchQuery, fetchedUsers } = useUserSelectData({
 		filter,
 		excludeUserIds,
+		includeUserIds,
 		open,
 	});
 

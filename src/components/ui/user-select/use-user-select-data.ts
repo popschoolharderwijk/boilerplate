@@ -8,10 +8,12 @@ import type { UserFilter } from './types';
 export function useUserSelectData({
 	filter = 'all',
 	excludeUserIds = [],
+	includeUserIds,
 	open,
 }: {
 	filter?: UserFilter;
 	excludeUserIds?: string[];
+	includeUserIds?: string[];
 	open: boolean;
 }) {
 	const [loading, setLoading] = useState(false);
@@ -19,10 +21,11 @@ export function useUserSelectData({
 	const [searchQuery, setSearchQuery] = useState('');
 
 	const excludeSet = new Set(excludeUserIds);
-	const filterExcluded = (list: User[]) =>
-		excludeUserIds.length === 0 ? list : list.filter((u) => !excludeSet.has(u.user_id));
+	const includeSet = includeUserIds ? new Set(includeUserIds) : null;
+	const applyFilters = (list: User[]) =>
+		list.filter((u) => !excludeSet.has(u.user_id) && (!includeSet || includeSet.has(u.user_id)));
 
-	const users = filterExcluded(fetchedUsers);
+	const users = applyFilters(fetchedUsers);
 
 	const filteredUsers = users.filter((user) => {
 		if (!searchQuery.trim()) return true;

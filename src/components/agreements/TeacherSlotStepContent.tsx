@@ -98,6 +98,8 @@ interface TeacherSlotStepContentProps {
 	selectedTeacher: TeacherOption | undefined;
 	/** User IDs to exclude from the teacher list (e.g. the student so they can't be their own teacher) */
 	excludeUserIds?: string[];
+	/** When set, restrict the teacher dropdown to these user IDs (e.g. only teachers offering a lesson type) */
+	includeUserIds?: string[];
 	slotsWithStatus: SlotWithStatus[];
 	selectedSlot: SlotWithStatus | null;
 	/** When editing: the time slot of the existing agreement (shown with solid background) */
@@ -112,6 +114,7 @@ export function TeacherSlotStepContent({
 	teachers,
 	selectedTeacher,
 	excludeUserIds = [],
+	includeUserIds,
 	slotsWithStatus,
 	selectedSlot,
 	currentAgreementSlot = null,
@@ -140,6 +143,7 @@ export function TeacherSlotStepContent({
 						onTeacherChange(teacher?.id ?? user.user_id);
 					}}
 					excludeUserIds={excludeUserIds}
+					includeUserIds={includeUserIds}
 					placeholder="Selecteer docent..."
 				/>
 				{isTeacherOwnStudent && (

@@ -713,6 +713,7 @@ export default function AgreementWizard() {
 						teachers={teachers}
 						selectedTeacher={selectedTeacher}
 						excludeUserIds={form.studentUserId ? [form.studentUserId] : []}
+						includeUserIds={teachers.map((t) => t.userId)}
 						slotsWithStatus={slotsWithStatus}
 						selectedSlot={form.slot}
 						currentAgreementSlot={
