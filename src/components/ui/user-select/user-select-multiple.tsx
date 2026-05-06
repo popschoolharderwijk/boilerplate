@@ -20,6 +20,7 @@ export function UserSelectMultiple({
 	max,
 	filter = 'all',
 	excludeUserIds = [],
+	includeUserIds,
 	placeholder = 'Selecteer gebruikers...',
 	disabled = false,
 	className,
@@ -33,6 +34,7 @@ export function UserSelectMultiple({
 	const { users, filteredUsers, loading, searchQuery, setSearchQuery, fetchedUsers } = useUserSelectData({
 		filter,
 		excludeUserIds,
+		includeUserIds,
 		open,
 	});
 
