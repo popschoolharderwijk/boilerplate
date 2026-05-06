@@ -242,9 +242,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 									.filter((id): id is string => !!id),
 							),
 						];
-			const groupMemberIds = [
-				...new Set([...newLessonGroupsMap.values()].flatMap((g) => g.memberUserIds)),
-			];
+			const groupMemberIds = [...new Set([...newLessonGroupsMap.values()].flatMap((g) => g.memberUserIds))];
 			const allProfileIds = [
 				...new Set([
 					...allParticipants.map((p) => p.user_id),

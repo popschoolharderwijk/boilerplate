@@ -345,9 +345,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 					handleCancelLesson(pendingCancelScope, cancellationType, cancelledIds)
 				}
 				disabled={isCancelling}
-				participants={
-					selectedEvent?.resource.isGroupLesson ? (selectedEvent.resource.users ?? []) : undefined
-				}
+				participants={selectedEvent?.resource.isGroupLesson ? (selectedEvent.resource.users ?? []) : undefined}
 				initialCancelledIds={selectedEvent?.resource.cancelledParticipantIds ?? null}
 			/>
 

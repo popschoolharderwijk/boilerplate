@@ -22,7 +22,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getDisplayName } from '@/lib/display-name';
 import { frequencyOptions } from '@/lib/frequencies';
-import type { AgendaEventRow, AgendaEventSourceType, CancellationType, DeleteScope, DeviationInfo } from '@/types/agenda-events';
+import type {
+	AgendaEventRow,
+	AgendaEventSourceType,
+	CancellationType,
+	DeleteScope,
+	DeviationInfo,
+} from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 export type { DeleteScope, DeviationInfo } from '@/types/agenda-events';
@@ -156,7 +162,8 @@ export function AgendaEventFormDialog({
 	const isCancelledEvent = !!deviationInfo?.isCancelled;
 	const canDelete = (isManualEvent || isProjectEvent) && event?.id && onDelete && !isCancelledEvent;
 	const canRevert = !!deviationInfo && !!onRevert;
-	const canCancelLesson = (isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
+	const canCancelLesson =
+		(isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

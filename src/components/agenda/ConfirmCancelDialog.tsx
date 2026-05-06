@@ -81,10 +81,7 @@ export function ConfirmCancelDialog({
 							<div className="space-y-2 rounded-md border p-3 max-h-48 overflow-y-auto">
 								<p className="text-xs text-muted-foreground">Deelnemers die afzeggen:</p>
 								{participants?.map((p) => (
-									<label
-										key={p.user_id}
-										className="flex items-center gap-2 cursor-pointer text-sm"
-									>
+									<label key={p.user_id} className="flex items-center gap-2 cursor-pointer text-sm">
 										<input
 											type="checkbox"
 											checked={selectedIds.includes(p.user_id)}
