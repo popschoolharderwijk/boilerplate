@@ -1,3 +1,4 @@
+import type { IconType } from 'react-icons';
 import { LuCalendar, LuCheck, LuClipboardCheck, LuClock, LuUser } from 'react-icons/lu';
 import { cn } from '@/lib/utils';
 
@@ -15,40 +16,56 @@ export const STEP_ORDER: WizardStep[] = [
 	WizardStep.Confirm,
 ];
 
-export const STEP_CONFIG: Record<WizardStep, { label: string; icon: typeof LuUser }> = {
+export const STEP_CONFIG: Record<WizardStep, { label: string; icon: IconType }> = {
 	[WizardStep.User]: { label: 'Leerling', icon: LuUser },
 	[WizardStep.Period]: { label: 'Periode', icon: LuCalendar },
 	[WizardStep.TeacherSlot]: { label: 'Docent & tijdslot', icon: LuClock },
 	[WizardStep.Confirm]: { label: 'Overzicht', icon: LuClipboardCheck },
 };
 
-interface WizardStepIndicatorProps {
-	step: WizardStep;
-	stepIndex: number;
-	highestReachedStepIndex: number;
-	onStepChange: (step: WizardStep) => void;
+export interface WizardStepDef<TStep extends string> {
+	key: TStep;
+	label: string;
+	icon: IconType;
 }
 
-export function WizardStepIndicator({
+interface WizardStepIndicatorProps<TStep extends string = WizardStep> {
+	step: TStep;
+	stepIndex: number;
+	highestReachedStepIndex: number;
+	onStepChange: (step: TStep) => void;
+	/** Optional custom step definitions; when omitted falls back to the agreement-wizard steps. */
+	steps?: WizardStepDef<TStep>[];
+}
+
+export function WizardStepIndicator<TStep extends string = WizardStep>({
 	step,
 	stepIndex,
 	highestReachedStepIndex,
 	onStepChange,
-}: WizardStepIndicatorProps) {
+	steps,
+}: WizardStepIndicatorProps<TStep>) {
+	const stepDefs: WizardStepDef<TStep>[] =
+		steps ??
+		(STEP_ORDER.map((k) => ({
+			key: k as unknown as TStep,
+			label: STEP_CONFIG[k].label,
+			icon: STEP_CONFIG[k].icon,
+		})) as WizardStepDef<TStep>[]);
+
 	return (
 		<div className="flex items-center px-2 pt-2">
-			{STEP_ORDER.map((stepKey, idx) => {
-				const config = STEP_CONFIG[stepKey];
-				const Icon = config.icon;
-				const isActive = step === stepKey;
+			{stepDefs.map((stepDef, idx) => {
+				const Icon = stepDef.icon;
+				const isActive = step === stepDef.key;
 				const isCompleted = idx < stepIndex;
 				const wasReached = idx <= highestReachedStepIndex;
 				const canNavigate = wasReached || isActive;
 				return (
-					<div key={stepKey} className="flex items-center">
+					<div key={stepDef.key} className="flex items-center">
 						<button
 							type="button"
-							onClick={() => canNavigate && onStepChange(stepKey)}
+							onClick={() => canNavigate && onStepChange(stepDef.key)}
 							disabled={!canNavigate}
 							className={cn(
 								'flex flex-col items-center transition-opacity',
@@ -81,10 +98,10 @@ export function WizardStepIndicator({
 									!isActive && !wasReached && 'text-muted-foreground',
 								)}
 							>
-								{config.label}
+								{stepDef.label}
 							</span>
 						</button>
-						{idx < STEP_ORDER.length - 1 && (
+						{idx < stepDefs.length - 1 && (
 							<div
 								className={cn(
 									'h-0.5 w-16 mx-4',
