@@ -150,12 +150,13 @@ export function AgendaEventFormDialog({
 
 	const isManualEvent = (event?.source_type ?? selectedSourceType) === 'manual';
 	const isLessonEvent = event?.source_type === 'lesson_agreement';
+	const isLessonGroupEvent = event?.source_type === 'lesson_group';
 	const isProjectEvent = effectiveSourceType === 'project';
 	const isRecurringEvent = !!event?.recurring;
 	const isCancelledEvent = !!deviationInfo?.isCancelled;
 	const canDelete = (isManualEvent || isProjectEvent) && event?.id && onDelete && !isCancelledEvent;
 	const canRevert = !!deviationInfo && !!onRevert;
-	const canCancelLesson = isLessonEvent && event?.id && (onCancelLesson || onOpenCancelConfirm);
+	const canCancelLesson = (isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
