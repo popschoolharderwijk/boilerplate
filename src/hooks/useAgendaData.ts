@@ -414,8 +414,16 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				if (ev.resource.sourceType === 'lesson_group' && ev.resource.agreementId) {
 					const group = lessonGroupsMap.get(ev.resource.agreementId);
 					if (group) {
-						const count = participantCount ?? 0;
+						const users = group.memberUserIds
+							.map((uid) => profileMap.get(uid))
+							.filter((p): p is User => !!p);
+						const count = users.length || (participantCount ?? 0);
 						const title = count > 0 ? `${group.name} (${count})` : group.name;
+						const deviation =
+							ev.resource.eventId && ev.resource.originalDate
+								? deviationsByEventId.get(ev.resource.eventId)?.get(ev.resource.originalDate)
+								: undefined;
+						const cancelledParticipantIds = deviation?.cancelled_participant_ids ?? undefined;
 						return {
 							...enriched,
 							title,
@@ -426,9 +434,12 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 								lessonTypeName: group.lessonTypeName ?? group.name,
 								lessonTypeColor: enriched.resource.color ?? group.lessonTypeColor,
 								lessonTypeIcon: group.lessonTypeIcon,
-								studentName: group.name,
+								studentName: users.map((u) => getDisplayName(u)).join(', ') || group.name,
 								isGroupLesson: true,
 								studentCount: count,
+								users,
+								isLesson: true,
+								cancelledParticipantIds,
 							},
 						};
 					}
