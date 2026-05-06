@@ -116,8 +116,48 @@ export default function Students() {
 			}
 
 			const result = data as unknown as PaginatedStudentsResponseRaw;
-			setStudents((result.data ?? []).map(flattenStudentWithAgreements));
+			const flat = (result.data ?? []).map(flattenStudentWithAgreements);
+			setStudents(flat);
 			setTotalCount(result.total_count ?? 0);
+
+			// Load signup requests for the visible students (matched by email)
+			const emails = flat.map((s) => s.email).filter((e): e is string => Boolean(e));
+			if (emails.length) {
+				const { data: reqData } = await supabase
+					.from('lesson_signup_requests')
+					.select(
+						'*, lesson_types(name), lesson_groups(name)',
+					)
+					.in('email', emails);
+				const map = new Map<string, SignupRequestDetail[]>();
+				for (const r of reqData ?? []) {
+					const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
+					const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
+					const detail: SignupRequestDetail = {
+						id: r.id,
+						first_name: r.first_name,
+						last_name: r.last_name,
+						email: r.email,
+						phone_number: r.phone_number,
+						parent_name: r.parent_name,
+						parent_email: r.parent_email,
+						parent_phone_number: r.parent_phone_number,
+						date_of_birth: r.date_of_birth,
+						notes: r.notes,
+						status: r.status,
+						created_at: r.created_at,
+						processed_at: r.processed_at,
+						lesson_type_name: lt?.name ?? null,
+						lesson_group_name: lg?.name ?? null,
+					};
+					const arr = map.get(r.email) ?? [];
+					arr.push(detail);
+					map.set(r.email, arr);
+				}
+				setRequestsByEmail(map);
+			} else {
+				setRequestsByEmail(new Map());
+			}
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading students:', error);
