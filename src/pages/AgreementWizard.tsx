@@ -616,7 +616,7 @@ export default function AgreementWizard() {
 			</div>
 
 			{/* Steps */}
-			<WizardStepIndicator
+			<WizardStepIndicator<WizardStep>
 				step={step}
 				stepIndex={stepIndex}
 				highestReachedStepIndex={highestStep}
