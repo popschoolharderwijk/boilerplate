@@ -24,6 +24,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 		needsReschedule,
 	} = event.resource;
 	const hasMultipleParticipants = (participantCount ?? 0) > 1;
+	const isLessonGroupEvent = sourceType === 'lesson_group';
 	const isLessonEvent = isLesson || sourceType === 'lesson_agreement';
 	const isProjectEvent = sourceType === 'project';
 	const isTeacherCancelled = isCancelled && cancellationType === 'teacher';
