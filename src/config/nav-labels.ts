@@ -33,6 +33,7 @@ export const NAV_LABELS = {
 	students: 'Leerlingen',
 	myStudents: 'Mijn leerlingen',
 	agreements: 'Overeenkomsten',
+	lessonGroups: 'Groepslessen',
 	reports: 'Rapportage',
 	manual: 'Handleiding',
 } as const;
