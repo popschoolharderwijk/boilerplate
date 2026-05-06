@@ -334,9 +334,12 @@ export default function MyStudentProfile() {
 					{agreements.length === 0 ? (
 						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten gevonden</p>
 					) : (
-						<div className="space-y-2">
+						<div className="space-y-4">
 							{agreements.map((agreement) => (
-								<LessonAgreementItem key={agreement.id} agreement={agreement} />
+								<div key={agreement.id} className="space-y-2">
+									<LessonAgreementItem agreement={agreement} />
+									<SubscriptionCard lessonAgreementId={agreement.id} hideStartAction />
+								</div>
 							))}
 						</div>
 					)}
