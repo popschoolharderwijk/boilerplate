@@ -206,6 +206,22 @@ export default function LessonGroupWizard() {
 		})();
 	}, [lessonTypeId]);
 
+	// load students who signed up for this lesson type (have an agreement of this type)
+	useEffect(() => {
+		if (!lessonTypeId) {
+			setEligibleStudentIds([]);
+			return;
+		}
+		(async () => {
+			const { data } = await supabase
+				.from('lesson_agreements')
+				.select('student_user_id')
+				.eq('lesson_type_id', lessonTypeId);
+			const ids = Array.from(new Set((data ?? []).map((a) => a.student_user_id)));
+			setEligibleStudentIds(ids);
+		})();
+	}, [lessonTypeId]);
+
 	// compute slot statuses for chosen teacher (visualises agenda)
 	useEffect(() => {
 		if (step !== LGStep.Teacher || !teacherUserId || !startDate || !endDate) {
