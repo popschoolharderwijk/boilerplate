@@ -10,6 +10,8 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 interface Body {
 	request_id: string;
+	/** Optional: enroll the student in this group instead of the one originally requested. */
+	override_lesson_group_id?: string | null;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,6 +37,9 @@ Deno.serve(async (req) => {
 		return json(400, { error: 'Invalid JSON' });
 	}
 	if (!body.request_id || !UUID_RE.test(body.request_id)) return json(400, { error: 'Ongeldig request id' });
+	if (body.override_lesson_group_id != null && !UUID_RE.test(body.override_lesson_group_id)) {
+		return json(400, { error: 'Ongeldig groep id' });
+	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -136,10 +141,12 @@ Deno.serve(async (req) => {
 
 	let createdAgreementId: string | null = null;
 
-	if (reqRow.lesson_group_id) {
+	const targetGroupId = body.override_lesson_group_id ?? reqRow.lesson_group_id;
+
+	if (targetGroupId) {
 		// Add to group; trigger creates the lesson_agreement
 		const { error: memberErr } = await admin.from('lesson_group_members').insert({
-			lesson_group_id: reqRow.lesson_group_id,
+			lesson_group_id: targetGroupId,
 			student_user_id: studentUserId,
 		});
 		if (memberErr && !memberErr.message?.includes('duplicate')) {
@@ -149,7 +156,7 @@ Deno.serve(async (req) => {
 		const { data: ag } = await admin
 			.from('lesson_agreements')
 			.select('id')
-			.eq('lesson_group_id', reqRow.lesson_group_id)
+			.eq('lesson_group_id', targetGroupId)
 			.eq('student_user_id', studentUserId)
 			.eq('is_active', true)
 			.maybeSingle();
@@ -162,6 +169,7 @@ Deno.serve(async (req) => {
 				processed_by: user.id,
 				processed_at: new Date().toISOString(),
 				created_agreement_id: createdAgreementId,
+				lesson_group_id: targetGroupId,
 			})
 			.eq('id', reqRow.id);
 	}
@@ -171,6 +179,6 @@ Deno.serve(async (req) => {
 	return json(200, {
 		student_user_id: studentUserId,
 		created_agreement_id: createdAgreementId,
-		status: reqRow.lesson_group_id ? 'approved' : 'pending',
+		status: targetGroupId ? 'approved' : 'pending',
 	});
 });

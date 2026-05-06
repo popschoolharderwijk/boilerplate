@@ -105,6 +105,10 @@ export default function LessonGroupWizard() {
 
 	const [memberIds, setMemberIds] = useState<string[]>([]);
 	const [eligibleStudentIds, setEligibleStudentIds] = useState<string[]>([]);
+	const [pendingRequests, setPendingRequests] = useState<
+		{ id: string; first_name: string; last_name: string; email: string }[]
+	>([]);
+	const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
 	const [scheduleInAgenda, setScheduleInAgenda] = useState(true);
 
 	// ----- reference data -----
@@ -219,6 +223,24 @@ export default function LessonGroupWizard() {
 				.eq('lesson_type_id', lessonTypeId);
 			const ids = Array.from(new Set((data ?? []).map((a) => a.student_user_id)));
 			setEligibleStudentIds(ids);
+		})();
+	}, [lessonTypeId]);
+
+	// load pending signup requests for this lesson type
+	useEffect(() => {
+		if (!lessonTypeId) {
+			setPendingRequests([]);
+			setSelectedRequestIds([]);
+			return;
+		}
+		(async () => {
+			const { data } = await supabase
+				.from('lesson_signup_requests')
+				.select('id, first_name, last_name, email')
+				.eq('lesson_type_id', lessonTypeId)
+				.eq('status', 'pending')
+				.order('created_at', { ascending: true });
+			setPendingRequests(data ?? []);
 		})();
 	}, [lessonTypeId]);
 
@@ -378,6 +400,21 @@ export default function LessonGroupWizard() {
 			for (const m of existing ?? []) {
 				if (!wanted.has(m.student_user_id)) {
 					await supabase.from('lesson_group_members').delete().eq('id', m.id);
+				}
+			}
+
+			// Approve any selected pending signup requests into this group
+			if (selectedRequestIds.length > 0) {
+				const results = await Promise.all(
+					selectedRequestIds.map((rid) =>
+						supabase.functions.invoke('approve-signup-request', {
+							body: { request_id: rid, override_lesson_group_id: groupId },
+						}),
+					),
+				);
+				const failed = results.filter((r) => r.error).length;
+				if (failed > 0) {
+					toast.error(`Kon ${failed} aanmelding(en) niet goedkeuren`);
 				}
 			}
 
@@ -609,6 +646,43 @@ export default function LessonGroupWizard() {
 								</p>
 							)}
 						</div>
+						{pendingRequests.length > 0 && (
+							<div>
+								<Label>Aanmeldingen voor deze lessoort</Label>
+								<p className="mb-2 text-xs text-muted-foreground">
+									Selecteer aanmeldingen om bij opslaan een leerling-account aan te maken en direct
+									in deze groep in te schrijven.
+								</p>
+								<div className="space-y-1 rounded-md border p-2">
+									{pendingRequests.map((r) => {
+										const checked = selectedRequestIds.includes(r.id);
+										return (
+											<label
+												key={r.id}
+												className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+											>
+												<input
+													type="checkbox"
+													checked={checked}
+													onChange={(e) =>
+														setSelectedRequestIds((prev) =>
+															e.target.checked
+																? [...prev, r.id]
+																: prev.filter((x) => x !== r.id),
+														)
+													}
+													className="h-4 w-4 rounded border-input"
+												/>
+												<span className="font-medium">
+													{r.first_name} {r.last_name}
+												</span>
+												<span className="text-muted-foreground text-xs">{r.email}</span>
+											</label>
+										);
+									})}
+								</div>
+							</div>
+						)}
 					</div>
 				)}
 
