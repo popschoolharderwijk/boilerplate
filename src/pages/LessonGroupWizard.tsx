@@ -32,7 +32,6 @@ import { DAY_NAMES } from '@/lib/date/day-index';
 import { frequencyLabels, frequencyOptions } from '@/lib/frequencies';
 import { formatTime } from '@/lib/time/time-format';
 import type { LessonFrequency } from '@/types/lesson-agreements';
-import type { LessonGroupRow } from '@/types/lesson-groups';
 
 // ===================== Step config =====================
 
