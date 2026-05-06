@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
@@ -25,6 +25,7 @@ export default function Students() {
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// Server-side table state (pagination, sorting, search, filters)
 	const {
@@ -46,6 +47,17 @@ export default function Students() {
 		initialSortDirection: 'asc',
 		initialFilters: { statusFilter: 'all', selectedLessonTypeId: null },
 	});
+
+	// Apply ?search= query param once on mount
+	useEffect(() => {
+		const q = searchParams.get('search');
+		if (q) {
+			handleSearchChange(q);
+			searchParams.delete('search');
+			setSearchParams(searchParams, { replace: true });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const statusFilter = (filters.statusFilter as 'all' | 'active' | 'inactive') ?? 'all';
 	const selectedLessonTypeId = (filters.selectedLessonTypeId as string | null) ?? null;
