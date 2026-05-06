@@ -52,6 +52,7 @@ export default function Students() {
 	});
 
 	// Apply ?search= query param once on mount
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only run on mount
 	useEffect(() => {
 		const q = searchParams.get('search');
 		if (q) {
@@ -59,7 +60,6 @@ export default function Students() {
 			searchParams.delete('search');
 			setSearchParams(searchParams, { replace: true });
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const statusFilter = (filters.statusFilter as 'all' | 'active' | 'inactive') ?? 'all';
