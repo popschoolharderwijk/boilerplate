@@ -29,7 +29,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
-	const { isAdmin, isSiteAdmin, isPrivileged, isTeacher } = useAuth();
+	const { isAdmin, isSiteAdmin, isPrivileged, isTeacher, isStudent } = useAuth();
 	const { hasOwnedProjects, isLoading: ownedProjectsLoading } = useHasOwnedProjects();
 	const showAdminNav = isAdmin || isSiteAdmin;
 	const showTeachersNav = isAdmin || isSiteAdmin;
