@@ -25,6 +25,7 @@ import {
 export default function Students() {
 	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
+	const [requestsByEmail, setRequestsByEmail] = useState<Map<string, SignupRequestDetail[]>>(new Map());
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 	const [searchParams, setSearchParams] = useSearchParams();
