@@ -588,9 +588,13 @@ export default function AgreementWizard() {
 						...payload,
 						student_user_id: form.studentUserId,
 						lesson_type_id: form.lessonTypeId,
-						duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
+						duration_minutes: form.selectedOptionSnapshot
+							? form.selectedOptionSnapshot.duration_minutes
+							: 30,
 						frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
-						price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
+						price_per_lesson: form.selectedOptionSnapshot
+							? form.selectedOptionSnapshot.price_per_lesson
+							: 30,
 						is_active: true,
 						signup_source: fromRequestId ? 'public_form' : 'staff',
 					})
@@ -599,7 +603,9 @@ export default function AgreementWizard() {
 
 		setSaving(false);
 		if (insertResult.error) {
-			toast.error(insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
+			toast.error(
+				insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen',
+			);
 			return;
 		}
 
