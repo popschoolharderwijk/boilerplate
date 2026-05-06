@@ -10,6 +10,7 @@ import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import LessonGroups from './pages/LessonGroups';
+import LessonGroupWizard from './pages/LessonGroupWizard';
 import LessonTypeInfo from './pages/LessonTypeInfo';
 import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
@@ -57,6 +58,8 @@ const App = () => (
 						<Route path="/lesson-types/:id" element={<LessonTypeInfo />} />
 						<Route path="/agreements" element={<Agreements />} />
 						<Route path="/lesson-groups" element={<LessonGroups />} />
+						<Route path="/lesson-groups/new" element={<LessonGroupWizard />} />
+						<Route path="/lesson-groups/:id" element={<LessonGroupWizard />} />
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/settings" element={<Settings />} />
