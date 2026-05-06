@@ -66,7 +66,7 @@ export default function Subscriptions() {
 	const columns: DataTableColumn<Row>[] = [
 		{
 			key: 'student',
-			header: 'Leerling',
+			label: 'Leerling',
 			render: (row) =>
 				row.lesson_agreement?.profiles ? (
 					<UserDisplay profile={row.lesson_agreement.profiles} showEmail />
@@ -76,7 +76,7 @@ export default function Subscriptions() {
 		},
 		{
 			key: 'status',
-			header: 'Status',
+			label: 'Status',
 			render: (row) => {
 				const status = row.status as SubscriptionStatus;
 				return <Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>{SUBSCRIPTION_STATUS_LABELS[status]}</Badge>;
@@ -84,7 +84,7 @@ export default function Subscriptions() {
 		},
 		{
 			key: 'period',
-			header: 'Huidige periode',
+			label: 'Huidige periode',
 			render: (row) =>
 				row.current_period_end ? (
 					<span className="text-sm text-muted-foreground">
@@ -96,7 +96,7 @@ export default function Subscriptions() {
 		},
 		{
 			key: 'method',
-			header: 'Betaalmethode',
+			label: 'Betaalmethode',
 			render: (row) =>
 				row.default_payment_method_brand ? (
 					<span className="text-sm">{row.default_payment_method_brand.replace('_', ' ')}</span>
@@ -114,11 +114,11 @@ export default function Subscriptions() {
 				subtitle="Stripe incasso's per lesovereenkomst"
 			/>
 			<DataTable<Row>
+				title="Abonnementen"
 				data={rows}
 				columns={columns}
 				loading={loading}
-				rowKey={(r) => r.id}
-				onRowClick={(r) => r.lesson_agreement?.id && navigate(`/agreements/${r.lesson_agreement.id}`)}
+				getRowKey={(r) => r.id}
 				emptyMessage="Nog geen abonnementen."
 			/>
 		</div>
