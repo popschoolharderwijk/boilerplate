@@ -9,6 +9,7 @@ import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import LessonGroups from './pages/LessonGroups';
 import LessonTypeInfo from './pages/LessonTypeInfo';
 import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
