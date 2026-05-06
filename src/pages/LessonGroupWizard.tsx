@@ -1,16 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-	LuCalendarClock,
-	LuCircleCheck,
-	LuClipboardCheck,
-	LuMusic2,
-	LuTriangleAlert,
-	LuUsers,
-} from 'react-icons/lu';
+import { LuCalendarClock, LuCircleCheck, LuClipboardCheck, LuMusic2, LuTriangleAlert, LuUsers } from 'react-icons/lu';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepContent';
-import { WizardStepIndicator, type WizardStepDef } from '@/components/agreements/WizardStepIndicator';
+import { type WizardStepDef, WizardStepIndicator } from '@/components/agreements/WizardStepIndicator';
 import { NavPageHeaderIcon } from '@/components/layout/NavPageHeaderIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -278,10 +271,7 @@ export default function LessonGroupWizard() {
 		() => lessonTypes.find((lt) => lt.id === lessonTypeId),
 		[lessonTypes, lessonTypeId],
 	);
-	const selectedTeacher = useMemo(
-		() => teachers.find((t) => t.userId === teacherUserId),
-		[teachers, teacherUserId],
-	);
+	const selectedTeacher = useMemo(() => teachers.find((t) => t.userId === teacherUserId), [teachers, teacherUserId]);
 
 	const stepIndex = LG_STEP_ORDER.indexOf(step);
 	const isFirst = stepIndex === 0;
@@ -348,11 +338,7 @@ export default function LessonGroupWizard() {
 				if (error) throw error;
 				groupId = id;
 			} else {
-				const { data, error } = await supabase
-					.from('lesson_groups')
-					.insert(payload)
-					.select('id')
-					.single();
+				const { data, error } = await supabase.from('lesson_groups').insert(payload).select('id').single();
 				if (error) throw error;
 				groupId = data.id;
 			}
@@ -419,9 +405,7 @@ export default function LessonGroupWizard() {
 	};
 
 	if (authLoading || loading) {
-		return (
-			<div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>
-		);
+		return <div className="flex items-center justify-center p-8 text-muted-foreground">Laden...</div>;
 	}
 	if (!canEdit) return <Navigate to="/lesson-groups" replace />;
 
@@ -548,8 +532,8 @@ export default function LessonGroupWizard() {
 					<div className="space-y-2 py-2">
 						{teachers.length === 0 ? (
 							<p className="text-sm text-muted-foreground">
-								Geen actieve docenten gevonden die deze lessoort aanbieden. Koppel het lestype eerst
-								aan een docent.
+								Geen actieve docenten gevonden die deze lessoort aanbieden. Koppel het lestype eerst aan
+								een docent.
 							</p>
 						) : (
 							<TeacherSlotStepContent
@@ -584,8 +568,7 @@ export default function LessonGroupWizard() {
 								placeholder="Voeg leerlingen toe..."
 							/>
 							<p className="mt-2 text-xs text-muted-foreground">
-								Geselecteerd: {memberIds.length}{' '}
-								{memberIds.length === 1 ? 'leerling' : 'leerlingen'}
+								Geselecteerd: {memberIds.length} {memberIds.length === 1 ? 'leerling' : 'leerlingen'}
 								{memberIds.length > 0 && pricePerLesson > 0 && (
 									<>
 										{' '}
@@ -615,11 +598,7 @@ export default function LessonGroupWizard() {
 								<Row
 									label="Lessoort"
 									value={
-										selectedLessonType ? (
-											<LessonTypeBadge lessonType={selectedLessonType} />
-										) : (
-											'-'
-										)
+										selectedLessonType ? <LessonTypeBadge lessonType={selectedLessonType} /> : '-'
 									}
 								/>
 								<Row
@@ -665,8 +644,7 @@ export default function LessonGroupWizard() {
 											<span className="text-muted-foreground">Nog geen leerlingen</span>
 										) : (
 											<Badge variant="secondary">
-												{memberIds.length}{' '}
-												{memberIds.length === 1 ? 'deelnemer' : 'deelnemers'}
+												{memberIds.length} {memberIds.length === 1 ? 'deelnemer' : 'deelnemers'}
 											</Badge>
 										)
 									}
