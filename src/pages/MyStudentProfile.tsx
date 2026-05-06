@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import { type SignupRequestDetail } from '@/components/students/SignupRequestDialog';
+import { SignupRequestItem } from '@/components/students/SignupRequestItem';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
