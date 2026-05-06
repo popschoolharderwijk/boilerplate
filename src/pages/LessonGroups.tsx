@@ -236,21 +236,36 @@ export default function LessonGroups() {
 				}
 				rowActions={{
 					onEdit: canEdit ? (g) => setFormDialog({ open: true, group: g }) : undefined,
-					onDelete: canEdit ? (g) => setDeleteDialog(g) : undefined,
 					render: canEdit
 						? (g) => (
-								<Button
-									type="button"
-									size="sm"
-									variant="ghost"
-									onClick={(e) => {
-										e.stopPropagation();
-										handleScheduleInAgenda(g);
-									}}
-									title="Plan in agenda"
-								>
-									<LuCalendarPlus className="h-4 w-4" />
-								</Button>
+								<div className="flex items-center gap-1">
+									<Button
+										type="button"
+										size="icon"
+										variant="ghost"
+										className="h-8 w-8"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleScheduleInAgenda(g);
+										}}
+										title="Plan in agenda"
+									>
+										<LuCalendarPlus className="h-4 w-4" />
+									</Button>
+									<Button
+										type="button"
+										size="icon"
+										variant="ghost"
+										className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+										onClick={(e) => {
+											e.stopPropagation();
+											setDeleteDialog(g);
+										}}
+										title="Verwijderen"
+									>
+										<LuTrash2 className="h-4 w-4" />
+									</Button>
+								</div>
 							)
 						: undefined,
 				}}
