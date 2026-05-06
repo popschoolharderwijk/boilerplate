@@ -19,7 +19,7 @@ interface StudentProfile {
 		avatar_url: string | null;
 	};
 	student: {
-		id: string;
+		user_id: string;
 		parent_name: string | null;
 		parent_email: string | null;
 		parent_phone_number: string | null;
