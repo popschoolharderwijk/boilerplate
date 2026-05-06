@@ -58,6 +58,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	students: LuUsers,
 	myStudents: LuUsers,
 	agreements: LuClipboardList,
+	lessonGroups: LuUsers,
 	reports: LuChartBar,
 	manual: LuBookOpen,
 };
