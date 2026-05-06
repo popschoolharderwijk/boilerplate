@@ -646,6 +646,43 @@ export default function LessonGroupWizard() {
 								</p>
 							)}
 						</div>
+						{pendingRequests.length > 0 && (
+							<div>
+								<Label>Aanmeldingen voor deze lessoort</Label>
+								<p className="mb-2 text-xs text-muted-foreground">
+									Selecteer aanmeldingen om bij opslaan een leerling-account aan te maken en direct
+									in deze groep in te schrijven.
+								</p>
+								<div className="space-y-1 rounded-md border p-2">
+									{pendingRequests.map((r) => {
+										const checked = selectedRequestIds.includes(r.id);
+										return (
+											<label
+												key={r.id}
+												className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+											>
+												<input
+													type="checkbox"
+													checked={checked}
+													onChange={(e) =>
+														setSelectedRequestIds((prev) =>
+															e.target.checked
+																? [...prev, r.id]
+																: prev.filter((x) => x !== r.id),
+														)
+													}
+													className="h-4 w-4 rounded border-input"
+												/>
+												<span className="font-medium">
+													{r.first_name} {r.last_name}
+												</span>
+												<span className="text-muted-foreground text-xs">{r.email}</span>
+											</label>
+										);
+									})}
+								</div>
+							</div>
+						)}
 					</div>
 				)}
 
