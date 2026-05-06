@@ -485,6 +485,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			participantNamesByEventId,
 			participantCountByDeviationId,
 			participantNamesByDeviationId,
+			profileMap,
 		],
 	);
 
