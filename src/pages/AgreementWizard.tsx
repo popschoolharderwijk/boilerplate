@@ -764,6 +764,7 @@ export default function AgreementWizard() {
 							selectedTeacher={selectedTeacher}
 							effectiveSlot={effectiveSlot}
 						/>
+						{isEditMode && agreement && <SubscriptionCard lessonAgreementId={agreement.id} />}
 					</div>
 				)}
 			</div>
