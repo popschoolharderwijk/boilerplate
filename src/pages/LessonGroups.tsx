@@ -69,16 +69,34 @@ export default function LessonGroups() {
 				.in('user_id', teacherIds),
 			supabase
 				.from('lesson_group_members')
-				.select('lesson_group_id')
+				.select('lesson_group_id, student_user_id')
 				.in('lesson_group_id', groupIds)
 				.is('left_date', null),
 		]);
 
+		const memberRows = membersRes.data ?? [];
+		const studentIds = [...new Set(memberRows.map((m) => m.student_user_id))];
+		const { data: studentProfiles } = studentIds.length
+			? await supabase
+					.from('view_profiles_with_display_name')
+					.select('user_id, first_name, last_name, email')
+					.in('user_id', studentIds)
+			: { data: [] };
+		const studentMap = new Map((studentProfiles ?? []).map((p) => [p.user_id, p]));
+
 		const lessonTypeMap = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
 		const profileMap = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p]));
-		const memberCounts = new Map<string, number>();
-		for (const m of membersRes.data ?? []) {
-			memberCounts.set(m.lesson_group_id, (memberCounts.get(m.lesson_group_id) ?? 0) + 1);
+		const groupMembers = new Map<string, MemberInfo[]>();
+		for (const m of memberRows) {
+			const arr = groupMembers.get(m.lesson_group_id) ?? [];
+			const sp = studentMap.get(m.student_user_id);
+			arr.push({
+				user_id: m.student_user_id,
+				first_name: sp?.first_name ?? null,
+				last_name: sp?.last_name ?? null,
+				email: sp?.email ?? null,
+			});
+			groupMembers.set(m.lesson_group_id, arr);
 		}
 
 		setRows(
@@ -92,7 +110,7 @@ export default function LessonGroups() {
 					teacher_last_name: teacher?.last_name ?? null,
 					teacher_email: teacher?.email ?? null,
 					teacher_avatar_url: teacher?.avatar_url ?? null,
-					members_count: memberCounts.get(g.id) ?? 0,
+					members: groupMembers.get(g.id) ?? [],
 				};
 			}),
 		);
