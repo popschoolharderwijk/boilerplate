@@ -60,12 +60,14 @@ const sections: ManualSection[] = [
 	{
 		icon: NAV_ICONS.students,
 		title: NAV_LABELS.students,
-		description: 'Beheer leerlinggegevens en bekijk hun lesovereenkomsten.',
+		description: 'Beheer leerlinggegevens en bekijk hun lesovereenkomsten en aanmeldingen.',
 		details: [
-			'Leerlingen overzicht: doorzoek en filter leerlingen op naam, lessoort of status.',
+			'Leerlingen overzicht: doorzoek en filter leerlingen op naam, lessoort of status. De kolommen "Overeenkomsten" en "Aanmeldingen" tonen het aantal per leerling.',
+			'Doorklikken: klik op de naam van een leerling (of op het aantal overeenkomsten/aanmeldingen) om het leerlingdetail te openen met alle gekoppelde overeenkomsten en aanmeldingen.',
+			'Detailpagina: vanuit het leerlingdetail kun je doorklikken naar een specifieke overeenkomst of aanmelding voor de details.',
 			'Leerling toevoegen: maak een nieuwe leerling aan (een leerlingprofiel wordt automatisch aangemaakt zodra een overeenkomst wordt afgesloten).',
 			'Gegevens bewerken: pas contactgegevens, geboortedatum, ouder/verzorger-informatie en debiteurgegevens aan.',
-			'Lesgeschiedenis: bekijk alle actieve en beëindigde lesovereenkomsten van een leerling.',
+			'Mijn profiel (leerlingportal): leerlingen zien hun eigen profiel met gekoppelde overeenkomsten en aanmeldingen via "Mijn profiel" in de sidebar.',
 		],
 	},
 	{
