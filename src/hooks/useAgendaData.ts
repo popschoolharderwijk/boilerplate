@@ -265,6 +265,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 
 			const profilesList: User[] = profilesData ?? [];
 			const profileMap = new Map<string, User>(profilesList.map((p) => [p.user_id, p]));
+			setProfileMap(profileMap);
 
 			const namesByEvent = new Map<string, string[]>();
 			for (const [eventId, userIds] of userIdsByEvent) {
