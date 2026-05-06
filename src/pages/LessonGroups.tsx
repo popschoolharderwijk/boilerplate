@@ -13,13 +13,20 @@ import { addDaysToDateStr } from '@/lib/date/date-format';
 import { frequencyLabels } from '@/lib/frequencies';
 import type { LessonGroupRow } from '@/types/lesson-groups';
 
+interface MemberInfo {
+	user_id: string;
+	first_name: string | null;
+	last_name: string | null;
+	email: string | null;
+}
+
 interface LessonGroupTableRow extends LessonGroupRow {
 	lesson_type_name: string;
 	teacher_first_name: string | null;
 	teacher_last_name: string | null;
 	teacher_email: string | null;
 	teacher_avatar_url: string | null;
-	members_count: number;
+	members: MemberInfo[];
 }
 
 const DAY_LABELS = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
