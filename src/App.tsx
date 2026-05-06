@@ -24,6 +24,7 @@ import PublicSignup from './pages/PublicSignup';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import SignupRequests from './pages/SignupRequests';
+import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
