@@ -19,6 +19,7 @@
 		"lint:sql": "squawk supabase/migrations/*.sql",
 		"reset-db:dev": "bun run scripts/reset-db.ts",
 		"reset-branch:lovable": "bun run scripts/reset-branch-lovable.ts",
+		"test:rls:agreements-and-signups": "bun run scripts/test-rls-agreements-and-signups.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
