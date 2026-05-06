@@ -236,7 +236,7 @@ export default function LessonGroups() {
 				),
 			},
 		],
-		[],
+		[navigate],
 	);
 
 	const confirmDelete = useCallback(async () => {
