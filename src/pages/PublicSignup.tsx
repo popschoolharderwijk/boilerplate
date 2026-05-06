@@ -119,8 +119,22 @@ export default function PublicSignup() {
 			},
 		});
 		setSubmitting(false);
-		if (error || (data && (data as { error?: string }).error)) {
-			setError((data as { error?: string })?.error ?? error?.message ?? 'Er ging iets mis');
+		if (error) {
+			let msg = error.message ?? 'Er ging iets mis';
+			const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+			if (ctx?.json) {
+				try {
+					const body = await ctx.json();
+					if (body?.error) msg = body.error;
+				} catch {
+					// ignore
+				}
+			}
+			setError(msg);
+			return;
+		}
+		if (data && (data as { error?: string }).error) {
+			setError((data as { error?: string }).error ?? 'Er ging iets mis');
 			return;
 		}
 		setDone(true);
