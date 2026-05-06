@@ -140,7 +140,19 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				),
 			];
 
-			const [agreementsResult, projectsResult] = await Promise.all([
+			// Fetch lesson group info for lesson_group events
+			const lessonGroupSourceIds = [
+				...new Set(
+					eventsList
+						.filter(
+							(e): e is AgendaEventRow & { source_id: string } =>
+								e.source_type === 'lesson_group' && e.source_id != null,
+						)
+						.map((e) => e.source_id),
+				),
+			];
+
+			const [agreementsResult, projectsResult, lessonGroupsResult] = await Promise.all([
 				lessonSourceIds.length > 0
 					? supabase
 							.from('lesson_agreements')
@@ -153,6 +165,15 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				projectSourceIds.length > 0
 					? supabase.from('projects').select('id, name').in('id', projectSourceIds)
 					: Promise.resolve<{ data: ProjectInfo[]; error: null }>({ data: [], error: null }),
+				lessonGroupSourceIds.length > 0
+					? supabase
+							.from('lesson_groups')
+							.select('id, name, lesson_types(id, name, icon, color)')
+							.in('id', lessonGroupSourceIds)
+					: Promise.resolve<{
+							data: { id: string; name: string; lesson_types: { id: string; name: string; icon: string | null; color: string | null } | { id: string; name: string; icon: string | null; color: string | null }[] | null }[];
+							error: null;
+						}>({ data: [], error: null }),
 			]);
 
 			const agreementsData: LessonAgreementQuery[] = agreementsResult.data ?? [];
