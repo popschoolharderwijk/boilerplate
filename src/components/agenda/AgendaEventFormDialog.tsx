@@ -22,7 +22,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getDisplayName } from '@/lib/display-name';
 import { frequencyOptions } from '@/lib/frequencies';
-import type { AgendaEventRow, AgendaEventSourceType, CancellationType, DeleteScope, DeviationInfo } from '@/types/agenda-events';
+import type {
+	AgendaEventRow,
+	AgendaEventSourceType,
+	CancellationType,
+	DeleteScope,
+	DeviationInfo,
+} from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 export type { DeleteScope, DeviationInfo } from '@/types/agenda-events';
@@ -150,12 +156,14 @@ export function AgendaEventFormDialog({
 
 	const isManualEvent = (event?.source_type ?? selectedSourceType) === 'manual';
 	const isLessonEvent = event?.source_type === 'lesson_agreement';
+	const isLessonGroupEvent = event?.source_type === 'lesson_group';
 	const isProjectEvent = effectiveSourceType === 'project';
 	const isRecurringEvent = !!event?.recurring;
 	const isCancelledEvent = !!deviationInfo?.isCancelled;
 	const canDelete = (isManualEvent || isProjectEvent) && event?.id && onDelete && !isCancelledEvent;
 	const canRevert = !!deviationInfo && !!onRevert;
-	const canCancelLesson = isLessonEvent && event?.id && (onCancelLesson || onOpenCancelConfirm);
+	const canCancelLesson =
+		(isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -242,7 +250,7 @@ export function AgendaEventFormDialog({
 			<DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
 				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
 					<div className="flex items-center gap-3">
-						{isLessonEvent ? (
+						{isLessonEvent || isLessonGroupEvent ? (
 							<LessonTypeBadge
 								lessonType={lessonType ?? { name: '', icon: null, color }}
 								size="lg"
@@ -257,7 +265,7 @@ export function AgendaEventFormDialog({
 								disabled={isCancelledEvent}
 							/>
 						)}
-						{isLessonEvent ? (
+						{isLessonEvent || isLessonGroupEvent ? (
 							<span className="flex-1 text-lg font-medium">{title}</span>
 						) : (
 							<Input

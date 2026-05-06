@@ -52,6 +52,8 @@ export interface CalendarEventResource {
 	cancellationType?: CancellationType;
 	/** True when teacher cancelled and lesson needs rescheduling */
 	needsReschedule?: boolean;
+	/** For group lessons: ids of participants whose attendance is cancelled for this occurrence */
+	cancelledParticipantIds?: string[];
 }
 
 export interface CalendarEvent extends Event {

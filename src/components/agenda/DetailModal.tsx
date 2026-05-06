@@ -274,7 +274,6 @@ export function DetailModal({
 
 				{isLessonEvent &&
 					canEdit &&
-					!selectedEvent?.resource.isGroupLesson &&
 					onCancelLesson != null &&
 					onOpenCancelConfirm != null && (
 						<DialogFooter>

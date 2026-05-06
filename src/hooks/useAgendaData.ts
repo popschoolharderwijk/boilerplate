@@ -25,6 +25,7 @@ export interface LessonGroupInfo {
 	lessonTypeName: string | null;
 	lessonTypeIcon: string | null;
 	lessonTypeColor: string | null;
+	memberUserIds: string[];
 }
 
 export interface UseAgendaDataResult {
@@ -65,6 +66,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
 	const [projectsMap, setProjectsMap] = useState<Map<string, ProjectInfo>>(new Map());
 	const [lessonGroupsMap, setLessonGroupsMap] = useState<Map<string, LessonGroupInfo>>(new Map());
+	const [profileMap, setProfileMap] = useState<Map<string, User>>(new Map());
 	const [loading, setLoading] = useState(true);
 
 	const loadData = useCallback(
@@ -179,10 +181,20 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				lessonGroupSourceIds.length > 0
 					? supabase
 							.from('lesson_groups')
-							.select('id, name, lesson_types(id, name, icon, color)')
+							.select(
+								'id, name, lesson_types(id, name, icon, color), lesson_group_members(student_user_id, left_date)',
+							)
 							.in('id', lessonGroupSourceIds)
 					: Promise.resolve<{
-							data: { id: string; name: string; lesson_types: { id: string; name: string; icon: string | null; color: string | null } | { id: string; name: string; icon: string | null; color: string | null }[] | null }[];
+							data: {
+								id: string;
+								name: string;
+								lesson_types:
+									| { id: string; name: string; icon: string | null; color: string | null }
+									| { id: string; name: string; icon: string | null; color: string | null }[]
+									| null;
+								lesson_group_members: { student_user_id: string; left_date: string | null }[] | null;
+							}[];
 							error: null;
 						}>({ data: [], error: null }),
 			]);
@@ -198,6 +210,9 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			const newLessonGroupsMap = new Map<string, LessonGroupInfo>(
 				(lessonGroupsResult.data ?? []).map((g) => {
 					const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
+					const members = (g.lesson_group_members ?? [])
+						.filter((m) => m.left_date === null)
+						.map((m) => m.student_user_id);
 					return [
 						g.id,
 						{
@@ -206,6 +221,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 							lessonTypeName: lt?.name ?? null,
 							lessonTypeIcon: lt?.icon ?? null,
 							lessonTypeColor: lt?.color ?? null,
+							memberUserIds: members,
 						},
 					] as const;
 				}),
@@ -226,12 +242,14 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 									.filter((id): id is string => !!id),
 							),
 						];
+			const groupMemberIds = [...new Set([...newLessonGroupsMap.values()].flatMap((g) => g.memberUserIds))];
 			const allProfileIds = [
 				...new Set([
 					...allParticipants.map((p) => p.user_id),
 					...deviationUserIds,
 					...studentUserIds,
 					...teacherUserIds,
+					...groupMemberIds,
 				]),
 			];
 
@@ -245,6 +263,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 
 			const profilesList: User[] = profilesData ?? [];
 			const profileMap = new Map<string, User>(profilesList.map((p) => [p.user_id, p]));
+			setProfileMap(profileMap);
 
 			const namesByEvent = new Map<string, string[]>();
 			for (const [eventId, userIds] of userIdsByEvent) {
@@ -393,8 +412,16 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				if (ev.resource.sourceType === 'lesson_group' && ev.resource.agreementId) {
 					const group = lessonGroupsMap.get(ev.resource.agreementId);
 					if (group) {
-						const count = participantCount ?? 0;
+						const users = group.memberUserIds
+							.map((uid) => profileMap.get(uid))
+							.filter((p): p is User => !!p);
+						const count = users.length || (participantCount ?? 0);
 						const title = count > 0 ? `${group.name} (${count})` : group.name;
+						const deviation =
+							ev.resource.eventId && ev.resource.originalDate
+								? deviationsByEventId.get(ev.resource.eventId)?.get(ev.resource.originalDate)
+								: undefined;
+						const cancelledParticipantIds = deviation?.cancelled_participant_ids ?? undefined;
 						return {
 							...enriched,
 							title,
@@ -405,9 +432,12 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 								lessonTypeName: group.lessonTypeName ?? group.name,
 								lessonTypeColor: enriched.resource.color ?? group.lessonTypeColor,
 								lessonTypeIcon: group.lessonTypeIcon,
-								studentName: group.name,
+								studentName: users.map((u) => getDisplayName(u)).join(', ') || group.name,
 								isGroupLesson: true,
 								studentCount: count,
+								users,
+								isLesson: true,
+								cancelledParticipantIds,
 							},
 						};
 					}
@@ -453,6 +483,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			participantNamesByEventId,
 			participantCountByDeviationId,
 			participantNamesByDeviationId,
+			profileMap,
 		],
 	);
 
