@@ -23,6 +23,7 @@ import {
 } from '@/types/students';
 
 export default function Students() {
+	const navigate = useNavigate();
 	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [requestsByEmail, setRequestsByEmail] = useState<Map<string, SignupRequestDetail[]>>(new Map());
