@@ -16,6 +16,7 @@ export type AgendaEventInsert = Insert<'agenda_events'>;
 export type AgendaEventDeviationInsert = Insert<'agenda_event_deviations'>;
 export type AgendaParticipantInsert = Insert<'agenda_participants'>;
 export type LessonAgreementInsert = Insert<'lesson_agreements'>;
+export type LessonSignupRequestInsert = Insert<'lesson_signup_requests'>;
 export type LessonTypeInsert = Insert<'lesson_types'>;
 export type LessonTypeOptionInsert = Insert<'lesson_type_options'>;
 export type ProfileInsert = Insert<'profiles'>;
