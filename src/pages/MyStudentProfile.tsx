@@ -171,6 +171,38 @@ export default function MyStudentProfile() {
 			});
 
 			setAgreements(transformedAgreements);
+
+			// Load signup requests for this user (matched by profile email)
+			if (profileData?.email) {
+				const { data: reqData } = await supabase
+					.from('lesson_signup_requests')
+					.select('*, lesson_types(name), lesson_groups(name)')
+					.eq('email', profileData.email)
+					.order('created_at', { ascending: false });
+				setSignupRequests(
+					(reqData ?? []).map((r) => {
+						const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
+						const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
+						return {
+							id: r.id,
+							first_name: r.first_name,
+							last_name: r.last_name,
+							email: r.email,
+							phone_number: r.phone_number,
+							parent_name: r.parent_name,
+							parent_email: r.parent_email,
+							parent_phone_number: r.parent_phone_number,
+							date_of_birth: r.date_of_birth,
+							notes: r.notes,
+							status: r.status,
+							created_at: r.created_at,
+							processed_at: r.processed_at,
+							lesson_type_name: lt?.name ?? null,
+							lesson_group_name: lg?.name ?? null,
+						};
+					}),
+				);
+			}
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading profile:', error);
