@@ -141,10 +141,12 @@ Deno.serve(async (req) => {
 
 	let createdAgreementId: string | null = null;
 
-	if (reqRow.lesson_group_id) {
+	const targetGroupId = body.override_lesson_group_id ?? reqRow.lesson_group_id;
+
+	if (targetGroupId) {
 		// Add to group; trigger creates the lesson_agreement
 		const { error: memberErr } = await admin.from('lesson_group_members').insert({
-			lesson_group_id: reqRow.lesson_group_id,
+			lesson_group_id: targetGroupId,
 			student_user_id: studentUserId,
 		});
 		if (memberErr && !memberErr.message?.includes('duplicate')) {
@@ -154,7 +156,7 @@ Deno.serve(async (req) => {
 		const { data: ag } = await admin
 			.from('lesson_agreements')
 			.select('id')
-			.eq('lesson_group_id', reqRow.lesson_group_id)
+			.eq('lesson_group_id', targetGroupId)
 			.eq('student_user_id', studentUserId)
 			.eq('is_active', true)
 			.maybeSingle();
@@ -167,6 +169,7 @@ Deno.serve(async (req) => {
 				processed_by: user.id,
 				processed_at: new Date().toISOString(),
 				created_agreement_id: createdAgreementId,
+				lesson_group_id: targetGroupId,
 			})
 			.eq('id', reqRow.id);
 	}
@@ -176,6 +179,6 @@ Deno.serve(async (req) => {
 	return json(200, {
 		student_user_id: studentUserId,
 		created_agreement_id: createdAgreementId,
-		status: reqRow.lesson_group_id ? 'approved' : 'pending',
+		status: targetGroupId ? 'approved' : 'pending',
 	});
 });
