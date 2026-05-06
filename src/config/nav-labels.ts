@@ -33,6 +33,7 @@ export const NAV_LABELS = {
 	students: 'Leerlingen',
 	myStudents: 'Mijn leerlingen',
 	agreements: 'Overeenkomsten',
+	lessonGroups: 'Groepslessen',
 	reports: 'Rapportage',
 	manual: 'Handleiding',
 } as const;
@@ -57,6 +58,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	students: LuUsers,
 	myStudents: LuUsers,
 	agreements: LuClipboardList,
+	lessonGroups: LuUsers,
 	reports: LuChartBar,
 	manual: LuBookOpen,
 };
