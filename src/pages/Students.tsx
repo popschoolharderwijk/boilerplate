@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { type SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
 import { Badge } from '@/components/ui/badge';
