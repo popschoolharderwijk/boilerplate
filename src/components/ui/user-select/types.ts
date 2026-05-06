@@ -8,6 +8,8 @@ export type UserFilter = 'all' | 'students' | 'teachers' | AppRole;
 export interface UserSelectBaseProps {
 	filter?: UserFilter;
 	excludeUserIds?: string[];
+	/** When set, only users whose user_id is in this list are shown. */
+	includeUserIds?: string[];
 	placeholder?: string;
 	disabled?: boolean;
 	className?: string;
