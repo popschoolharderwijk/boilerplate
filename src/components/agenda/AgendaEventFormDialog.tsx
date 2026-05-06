@@ -243,7 +243,7 @@ export function AgendaEventFormDialog({
 			<DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
 				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
 					<div className="flex items-center gap-3">
-						{isLessonEvent ? (
+						{isLessonEvent || isLessonGroupEvent ? (
 							<LessonTypeBadge
 								lessonType={lessonType ?? { name: '', icon: null, color }}
 								size="lg"
@@ -258,7 +258,7 @@ export function AgendaEventFormDialog({
 								disabled={isCancelledEvent}
 							/>
 						)}
-						{isLessonEvent ? (
+						{isLessonEvent || isLessonGroupEvent ? (
 							<span className="flex-1 text-lg font-medium">{title}</span>
 						) : (
 							<Input
