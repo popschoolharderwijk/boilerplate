@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
 		return json(400, { error: 'Invalid JSON' });
 	}
 	if (!body.request_id || !UUID_RE.test(body.request_id)) return json(400, { error: 'Ongeldig request id' });
+	if (body.override_lesson_group_id != null && !UUID_RE.test(body.override_lesson_group_id)) {
+		return json(400, { error: 'Ongeldig groep id' });
+	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
