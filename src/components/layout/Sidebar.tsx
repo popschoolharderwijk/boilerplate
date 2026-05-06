@@ -30,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 	const { isAdmin, isSiteAdmin, isPrivileged, isTeacher } = useAuth();
+	const isStudent = !isPrivileged && !isTeacher;
 	const { hasOwnedProjects, isLoading: ownedProjectsLoading } = useHasOwnedProjects();
 	const showAdminNav = isAdmin || isSiteAdmin;
 	const showTeachersNav = isAdmin || isSiteAdmin;
@@ -127,6 +128,16 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 										href="/students/my-students"
 										label={NAV_LABELS.myStudents}
 										icon={NAV_ICONS.myStudents}
+										collapsed={collapsed}
+									/>
+								)}
+
+								{/* Student-only: My Profile */}
+								{isStudent && (
+									<NavItem
+										href="/students/my-profile"
+										label={NAV_LABELS.myProfile}
+										icon={NAV_ICONS.myProfile}
 										collapsed={collapsed}
 									/>
 								)}
