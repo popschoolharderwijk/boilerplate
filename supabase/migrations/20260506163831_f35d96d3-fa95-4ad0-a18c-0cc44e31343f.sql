@@ -1,0 +1,2 @@
+ALTER TABLE public.lesson_agreements DROP CONSTRAINT IF EXISTS lesson_agreements_price_per_lesson_check;
+ALTER TABLE public.lesson_agreements ADD CONSTRAINT lesson_agreements_price_per_lesson_check CHECK (price_per_lesson >= 0);
