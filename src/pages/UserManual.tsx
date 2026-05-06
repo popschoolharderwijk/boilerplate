@@ -46,6 +46,16 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.lessonGroups,
+		title: NAV_LABELS.lessonGroups,
+		description: 'Beheer groepslessen en de leerlingen die eraan deelnemen.',
+		details: [
+			'Groepsles aanmaken: geef een naam op en koppel een lessoort dat als groepsles gemarkeerd is.',
+			'Deelnemers: bekijk per groepsles welke leerlingen deelnemen. Klik op een leerling om naar het leerlingdetail te navigeren.',
+			'Aantal leerlingen: het overzicht toont per groep het aantal deelnemers.',
+		],
+	},
+	{
 		icon: NAV_ICONS.teachers,
 		title: NAV_LABELS.teachers,
 		description: 'Beheer het docentenbestand en hun beschikbaarheid.',
