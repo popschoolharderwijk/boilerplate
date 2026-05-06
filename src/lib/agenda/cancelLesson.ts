@@ -13,12 +13,14 @@ export interface CancelLessonParams {
 	agreementsMap: Map<string, AgendaAgreementLike>;
 	scope: RecurrenceScope;
 	cancellationType?: CancellationType;
+	/** When provided (group lessons): cancel only these participants. Empty/undefined = whole occurrence. */
+	cancelledParticipantIds?: string[] | null;
 }
 
 export type CancelLessonResult = { ok: true; message: string } | { ok: false; message: string };
 
 export async function cancelLesson(params: CancelLessonParams): Promise<CancelLessonResult> {
-	const { selectedEvent, agendaEvents, agreementsMap, scope, cancellationType } = params;
+	const { selectedEvent, agendaEvents, agreementsMap, scope, cancellationType, cancelledParticipantIds } = params;
 	const needsReschedule = cancellationType === 'teacher';
 	const eventId = selectedEvent.resource.eventId;
 	if (!eventId) return { ok: false, message: 'Geen afspraak' };
@@ -42,7 +44,9 @@ export async function cancelLesson(params: CancelLessonParams): Promise<CancelLe
 		originalStartTime = normalizeTime(baseStartTime);
 	}
 
-	if (selectedEvent.resource.isCancelled && isExistingDeviation) {
+	const isPartialCancel = !!cancelledParticipantIds && cancelledParticipantIds.length > 0;
+
+	if (selectedEvent.resource.isCancelled && isExistingDeviation && !isPartialCancel) {
 		const { error } = await supabase
 			.from('agenda_event_deviations')
 			.delete()
@@ -55,16 +59,17 @@ export async function cancelLesson(params: CancelLessonParams): Promise<CancelLe
 		const { error } = await supabase
 			.from('agenda_event_deviations')
 			.update({
-				is_cancelled: true,
+				is_cancelled: !isPartialCancel,
 				actual_date: originalDateStr,
 				actual_start_time: originalStartTime,
 				spans_future_occurrences: recurring,
 				cancellation_type: cancellationType ?? null,
-				needs_reschedule: needsReschedule,
+				needs_reschedule: !isPartialCancel && needsReschedule,
+				cancelled_participant_ids: isPartialCancel ? cancelledParticipantIds : null,
 			})
 			.eq('id', selectedEvent.resource.deviationId);
 		if (error) return { ok: false, message: 'Fout bij annuleren les' };
-		return { ok: true, message: 'Les geannuleerd' };
+		return { ok: true, message: isPartialCancel ? 'Deelnemer(s) geannuleerd' : 'Les geannuleerd' };
 	}
 
 	const { error } = await supabase.from('agenda_event_deviations').insert({
@@ -73,11 +78,12 @@ export async function cancelLesson(params: CancelLessonParams): Promise<CancelLe
 		original_start_time: originalStartTime,
 		actual_date: originalDateStr,
 		actual_start_time: originalStartTime,
-		is_cancelled: true,
+		is_cancelled: !isPartialCancel,
 		spans_future_occurrences: recurring,
 		cancellation_type: cancellationType ?? null,
-		needs_reschedule: needsReschedule,
+		needs_reschedule: !isPartialCancel && needsReschedule,
+		cancelled_participant_ids: isPartialCancel ? cancelledParticipantIds : null,
 	});
 	if (error) return { ok: false, message: 'Fout bij annuleren les' };
-	return { ok: true, message: 'Les geannuleerd' };
+	return { ok: true, message: isPartialCancel ? 'Deelnemer(s) geannuleerd' : 'Les geannuleerd' };
 }
