@@ -104,6 +104,7 @@ export default function LessonGroupWizard() {
 	const [partialOpen, setPartialOpen] = useState(false);
 
 	const [memberIds, setMemberIds] = useState<string[]>([]);
+	const [eligibleStudentIds, setEligibleStudentIds] = useState<string[]>([]);
 	const [scheduleInAgenda, setScheduleInAgenda] = useState(true);
 
 	// ----- reference data -----
@@ -202,6 +203,22 @@ export default function LessonGroupWizard() {
 					};
 				}),
 			);
+		})();
+	}, [lessonTypeId]);
+
+	// load students who signed up for this lesson type (have an agreement of this type)
+	useEffect(() => {
+		if (!lessonTypeId) {
+			setEligibleStudentIds([]);
+			return;
+		}
+		(async () => {
+			const { data } = await supabase
+				.from('lesson_agreements')
+				.select('student_user_id')
+				.eq('lesson_type_id', lessonTypeId);
+			const ids = Array.from(new Set((data ?? []).map((a) => a.student_user_id)));
+			setEligibleStudentIds(ids);
 		})();
 	}, [lessonTypeId]);
 
@@ -565,7 +582,12 @@ export default function LessonGroupWizard() {
 								value={memberIds}
 								onChange={(users) => setMemberIds(users.map((u) => u.user_id))}
 								filter="students"
-								placeholder="Voeg leerlingen toe..."
+								includeUserIds={eligibleStudentIds}
+								placeholder={
+									eligibleStudentIds.length === 0
+										? 'Geen leerlingen aangemeld voor deze lessoort'
+										: 'Voeg leerlingen toe...'
+								}
 							/>
 							<p className="mt-2 text-xs text-muted-foreground">
 								Geselecteerd: {memberIds.length} {memberIds.length === 1 ? 'leerling' : 'leerlingen'}
