@@ -3,7 +3,7 @@ import { LuArrowLeft } from 'react-icons/lu';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
-import { type SignupRequestDetail } from '@/components/students/SignupRequestDialog';
+import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { SignupRequestItem } from '@/components/students/SignupRequestItem';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
