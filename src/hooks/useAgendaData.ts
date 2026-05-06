@@ -25,6 +25,7 @@ export interface LessonGroupInfo {
 	lessonTypeName: string | null;
 	lessonTypeIcon: string | null;
 	lessonTypeColor: string | null;
+	memberUserIds: string[];
 }
 
 export interface UseAgendaDataResult {
