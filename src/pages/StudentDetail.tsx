@@ -195,9 +195,12 @@ export default function StudentDetail() {
 					{agreements.length === 0 ? (
 						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten</p>
 					) : (
-						<div className="flex flex-wrap gap-2">
+						<div className="space-y-4">
 							{agreements.map((a) => (
-								<LessonAgreementItem key={a.id} agreement={a} />
+								<div key={a.id} className="space-y-2">
+									<LessonAgreementItem agreement={a} />
+									<SubscriptionCard lessonAgreementId={a.id} />
+								</div>
 							))}
 						</div>
 					)}
