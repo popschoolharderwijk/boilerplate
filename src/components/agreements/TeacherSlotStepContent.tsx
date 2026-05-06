@@ -137,7 +137,7 @@ export function TeacherSlotStepContent({
 							return;
 						}
 						const teacher = teachers.find((t) => t.userId === user.user_id);
-						onTeacherChange(teacher?.id ?? null);
+						onTeacherChange(teacher?.id ?? user.user_id);
 					}}
 					excludeUserIds={excludeUserIds}
 					placeholder="Selecteer docent..."
