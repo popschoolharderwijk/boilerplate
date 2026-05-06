@@ -6,6 +6,7 @@ import {
 	LuClipboardList,
 	LuFolderOpen,
 	LuGraduationCap,
+	LuInbox,
 	LuLayoutDashboard,
 	LuMusic2,
 	LuSettings,
@@ -34,6 +35,7 @@ export const NAV_LABELS = {
 	myStudents: 'Mijn leerlingen',
 	agreements: 'Overeenkomsten',
 	lessonGroups: 'Groepslessen',
+	signupRequests: 'Aanmeldingen',
 	reports: 'Rapportage',
 	manual: 'Handleiding',
 } as const;
@@ -59,6 +61,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	myStudents: LuUsers,
 	agreements: LuClipboardList,
 	lessonGroups: LuUsers,
+	signupRequests: LuInbox,
 	reports: LuChartBar,
 	manual: LuBookOpen,
 };
