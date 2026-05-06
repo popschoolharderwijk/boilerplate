@@ -247,8 +247,25 @@ export default function Students() {
 					);
 				},
 			},
+			{
+				key: 'signup_requests',
+				label: 'Aanmeldingen',
+				render: (s) => {
+					const reqs = s.email ? requestsByEmail.get(s.email) ?? [] : [];
+					if (reqs.length === 0) {
+						return <span className="text-muted-foreground text-sm">-</span>;
+					}
+					return (
+						<div className="flex flex-wrap gap-2">
+							{reqs.map((r) => (
+								<SignupRequestItem key={r.id} request={r} className="flex-shrink-0" />
+							))}
+						</div>
+					);
+				},
+			},
 		],
-		[],
+		[requestsByEmail],
 	);
 
 	const handleEdit = useCallback((student: StudentWithAgreements) => {
