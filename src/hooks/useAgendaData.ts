@@ -19,6 +19,14 @@ export interface LessonAgreementWithTeacher extends LessonAgreementWithStudent {
 	} | null;
 }
 
+export interface LessonGroupInfo {
+	id: string;
+	name: string;
+	lessonTypeName: string | null;
+	lessonTypeIcon: string | null;
+	lessonTypeColor: string | null;
+}
+
 export interface UseAgendaDataResult {
 	agendaEvents: AgendaEventRow[];
 	deviations: AgendaEventDeviationRow[];
@@ -28,6 +36,7 @@ export interface UseAgendaDataResult {
 	participantCountByEventId: Map<string, number>;
 	participantNamesByEventId: Map<string, string[]>;
 	projectsMap: Map<string, ProjectInfo>;
+	lessonGroupsMap: Map<string, LessonGroupInfo>;
 	loading: boolean;
 	loadData: (showLoading?: boolean) => Promise<void>;
 	getEnrichedEvents: (currentDate: Date, effectiveUserId: string | undefined) => CalendarEvent[];
@@ -55,6 +64,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	);
 	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
 	const [projectsMap, setProjectsMap] = useState<Map<string, ProjectInfo>>(new Map());
+	const [lessonGroupsMap, setLessonGroupsMap] = useState<Map<string, LessonGroupInfo>>(new Map());
 	const [loading, setLoading] = useState(true);
 
 	const loadData = useCallback(
@@ -76,6 +86,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				setParticipantNamesByDeviationId(new Map());
 				setAgreements([]);
 				setProjectsMap(new Map());
+				setLessonGroupsMap(new Map());
 				setLoading(false);
 				return;
 			}
@@ -140,7 +151,19 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				),
 			];
 
-			const [agreementsResult, projectsResult] = await Promise.all([
+			// Fetch lesson group info for lesson_group events
+			const lessonGroupSourceIds = [
+				...new Set(
+					eventsList
+						.filter(
+							(e): e is AgendaEventRow & { source_id: string } =>
+								e.source_type === 'lesson_group' && e.source_id != null,
+						)
+						.map((e) => e.source_id),
+				),
+			];
+
+			const [agreementsResult, projectsResult, lessonGroupsResult] = await Promise.all([
 				lessonSourceIds.length > 0
 					? supabase
 							.from('lesson_agreements')
@@ -153,6 +176,15 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				projectSourceIds.length > 0
 					? supabase.from('projects').select('id, name').in('id', projectSourceIds)
 					: Promise.resolve<{ data: ProjectInfo[]; error: null }>({ data: [], error: null }),
+				lessonGroupSourceIds.length > 0
+					? supabase
+							.from('lesson_groups')
+							.select('id, name, lesson_types(id, name, icon, color)')
+							.in('id', lessonGroupSourceIds)
+					: Promise.resolve<{
+							data: { id: string; name: string; lesson_types: { id: string; name: string; icon: string | null; color: string | null } | { id: string; name: string; icon: string | null; color: string | null }[] | null }[];
+							error: null;
+						}>({ data: [], error: null }),
 			]);
 
 			const agreementsData: LessonAgreementQuery[] = agreementsResult.data ?? [];
@@ -161,6 +193,24 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			// Build projects map
 			const newProjectsMap = new Map<string, ProjectInfo>((projectsResult.data ?? []).map((p) => [p.id, p]));
 			setProjectsMap(newProjectsMap);
+
+			// Build lesson groups map
+			const newLessonGroupsMap = new Map<string, LessonGroupInfo>(
+				(lessonGroupsResult.data ?? []).map((g) => {
+					const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
+					return [
+						g.id,
+						{
+							id: g.id,
+							name: g.name,
+							lessonTypeName: lt?.name ?? null,
+							lessonTypeIcon: lt?.icon ?? null,
+							lessonTypeColor: lt?.color ?? null,
+						},
+					] as const;
+				}),
+			);
+			setLessonGroupsMap(newLessonGroupsMap);
 
 			const studentUserIds =
 				agreementsError || agreementsData.length === 0
@@ -340,6 +390,29 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 					}
 				}
 
+				if (ev.resource.sourceType === 'lesson_group' && ev.resource.agreementId) {
+					const group = lessonGroupsMap.get(ev.resource.agreementId);
+					if (group) {
+						const count = participantCount ?? 0;
+						const title = count > 0 ? `${group.name} (${count})` : group.name;
+						return {
+							...enriched,
+							title,
+							resource: {
+								...enriched.resource,
+								lessonGroupId: group.id,
+								lessonGroupName: group.name,
+								lessonTypeName: group.lessonTypeName ?? group.name,
+								lessonTypeColor: enriched.resource.color ?? group.lessonTypeColor,
+								lessonTypeIcon: group.lessonTypeIcon,
+								studentName: group.name,
+								isGroupLesson: true,
+								studentCount: count,
+							},
+						};
+					}
+				}
+
 				if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return enriched;
 				const agreement = agreementsMap.get(ev.resource.agreementId);
 				if (!agreement) return enriched;
@@ -375,6 +448,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			recurringByEventId,
 			agreementsMap,
 			projectsMap,
+			lessonGroupsMap,
 			participantCountByEventId,
 			participantNamesByEventId,
 			participantCountByDeviationId,
@@ -391,6 +465,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 		participantCountByEventId,
 		participantNamesByEventId,
 		projectsMap,
+		lessonGroupsMap,
 		loading,
 		loadData,
 		getEnrichedEvents,

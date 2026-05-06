@@ -24,6 +24,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 		needsReschedule,
 	} = event.resource;
 	const hasMultipleParticipants = (participantCount ?? 0) > 1;
+	const isLessonGroupEvent = sourceType === 'lesson_group';
 	const isLessonEvent = isLesson || sourceType === 'lesson_agreement';
 	const isProjectEvent = sourceType === 'project';
 	const isTeacherCancelled = isCancelled && cancellationType === 'teacher';
@@ -73,14 +74,21 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 						aria-hidden
 					/>
 				)}
-				{isLessonEvent && !isProjectEvent && (
+				{isLessonGroupEvent && (
+					<LuUsers
+						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
+						title="Groepsles"
+						aria-hidden
+					/>
+				)}
+				{isLessonEvent && !isProjectEvent && !isLessonGroupEvent && (
 					<LuMusic
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Les"
 						aria-hidden
 					/>
 				)}
-				{!isLessonEvent && !isProjectEvent && hasMultipleParticipants && (
+				{!isLessonEvent && !isProjectEvent && !isLessonGroupEvent && hasMultipleParticipants && (
 					<LuUsers
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Meerdere deelnemers"
