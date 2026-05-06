@@ -24,7 +24,7 @@ export type AgendaEventSourceType = Enums<'agenda_event_source_type'>;
 export type CancellationType = 'student' | 'teacher';
 
 /** Runtime values for agenda_event_source_type (must match DB enum). */
-const AGENDA_EVENT_SOURCE_TYPE_VALUES: readonly string[] = ['manual', 'lesson_agreement', 'project'];
+const AGENDA_EVENT_SOURCE_TYPE_VALUES: readonly string[] = ['manual', 'lesson_agreement', 'project', 'lesson_group'];
 
 /** Narrow string (e.g. from Select) to {@link AgendaEventSourceType}. */
 export function isAgendaEventSourceType(v: string): v is AgendaEventSourceType {
