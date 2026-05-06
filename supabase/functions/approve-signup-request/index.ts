@@ -10,6 +10,8 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 interface Body {
 	request_id: string;
+	/** Optional: enroll the student in this group instead of the one originally requested. */
+	override_lesson_group_id?: string | null;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
