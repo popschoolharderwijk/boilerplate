@@ -276,6 +276,122 @@ export type Database = {
           },
         ]
       }
+      lesson_group_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          joined_date: string
+          left_date: string | null
+          lesson_group_id: string
+          student_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          joined_date?: string
+          left_date?: string | null
+          lesson_group_id: string
+          student_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          joined_date?: string
+          left_date?: string | null
+          lesson_group_id?: string
+          student_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_group_members_lesson_group_id_fkey"
+            columns: ["lesson_group_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day_of_week: number
+          duration_minutes: number
+          end_date: string | null
+          frequency: Database["public"]["Enums"]["lesson_frequency"]
+          id: string
+          is_active: boolean
+          lesson_type_id: string
+          name: string
+          price_per_lesson: number
+          start_date: string
+          start_time: string
+          teacher_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week: number
+          duration_minutes: number
+          end_date?: string | null
+          frequency: Database["public"]["Enums"]["lesson_frequency"]
+          id?: string
+          is_active?: boolean
+          lesson_type_id: string
+          name: string
+          price_per_lesson?: number
+          start_date: string
+          start_time: string
+          teacher_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week?: number
+          duration_minutes?: number
+          end_date?: string | null
+          frequency?: Database["public"]["Enums"]["lesson_frequency"]
+          id?: string
+          is_active?: boolean
+          lesson_type_id?: string
+          name?: string
+          price_per_lesson?: number
+          start_date?: string
+          start_time?: string
+          teacher_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_groups_lesson_type_id_fkey"
+            columns: ["lesson_type_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_groups_teacher_user_id_fkey"
+            columns: ["teacher_user_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       lesson_type_options: {
         Row: {
           created_at: string
@@ -801,6 +917,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_lesson_group_teacher: { Args: { _group_id: string }; Returns: string }
       get_public_function_pronames: { Args: never; Returns: string[] }
       get_public_table_names: {
         Args: never
@@ -859,6 +976,10 @@ export type Database = {
         Args: { ev_id: string; uid: string }
         Returns: boolean
       }
+      is_lesson_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_privileged: { Args: never; Returns: boolean }
       is_site_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
@@ -872,6 +993,10 @@ export type Database = {
       shift_recurring_deviation_to_next_week: {
         Args: { p_deviation_id: string }
         Returns: string
+      }
+      sync_lesson_group_event_participants: {
+        Args: { _event_id: string }
+        Returns: undefined
       }
     }
     Enums: {
