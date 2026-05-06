@@ -342,6 +342,25 @@ export default function MyStudentProfile() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Signup requests */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Aanmeldingen</CardTitle>
+					<CardDescription>Jouw aanmeldingen voor lessen</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{signupRequests.length === 0 ? (
+						<p className="text-sm text-muted-foreground">Geen aanmeldingen gevonden</p>
+					) : (
+						<div className="flex flex-wrap gap-2">
+							{signupRequests.map((r) => (
+								<SignupRequestItem key={r.id} request={r} />
+							))}
+						</div>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }
