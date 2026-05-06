@@ -582,7 +582,12 @@ export default function LessonGroupWizard() {
 								value={memberIds}
 								onChange={(users) => setMemberIds(users.map((u) => u.user_id))}
 								filter="students"
-								placeholder="Voeg leerlingen toe..."
+								includeUserIds={eligibleStudentIds}
+								placeholder={
+									eligibleStudentIds.length === 0
+										? 'Geen leerlingen aangemeld voor deze lessoort'
+										: 'Voeg leerlingen toe...'
+								}
 							/>
 							<p className="mt-2 text-xs text-muted-foreground">
 								Geselecteerd: {memberIds.length} {memberIds.length === 1 ? 'leerling' : 'leerlingen'}
