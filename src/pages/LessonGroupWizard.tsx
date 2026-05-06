@@ -538,6 +538,7 @@ export default function LessonGroupWizard() {
 							<TeacherSlotStepContent
 								teachers={teachers}
 								selectedTeacher={selectedTeacher}
+								includeUserIds={teachers.map((t) => t.userId)}
 								slotsWithStatus={slots}
 								selectedSlot={slot}
 								loadingStep3={loadingSlots}
