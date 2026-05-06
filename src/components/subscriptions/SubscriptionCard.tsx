@@ -1,0 +1,146 @@
+import { useState } from 'react';
+import { LuCreditCard, LuExternalLink, LuRefreshCw } from 'react-icons/lu';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDbDateToUi } from '@/lib/date/date-format';
+import {
+	SUBSCRIPTION_STATUS_LABELS,
+	SUBSCRIPTION_STATUS_VARIANTS,
+	type SubscriptionStatus,
+} from '@/types/subscriptions';
+
+interface SubscriptionCardProps {
+	lessonAgreementId: string;
+	/** When true, hides the "Start incasso" action (e.g. on student-facing views). */
+	hideStartAction?: boolean;
+}
+
+function formatCents(amount: number, currency: string): string {
+	return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: currency.toUpperCase() }).format(
+		amount / 100,
+	);
+}
+
+export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }: SubscriptionCardProps) {
+	const { isPrivileged } = useAuth();
+	const { subscription, invoices, loading, refresh } = useSubscription(lessonAgreementId);
+	const [busy, setBusy] = useState(false);
+
+	const handleStartCheckout = async () => {
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		if (error || (data as { error?: string })?.error) {
+			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon incasso niet starten');
+			return;
+		}
+		const url = (data as { url?: string })?.url;
+		if (url) window.location.href = url;
+	};
+
+	const handleOpenPortal = async () => {
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('create-customer-portal', {
+			body: {},
+		});
+		setBusy(false);
+		if (error || (data as { error?: string })?.error) {
+			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon portaal niet openen');
+			return;
+		}
+		const url = (data as { url?: string })?.url;
+		if (url) window.open(url, '_blank', 'noopener,noreferrer');
+	};
+
+	const status = subscription?.status as SubscriptionStatus | undefined;
+
+	return (
+		<Card>
+			<CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+				<CardTitle className="flex items-center gap-2 text-base">
+					<LuCreditCard className="h-4 w-4" />
+					Incasso & abonnement
+				</CardTitle>
+				<Button variant="ghost" size="sm" onClick={() => void refresh()} disabled={loading || busy}>
+					<LuRefreshCw className="h-4 w-4" />
+				</Button>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				{!subscription && !loading && (
+					<div className="flex flex-col gap-3">
+						<p className="text-sm text-muted-foreground">Nog geen abonnement gekoppeld aan deze lesovereenkomst.</p>
+						{!hideStartAction && isPrivileged && (
+							<Button onClick={handleStartCheckout} disabled={busy} className="w-fit">
+								Start incasso
+							</Button>
+						)}
+					</div>
+				)}
+
+				{subscription && status && (
+					<div className="space-y-3">
+						<div className="flex items-center gap-2">
+							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>{SUBSCRIPTION_STATUS_LABELS[status]}</Badge>
+							{subscription.default_payment_method_brand && (
+								<span className="text-xs text-muted-foreground">
+									via {subscription.default_payment_method_brand.replace('_', ' ')}
+								</span>
+							)}
+						</div>
+
+						{subscription.current_period_end && (
+							<p className="text-sm text-muted-foreground">
+								Huidige periode tot {formatDbDateToUi(subscription.current_period_end.split('T')[0])}
+							</p>
+						)}
+
+						<div className="flex flex-wrap gap-2">
+							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
+								Beheer betaling
+							</Button>
+						</div>
+
+						{invoices.length > 0 && (
+							<div className="border-t pt-3">
+								<p className="mb-2 text-sm font-medium">Facturen</p>
+								<ul className="space-y-1.5">
+									{invoices.slice(0, 6).map((inv) => (
+										<li key={inv.id} className="flex items-center justify-between gap-2 text-sm">
+											<span className="text-muted-foreground">
+												{inv.period_start ? formatDbDateToUi(inv.period_start.split('T')[0]) : '—'}
+											</span>
+											<span className="flex items-center gap-2">
+												<span>{formatCents(inv.amount_due, inv.currency)}</span>
+												<Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className="text-xs">
+													{inv.status}
+												</Badge>
+												{inv.hosted_invoice_url && (
+													<a
+														href={inv.hosted_invoice_url}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="text-primary hover:underline"
+														aria-label="Open factuur"
+													>
+														<LuExternalLink className="h-3.5 w-3.5" />
+													</a>
+												)}
+											</span>
+										</li>
+									))}
+								</ul>
+							</div>
+						)}
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
