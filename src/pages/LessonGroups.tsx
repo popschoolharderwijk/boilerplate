@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuCalendarPlus, LuPlus, LuTrash2 } from 'react-icons/lu';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LessonGroupFormDialog } from '@/components/lesson-groups/LessonGroupFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -30,13 +29,10 @@ export default function LessonGroups() {
 	const canView = isAdmin || isSiteAdmin || isPrivileged || isTeacher;
 	const canEdit = isAdmin || isSiteAdmin || isPrivileged;
 
+	const navigate = useNavigate();
 	const [rows, setRows] = useState<LessonGroupTableRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
-	const [formDialog, setFormDialog] = useState<{ open: boolean; group: LessonGroupRow | null }>({
-		open: false,
-		group: null,
-	});
 	const [deleteDialog, setDeleteDialog] = useState<LessonGroupRow | null>(null);
 
 	const load = useCallback(async () => {
@@ -100,41 +96,38 @@ export default function LessonGroups() {
 		if (!isLoading) load();
 	}, [isLoading, load]);
 
-	const handleScheduleInAgenda = useCallback(
-		async (group: LessonGroupTableRow) => {
-			// Compute the first occurrence date (>= start_date matching day_of_week)
-			const start = new Date(group.start_date + 'T12:00:00');
-			const offset = (group.day_of_week - start.getDay() + 7) % 7;
-			const firstDateStr = addDaysToDateStr(group.start_date, offset);
-			const endTime = (() => {
-				const [h, m] = group.start_time.split(':').map(Number);
-				const total = h * 60 + (m ?? 0) + group.duration_minutes;
-				const eh = Math.floor(total / 60) % 24;
-				const em = total % 60;
-				return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`;
-			})();
-			const { error } = await supabase.from('agenda_events').insert({
-				source_type: 'lesson_group',
-				source_id: group.id,
-				owner_user_id: group.teacher_user_id,
-				title: group.name,
-				start_date: firstDateStr,
-				start_time: group.start_time,
-				end_date: firstDateStr,
-				end_time: endTime,
-				is_all_day: false,
-				recurring: true,
-				recurring_frequency: group.frequency,
-				recurring_end_date: group.end_date,
-			});
-			if (error) {
-				toast.error('Plannen mislukt', { description: error.message });
-				return;
-			}
-			toast.success('Lesgroep ingepland in agenda');
-		},
-		[],
-	);
+	const handleScheduleInAgenda = useCallback(async (group: LessonGroupTableRow) => {
+		// Compute the first occurrence date (>= start_date matching day_of_week)
+		const start = new Date(group.start_date + 'T12:00:00');
+		const offset = (group.day_of_week - start.getDay() + 7) % 7;
+		const firstDateStr = addDaysToDateStr(group.start_date, offset);
+		const endTime = (() => {
+			const [h, m] = group.start_time.split(':').map(Number);
+			const total = h * 60 + (m ?? 0) + group.duration_minutes;
+			const eh = Math.floor(total / 60) % 24;
+			const em = total % 60;
+			return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`;
+		})();
+		const { error } = await supabase.from('agenda_events').insert({
+			source_type: 'lesson_group',
+			source_id: group.id,
+			owner_user_id: group.teacher_user_id,
+			title: group.name,
+			start_date: firstDateStr,
+			start_time: group.start_time,
+			end_date: firstDateStr,
+			end_time: endTime,
+			is_all_day: false,
+			recurring: true,
+			recurring_frequency: group.frequency,
+			recurring_end_date: group.end_date,
+		});
+		if (error) {
+			toast.error('Plannen mislukt', { description: error.message });
+			return;
+		}
+		toast.success('Lesgroep ingepland in agenda');
+	}, []);
 
 	const columns: DataTableColumn<LessonGroupTableRow>[] = useMemo(
 		() => [
@@ -188,9 +181,7 @@ export default function LessonGroups() {
 				sortable: true,
 				sortValue: (g) => (g.is_active ? 1 : 0),
 				render: (g) => (
-					<Badge variant={g.is_active ? 'default' : 'secondary'}>
-						{g.is_active ? 'Actief' : 'Inactief'}
-					</Badge>
+					<Badge variant={g.is_active ? 'default' : 'secondary'}>{g.is_active ? 'Actief' : 'Inactief'}</Badge>
 				),
 			},
 		],
@@ -228,14 +219,14 @@ export default function LessonGroups() {
 				initialSortDirection="asc"
 				headerActions={
 					canEdit ? (
-						<Button onClick={() => setFormDialog({ open: true, group: null })}>
+						<Button onClick={() => navigate('/lesson-groups/new')}>
 							<LuPlus className="mr-2 h-4 w-4" />
 							Nieuwe lesgroep
 						</Button>
 					) : undefined
 				}
 				rowActions={{
-					onEdit: canEdit ? (g) => setFormDialog({ open: true, group: g }) : undefined,
+					onEdit: canEdit ? (g) => navigate(`/lesson-groups/${g.id}`) : undefined,
 					render: canEdit
 						? (g) => (
 								<div className="flex items-center gap-1">
@@ -269,12 +260,6 @@ export default function LessonGroups() {
 							)
 						: undefined,
 				}}
-			/>
-			<LessonGroupFormDialog
-				open={formDialog.open}
-				onOpenChange={(open) => !open && setFormDialog({ open: false, group: null })}
-				group={formDialog.group}
-				onSaved={load}
 			/>
 			{deleteDialog && (
 				<ConfirmDeleteDialog
