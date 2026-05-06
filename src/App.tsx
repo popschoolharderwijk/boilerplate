@@ -26,6 +26,7 @@ import Settings from './pages/Settings';
 import SignupRequests from './pages/SignupRequests';
 import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
+import Subscriptions from './pages/Subscriptions';
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
 import Teachers from './pages/Teachers';
@@ -67,6 +68,7 @@ const App = () => (
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/aanmeldingen" element={<SignupRequests />} />
+						<Route path="/abonnementen" element={<Subscriptions />} />
 						<Route path="/settings" element={<Settings />} />
 						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />
