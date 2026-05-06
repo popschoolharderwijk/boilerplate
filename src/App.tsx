@@ -56,6 +56,7 @@ const App = () => (
 						<Route path="/lesson-types/new" element={<LessonTypeInfo />} />
 						<Route path="/lesson-types/:id" element={<LessonTypeInfo />} />
 						<Route path="/agreements" element={<Agreements />} />
+						<Route path="/lesson-groups" element={<LessonGroups />} />
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/settings" element={<Settings />} />
