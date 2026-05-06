@@ -194,6 +194,24 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			const newProjectsMap = new Map<string, ProjectInfo>((projectsResult.data ?? []).map((p) => [p.id, p]));
 			setProjectsMap(newProjectsMap);
 
+			// Build lesson groups map
+			const newLessonGroupsMap = new Map<string, LessonGroupInfo>(
+				(lessonGroupsResult.data ?? []).map((g) => {
+					const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
+					return [
+						g.id,
+						{
+							id: g.id,
+							name: g.name,
+							lessonTypeName: lt?.name ?? null,
+							lessonTypeIcon: lt?.icon ?? null,
+							lessonTypeColor: lt?.color ?? null,
+						},
+					] as const;
+				}),
+			);
+			setLessonGroupsMap(newLessonGroupsMap);
+
 			const studentUserIds =
 				agreementsError || agreementsData.length === 0
 					? []
