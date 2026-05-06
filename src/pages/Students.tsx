@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { type SignupRequestDetail } from '@/components/students/SignupRequestDialog';
-import { SignupRequestItem } from '@/components/students/SignupRequestItem';
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -23,6 +22,7 @@ import {
 } from '@/types/students';
 
 export default function Students() {
+	const navigate = useNavigate();
 	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [requestsByEmail, setRequestsByEmail] = useState<Map<string, SignupRequestDetail[]>>(new Map());
@@ -203,9 +203,20 @@ export default function Students() {
 			{
 				key: 'student',
 				label: 'Leerling',
-				sortable: true, // Server-side sorting
+				sortable: true,
 				className: 'w-64 max-w-64',
-				render: (s) => <UserDisplay profile={s} showEmail />,
+				render: (s) => (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							navigate(`/students/${s.user_id}`);
+						}}
+						className="text-left hover:underline"
+					>
+						<UserDisplay profile={s} showEmail />
+					</button>
+				),
 			},
 			{
 				key: 'phone_number',
@@ -227,45 +238,42 @@ export default function Students() {
 			},
 			{
 				key: 'agreements',
-				label: 'Lesovereenkomsten',
+				label: 'Overeenkomsten',
 				sortable: true,
-				className: '',
-				render: (s) => {
-					if (s.agreements.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
-					return (
-						<div className="flex flex-wrap gap-2">
-							{s.agreements.map((agreement) => (
-								<LessonAgreementItem
-									key={agreement.id}
-									agreement={agreement}
-									className="flex-shrink-0"
-								/>
-							))}
-						</div>
-					);
-				},
+				render: (s) => (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							navigate(`/students/${s.user_id}`);
+						}}
+						className="text-sm hover:underline"
+					>
+						{s.agreements.length} {s.agreements.length === 1 ? 'overeenkomst' : 'overeenkomsten'}
+					</button>
+				),
 			},
 			{
 				key: 'signup_requests',
 				label: 'Aanmeldingen',
 				render: (s) => {
-					const reqs = s.email ? requestsByEmail.get(s.email) ?? [] : [];
-					if (reqs.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
+					const count = s.email ? requestsByEmail.get(s.email)?.length ?? 0 : 0;
 					return (
-						<div className="flex flex-wrap gap-2">
-							{reqs.map((r) => (
-								<SignupRequestItem key={r.id} request={r} className="flex-shrink-0" />
-							))}
-						</div>
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								navigate(`/students/${s.user_id}`);
+							}}
+							className="text-sm hover:underline"
+						>
+							{count} {count === 1 ? 'aanmelding' : 'aanmeldingen'}
+						</button>
 					);
 				},
 			},
 		],
-		[requestsByEmail],
+		[requestsByEmail, navigate],
 	);
 
 	const handleEdit = useCallback((student: StudentWithAgreements) => {

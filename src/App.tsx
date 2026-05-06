@@ -24,6 +24,7 @@ import PublicSignup from './pages/PublicSignup';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import SignupRequests from './pages/SignupRequests';
+import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
@@ -77,6 +78,7 @@ const App = () => (
 						<Route path="/students" element={<Students />} />
 						<Route path="/students/my-students" element={<MyStudents />} />
 						<Route path="/students/my-profile" element={<MyStudentProfile />} />
+						<Route path="/students/:userId" element={<StudentDetail />} />
 						<Route path="/reports" element={<Reports />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
