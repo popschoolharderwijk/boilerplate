@@ -579,25 +579,43 @@ export default function AgreementWizard() {
 			end_date: form.endDate || null,
 		};
 
-		const { error } = agreement
-			? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id)
-			: await supabase.from('lesson_agreements').insert({
-					...payload,
-					student_user_id: form.studentUserId,
-					lesson_type_id: form.lessonTypeId,
-					duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
-					frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
-					price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
-					is_active: true,
-				});
+		const insertResult = agreement
+			? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id).select('id').maybeSingle()
+			: await supabase
+					.from('lesson_agreements')
+					.insert({
+						...payload,
+						student_user_id: form.studentUserId,
+						lesson_type_id: form.lessonTypeId,
+						duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
+						frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
+						price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
+						is_active: true,
+						signup_source: fromRequestId ? 'public_form' : 'staff',
+					})
+					.select('id')
+					.single();
 
 		setSaving(false);
-		if (error) {
-			toast.error(error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
+		if (insertResult.error) {
+			toast.error(insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
 			return;
 		}
+
+		// If coming from a public signup request, mark it approved
+		if (fromRequestId && !agreement && insertResult.data?.id) {
+			await supabase
+				.from('lesson_signup_requests')
+				.update({
+					status: 'approved',
+					processed_at: new Date().toISOString(),
+					created_agreement_id: insertResult.data.id,
+				})
+				.eq('id', fromRequestId);
+		}
+
 		toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
-		navigate('/agreements');
+		navigate(fromRequestId ? '/aanmeldingen' : '/agreements');
 	};
 
 	if (loadingAgreement) {
