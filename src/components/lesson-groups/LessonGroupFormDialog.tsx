@@ -235,7 +235,7 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 							<UserSelectSingle
 								value={teacherUserId}
 								onChange={(u) => setTeacherUserId(u?.user_id ?? null)}
-								filter="teacher"
+								filter="teachers"
 								placeholder="Kies docent"
 							/>
 						</div>
@@ -257,7 +257,7 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{LESSON_FREQUENCIES.map((f) => (
+									{frequencyOptions.map((f) => (
 										<SelectItem key={f.value} value={f.value}>
 											{f.label}
 										</SelectItem>
