@@ -8,7 +8,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDateTimeShort } from '@/lib/date/date-format';
+import { formatDbDateLong } from '@/lib/date/date-format';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Row = Tables<'lesson_signup_requests'> & {
@@ -105,12 +105,12 @@ export default function SignupRequests() {
 		() => [
 			{
 				key: 'created_at',
-				header: 'Ontvangen',
-				render: (r) => <span className="text-sm">{formatDateTimeShort(r.created_at)}</span>,
+				label: 'Ontvangen',
+				render: (r) => <span className="text-sm">{formatDbDateLong(r.created_at)}</span>,
 			},
 			{
 				key: 'name',
-				header: 'Aanmelder',
+				label: 'Aanmelder',
 				render: (r) => (
 					<div>
 						<div className="font-medium">
@@ -122,7 +122,7 @@ export default function SignupRequests() {
 			},
 			{
 				key: 'type',
-				header: 'Lessoort',
+				label: 'Lessoort',
 				render: (r) => (
 					<div>
 						<div>{r.lesson_type_name}</div>
@@ -136,7 +136,7 @@ export default function SignupRequests() {
 			},
 			{
 				key: 'status',
-				header: 'Status',
+				label: 'Status',
 				render: (r) => (
 					<Badge variant={r.status === 'pending' ? 'default' : r.status === 'approved' ? 'secondary' : 'outline'}>
 						{r.status}
@@ -145,7 +145,7 @@ export default function SignupRequests() {
 			},
 			{
 				key: 'actions',
-				header: '',
+				label: '',
 				render: (r) =>
 					r.status === 'pending' ? (
 						<div className="flex gap-2 justify-end">
@@ -176,7 +176,7 @@ export default function SignupRequests() {
 					Alle
 				</Button>
 			</div>
-			<DataTable columns={columns} data={rows} loading={loading} getRowKey={(r) => r.id} />
+			<DataTable title="Aanmeldingen" columns={columns} data={rows} loading={loading} getRowKey={(r) => r.id} />
 		</>
 	);
 }
