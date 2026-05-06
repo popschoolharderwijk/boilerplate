@@ -19,7 +19,7 @@ interface StudentProfile {
 		avatar_url: string | null;
 	};
 	student: {
-		id: string;
+		user_id: string;
 		parent_name: string | null;
 		parent_email: string | null;
 		parent_phone_number: string | null;
@@ -48,7 +48,7 @@ export default function MyStudentProfile() {
 			const { data: studentData, error: studentError } = await supabase
 				.from('students')
 				.select(
-					'id, parent_name, parent_email, parent_phone_number, debtor_info_same_as_student, debtor_name, debtor_address, debtor_postal_code, debtor_city',
+					'user_id, parent_name, parent_email, parent_phone_number, debtor_info_same_as_student, debtor_name, debtor_address, debtor_postal_code, debtor_city',
 				)
 				.eq('user_id', user.id)
 				.single();
