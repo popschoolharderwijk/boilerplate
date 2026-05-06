@@ -341,8 +341,14 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 			<ConfirmCancelDialog
 				open={cancelLessonConfirmOpen}
 				onOpenChange={setCancelLessonConfirmOpen}
-				onConfirm={(cancellationType) => handleCancelLesson(pendingCancelScope, cancellationType)}
+				onConfirm={(cancellationType, cancelledIds) =>
+					handleCancelLesson(pendingCancelScope, cancellationType, cancelledIds)
+				}
 				disabled={isCancelling}
+				participants={
+					selectedEvent?.resource.isGroupLesson ? (selectedEvent.resource.users ?? []) : undefined
+				}
+				initialCancelledIds={selectedEvent?.resource.cancelledParticipantIds ?? null}
 			/>
 
 			<StudentInfoModal
