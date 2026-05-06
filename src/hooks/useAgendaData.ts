@@ -86,6 +86,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				setParticipantNamesByDeviationId(new Map());
 				setAgreements([]);
 				setProjectsMap(new Map());
+				setLessonGroupsMap(new Map());
 				setLoading(false);
 				return;
 			}
