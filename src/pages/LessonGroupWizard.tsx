@@ -403,6 +403,21 @@ export default function LessonGroupWizard() {
 				}
 			}
 
+			// Approve any selected pending signup requests into this group
+			if (selectedRequestIds.length > 0) {
+				const results = await Promise.all(
+					selectedRequestIds.map((rid) =>
+						supabase.functions.invoke('approve-signup-request', {
+							body: { request_id: rid, override_lesson_group_id: groupId },
+						}),
+					),
+				);
+				const failed = results.filter((r) => r.error).length;
+				if (failed > 0) {
+					toast.error(`Kon ${failed} aanmelding(en) niet goedkeuren`);
+				}
+			}
+
 			// Schedule into agenda (only on create + opt-in)
 			if (!isEditMode && scheduleInAgenda) {
 				const start = new Date(startDate + 'T12:00:00');
