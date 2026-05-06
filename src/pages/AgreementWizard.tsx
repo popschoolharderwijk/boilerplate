@@ -321,6 +321,10 @@ function useTeachers(step: WizardStep, lessonTypeId: string | null) {
 
 export default function AgreementWizard() {
 	const { id } = useParams<{ id: string }>();
+	const [searchParams] = useSearchParams();
+	const fromRequestId = searchParams.get('fromRequest');
+	const prefillStudentUserId = searchParams.get('studentUserId');
+	const prefillLessonTypeId = searchParams.get('lessonTypeId');
 	const navigate = useNavigate();
 	const { setBreadcrumbSuffix } = useBreadcrumb();
 
