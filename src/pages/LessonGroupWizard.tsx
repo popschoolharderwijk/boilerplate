@@ -105,6 +105,10 @@ export default function LessonGroupWizard() {
 
 	const [memberIds, setMemberIds] = useState<string[]>([]);
 	const [eligibleStudentIds, setEligibleStudentIds] = useState<string[]>([]);
+	const [pendingRequests, setPendingRequests] = useState<
+		{ id: string; first_name: string; last_name: string; email: string }[]
+	>([]);
+	const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
 	const [scheduleInAgenda, setScheduleInAgenda] = useState(true);
 
 	// ----- reference data -----
