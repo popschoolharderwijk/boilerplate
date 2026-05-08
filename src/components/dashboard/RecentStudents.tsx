@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { LuUsers } from 'react-icons/lu';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

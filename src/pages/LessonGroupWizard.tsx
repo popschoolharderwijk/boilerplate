@@ -650,8 +650,8 @@ export default function LessonGroupWizard() {
 							<div>
 								<Label>Aanmeldingen voor deze lessoort</Label>
 								<p className="mb-2 text-xs text-muted-foreground">
-									Selecteer aanmeldingen om bij opslaan een leerling-account aan te maken en direct
-									in deze groep in te schrijven.
+									Selecteer aanmeldingen om bij opslaan een leerling-account aan te maken en direct in
+									deze groep in te schrijven.
 								</p>
 								<div className="space-y-1 rounded-md border p-2">
 									{pendingRequests.map((r) => {

@@ -181,7 +181,7 @@ function ReportsDataTable({
 						<span className="text-muted-foreground">—</span>
 					) : (
 						<Badge
-					variant={
+							variant={
 								row.age_category === 'under_21'
 									? 'secondary'
 									: row.age_category === '21_plus'
@@ -245,7 +245,7 @@ function ReportsDataTable({
 				label: 'Leeftijd',
 				value: tableAgeCategory,
 				options: [
-				{ id: 'under_21', label: 'Onder 21' },
+					{ id: 'under_21', label: 'Onder 21' },
 					{ id: '21_plus', label: '21+' },
 				],
 				onChange: onTableAgeCategoryChange,

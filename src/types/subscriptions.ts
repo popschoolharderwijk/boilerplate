@@ -25,7 +25,10 @@ export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
 	paused: 'Gepauzeerd',
 };
 
-export const SUBSCRIPTION_STATUS_VARIANTS: Record<SubscriptionStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+export const SUBSCRIPTION_STATUS_VARIANTS: Record<
+	SubscriptionStatus,
+	'default' | 'secondary' | 'destructive' | 'outline'
+> = {
 	trialing: 'secondary',
 	active: 'default',
 	past_due: 'destructive',

@@ -23,10 +23,7 @@ const ALLOWED_STATUSES = new Set([
 	'paused',
 ]);
 
-async function upsertSubscription(
-	admin: ReturnType<typeof createClient>,
-	sub: Stripe.Subscription,
-): Promise<void> {
+async function upsertSubscription(admin: ReturnType<typeof createClient>, sub: Stripe.Subscription): Promise<void> {
 	const lessonAgreementId = sub.metadata?.lesson_agreement_id;
 	if (!lessonAgreementId) {
 		console.warn('subscription without lesson_agreement_id metadata', sub.id);
@@ -47,12 +44,15 @@ async function upsertSubscription(
 			stripe_subscription_id: sub.id,
 			stripe_price_id: priceId,
 			status,
-			current_period_start: sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null,
+			current_period_start: sub.current_period_start
+				? new Date(sub.current_period_start * 1000).toISOString()
+				: null,
 			current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
 			cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
 			canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
 			default_payment_method_brand: pmBrand,
-			latest_invoice_id: typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
+			latest_invoice_id:
+				typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
 		},
 		{ onConflict: 'stripe_subscription_id' },
 	);
@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
 			case 'checkout.session.completed': {
 				const session = event.data.object as Stripe.Checkout.Session;
 				if (session.mode === 'subscription' && session.subscription) {
-					const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
+					const subId =
+						typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
 					const sub = await stripe.subscriptions.retrieve(subId, { expand: ['default_payment_method'] });
 					await upsertSubscription(admin, sub);
 				}

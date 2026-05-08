@@ -21,9 +21,7 @@ interface SubscriptionCardProps {
 }
 
 function formatCents(amount: number, currency: string): string {
-	return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: currency.toUpperCase() }).format(
-		amount / 100,
-	);
+	return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: currency.toUpperCase() }).format(amount / 100);
 }
 
 export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }: SubscriptionCardProps) {
@@ -75,7 +73,9 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 			<CardContent className="space-y-4">
 				{!subscription && !loading && (
 					<div className="flex flex-col gap-3">
-						<p className="text-sm text-muted-foreground">Nog geen abonnement gekoppeld aan deze lesovereenkomst.</p>
+						<p className="text-sm text-muted-foreground">
+							Nog geen abonnement gekoppeld aan deze lesovereenkomst.
+						</p>
 						{!hideStartAction && isPrivileged && (
 							<Button onClick={handleStartCheckout} disabled={busy} className="w-fit">
 								Start incasso
@@ -87,7 +87,9 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 				{subscription && status && (
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
-							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>{SUBSCRIPTION_STATUS_LABELS[status]}</Badge>
+							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
+								{SUBSCRIPTION_STATUS_LABELS[status]}
+							</Badge>
 							{subscription.default_payment_method_brand && (
 								<span className="text-xs text-muted-foreground">
 									via {subscription.default_payment_method_brand.replace('_', ' ')}
@@ -114,11 +116,16 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 									{invoices.slice(0, 6).map((inv) => (
 										<li key={inv.id} className="flex items-center justify-between gap-2 text-sm">
 											<span className="text-muted-foreground">
-												{inv.period_start ? formatDbDateToUi(inv.period_start.split('T')[0]) : '—'}
+												{inv.period_start
+													? formatDbDateToUi(inv.period_start.split('T')[0])
+													: '—'}
 											</span>
 											<span className="flex items-center gap-2">
 												<span>{formatCents(inv.amount_due, inv.currency)}</span>
-												<Badge variant={inv.status === 'paid' ? 'default' : 'secondary'} className="text-xs">
+												<Badge
+													variant={inv.status === 'paid' ? 'default' : 'secondary'}
+													className="text-xs"
+												>
 													{inv.status}
 												</Badge>
 												{inv.hosted_invoice_url && (

@@ -151,8 +151,12 @@ export function generateRecurringEvents(
 								originalStartTime: deviation.original_start_time,
 								reason: deviation.reason,
 								isRecurring: !!deviation.spans_future_occurrences,
-								cancellationType: (deviation as AgendaEventDeviationRow & { cancellation_type?: CancellationType }).cancellation_type ?? undefined,
-								needsReschedule: (deviation as AgendaEventDeviationRow & { needs_reschedule?: boolean }).needs_reschedule ?? false,
+								cancellationType:
+									(deviation as AgendaEventDeviationRow & { cancellation_type?: CancellationType })
+										.cancellation_type ?? undefined,
+								needsReschedule:
+									(deviation as AgendaEventDeviationRow & { needs_reschedule?: boolean })
+										.needs_reschedule ?? false,
 							},
 						});
 						addInterval(currentLessonDate, frequency);
@@ -215,8 +219,15 @@ export function generateRecurringEvents(
 								originalStartTime: recurringDeviation.original_start_time,
 								reason: recurringDeviation.reason,
 								isRecurring: true,
-								cancellationType: (recurringDeviation as AgendaEventDeviationRow & { cancellation_type?: CancellationType }).cancellation_type ?? undefined,
-								needsReschedule: (recurringDeviation as AgendaEventDeviationRow & { needs_reschedule?: boolean }).needs_reschedule ?? false,
+								cancellationType:
+									(
+										recurringDeviation as AgendaEventDeviationRow & {
+											cancellation_type?: CancellationType;
+										}
+									).cancellation_type ?? undefined,
+								needsReschedule:
+									(recurringDeviation as AgendaEventDeviationRow & { needs_reschedule?: boolean })
+										.needs_reschedule ?? false,
 							},
 						});
 						addInterval(currentLessonDate, frequency);
@@ -433,8 +444,14 @@ export function generateAgendaEvents(
 					sourceType,
 					color: displayColor,
 					isLesson: isLessonEvent,
-					cancellationType: effective ? ((effective as AgendaEventDeviationRow & { cancellation_type?: CancellationType }).cancellation_type ?? undefined) : undefined,
-					needsReschedule: effective ? ((effective as AgendaEventDeviationRow & { needs_reschedule?: boolean }).needs_reschedule ?? false) : false,
+					cancellationType: effective
+						? ((effective as AgendaEventDeviationRow & { cancellation_type?: CancellationType })
+								.cancellation_type ?? undefined)
+						: undefined,
+					needsReschedule: effective
+						? ((effective as AgendaEventDeviationRow & { needs_reschedule?: boolean }).needs_reschedule ??
+							false)
+						: false,
 				},
 			});
 

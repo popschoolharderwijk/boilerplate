@@ -8,8 +8,8 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDbDateLong } from '@/lib/date/date-format';
 import type { Tables } from '@/integrations/supabase/types';
+import { formatDbDateLong } from '@/lib/date/date-format';
 
 type Row = Tables<'lesson_signup_requests'> & {
 	lesson_type_name: string | null;
@@ -98,7 +98,9 @@ export default function SignupRequests() {
 			return;
 		}
 		const studentUserId = (data as { student_user_id?: string })?.student_user_id;
-		navigate(`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`);
+		navigate(
+			`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`,
+		);
 	};
 
 	const columns: DataTableColumn<Row>[] = useMemo(
@@ -138,7 +140,9 @@ export default function SignupRequests() {
 				key: 'status',
 				label: 'Status',
 				render: (r) => (
-					<Badge variant={r.status === 'pending' ? 'default' : r.status === 'approved' ? 'secondary' : 'outline'}>
+					<Badge
+						variant={r.status === 'pending' ? 'default' : r.status === 'approved' ? 'secondary' : 'outline'}
+					>
 						{r.status}
 					</Badge>
 				),
@@ -167,12 +171,24 @@ export default function SignupRequests() {
 
 	return (
 		<>
-			<PageHeader icon={<LuInbox className="h-6 w-6" />} title="Aanmeldingen" subtitle="Publieke aanmeldingen verwerken" />
+			<PageHeader
+				icon={<LuInbox className="h-6 w-6" />}
+				title="Aanmeldingen"
+				subtitle="Publieke aanmeldingen verwerken"
+			/>
 			<div className="mt-6 flex gap-2 mb-3">
-				<Button size="sm" variant={statusFilter === 'pending' ? 'default' : 'outline'} onClick={() => setStatusFilter('pending')}>
+				<Button
+					size="sm"
+					variant={statusFilter === 'pending' ? 'default' : 'outline'}
+					onClick={() => setStatusFilter('pending')}
+				>
 					Open
 				</Button>
-				<Button size="sm" variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')}>
+				<Button
+					size="sm"
+					variant={statusFilter === 'all' ? 'default' : 'outline'}
+					onClick={() => setStatusFilter('all')}
+				>
 					Alle
 				</Button>
 			</div>

@@ -61,20 +61,11 @@ export function useDashboardData() {
 				teacherListRes,
 			] = await Promise.all([
 				supabase.from('students').select('*', { count: 'exact', head: true }),
-				supabase
-					.from('lesson_agreements')
-					.select('*', { count: 'exact', head: true })
-					.eq('is_active', true),
+				supabase.from('lesson_agreements').select('*', { count: 'exact', head: true }).eq('is_active', true),
 				supabase.from('lesson_agreements').select('*', { count: 'exact', head: true }),
-				supabase
-					.from('teachers')
-					.select('*', { count: 'exact', head: true })
-					.eq('is_active', true),
+				supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('is_active', true),
 				supabase.from('teacher_availability').select('*', { count: 'exact', head: true }),
-				supabase
-					.from('lesson_types')
-					.select('*', { count: 'exact', head: true })
-					.eq('is_active', true),
+				supabase.from('lesson_types').select('*', { count: 'exact', head: true }).eq('is_active', true),
 				supabase.rpc('get_students_paginated', {
 					p_limit: 5,
 					p_offset: 0,
@@ -126,9 +117,7 @@ export function useDashboardData() {
 						.in('teacher_user_id', teacherUserIds),
 				]);
 
-				const profileMap = new Map(
-					(profilesRes.data ?? []).map((p) => [p.user_id, p]),
-				);
+				const profileMap = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p]));
 
 				// Count availability per teacher
 				const availCountMap = new Map<string, number>();
@@ -139,8 +128,8 @@ export function useDashboardData() {
 				// Group lesson type names per teacher
 				const ltMap = new Map<string, string[]>();
 				for (const tlt of tltRes.data ?? []) {
-				const lt = tlt.lesson_types as unknown as { name: string } | null;
-				const name = lt?.name;
+					const lt = tlt.lesson_types as unknown as { name: string } | null;
+					const name = lt?.name;
 					if (name) {
 						const arr = ltMap.get(tlt.teacher_user_id) ?? [];
 						arr.push(name);

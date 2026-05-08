@@ -45,11 +45,9 @@ Deno.serve(async (req) => {
 	if (!body.first_name?.trim() || !body.last_name?.trim()) return bad('Naam is verplicht');
 	if (!body.email || !EMAIL_RE.test(body.email)) return bad('Ongeldig e-mailadres');
 
-	const supabase = createClient(
-		Deno.env.get('SUPABASE_URL') ?? '',
-		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-		{ auth: { autoRefreshToken: false, persistSession: false } },
-	);
+	const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
+		auth: { autoRefreshToken: false, persistSession: false },
+	});
 
 	// Validate lesson_type exists and is active
 	const { data: lt } = await supabase
@@ -65,8 +63,7 @@ Deno.serve(async (req) => {
 			.select('id, lesson_type_id, is_active')
 			.eq('id', body.lesson_group_id)
 			.single();
-		if (!lg?.is_active || lg.lesson_type_id !== body.lesson_type_id)
-			return bad('Groep niet beschikbaar', 404);
+		if (!lg?.is_active || lg.lesson_type_id !== body.lesson_type_id) return bad('Groep niet beschikbaar', 404);
 	}
 
 	const { data, error } = await supabase

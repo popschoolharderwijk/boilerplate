@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { LuGraduationCap } from 'react-icons/lu';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,7 +77,11 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 										<div className="flex flex-wrap gap-1 mt-0.5">
 											{teacher.lessonTypeNames.length > 0 ? (
 												teacher.lessonTypeNames.map((name) => (
-													<Badge key={name} variant="secondary" className="text-[10px] px-1.5 py-0">
+													<Badge
+														key={name}
+														variant="secondary"
+														className="text-[10px] px-1.5 py-0"
+													>
 														{name}
 													</Badge>
 												))
