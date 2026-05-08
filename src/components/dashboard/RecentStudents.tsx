@@ -95,7 +95,7 @@ export function RecentStudents({ students, isLoading = false }: RecentStudentsPr
 										{student.created_at ? formatDateTimeShort(new Date(student.created_at)) : ''}
 									</span>
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				)}

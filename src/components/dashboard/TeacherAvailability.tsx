@@ -93,7 +93,7 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 									<span className="text-sm font-medium">{teacher.availableSlotCount}</span>
 									<p className="text-[10px] text-muted-foreground">slots</p>
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				)}
