@@ -163,7 +163,7 @@ export default function SignupRequests() {
 					) : null,
 			},
 		],
-		[busyId],
+		[busyId, process, reject],
 	);
 
 	if (isLoading) return null;

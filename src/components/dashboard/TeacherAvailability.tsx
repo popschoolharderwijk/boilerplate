@@ -58,13 +58,11 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 				) : (
 					<div className="space-y-3">
 						{teachers.map((teacher) => (
-							<div
+							<button
 								key={teacher.user_id}
-								className="flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors"
+								type="button"
+								className="w-full flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors text-left"
 								onClick={() => navigate(`/teachers/${teacher.user_id}`)}
-								onKeyDown={(e) => e.key === 'Enter' && navigate(`/teachers/${teacher.user_id}`)}
-								role="button"
-								tabIndex={0}
 							>
 								<div className="flex items-center gap-3">
 									<Avatar className="h-9 w-9">
