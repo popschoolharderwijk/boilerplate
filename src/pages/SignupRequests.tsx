@@ -56,26 +56,43 @@ export default function SignupRequests() {
 		if (isPrivileged) load();
 	}, [isPrivileged, load]);
 
-	const reject = async (row: Row) => {
-		if (!confirm('Aanmelding afwijzen?')) return;
-		setBusyId(row.id);
-		const { error } = await supabase
-			.from('lesson_signup_requests')
-			.update({ status: 'rejected', processed_at: new Date().toISOString() })
-			.eq('id', row.id);
-		setBusyId(null);
-		if (error) {
-			toast.error('Kon niet afwijzen');
-			return;
-		}
-		toast.success('Aanmelding afgewezen');
-		load();
-	};
+	const reject = useCallback(
+		async (row: Row) => {
+			if (!confirm('Aanmelding afwijzen?')) return;
+			setBusyId(row.id);
+			const { error } = await supabase
+				.from('lesson_signup_requests')
+				.update({ status: 'rejected', processed_at: new Date().toISOString() })
+				.eq('id', row.id);
+			setBusyId(null);
+			if (error) {
+				toast.error('Kon niet afwijzen');
+				return;
+			}
+			toast.success('Aanmelding afgewezen');
+			load();
+		},
+		[load],
+	);
 
-	const process = async (row: Row) => {
-		setBusyId(row.id);
-		// For group requests we approve via edge function (creates user/student/membership)
-		if (row.is_group_lesson && row.lesson_group_id) {
+	const process = useCallback(
+		async (row: Row) => {
+			setBusyId(row.id);
+			// For group requests we approve via edge function (creates user/student/membership)
+			if (row.is_group_lesson && row.lesson_group_id) {
+				const { data, error } = await supabase.functions.invoke('approve-signup-request', {
+					body: { request_id: row.id },
+				});
+				setBusyId(null);
+				if (error || (data as { error?: string })?.error) {
+					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
+					return;
+				}
+				toast.success('Aanmelding verwerkt');
+				load();
+				return;
+			}
+			// For individual / waitlist: create user via edge function then open AgreementWizard
 			const { data, error } = await supabase.functions.invoke('approve-signup-request', {
 				body: { request_id: row.id },
 			});
@@ -84,24 +101,13 @@ export default function SignupRequests() {
 				toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
 				return;
 			}
-			toast.success('Aanmelding verwerkt');
-			load();
-			return;
-		}
-		// For individual / waitlist: create user via edge function then open AgreementWizard
-		const { data, error } = await supabase.functions.invoke('approve-signup-request', {
-			body: { request_id: row.id },
-		});
-		setBusyId(null);
-		if (error || (data as { error?: string })?.error) {
-			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
-			return;
-		}
-		const studentUserId = (data as { student_user_id?: string })?.student_user_id;
-		navigate(
-			`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`,
-		);
-	};
+			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
+			navigate(
+				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`,
+			);
+		},
+		[load, navigate],
+	);
 
 	const columns: DataTableColumn<Row>[] = useMemo(
 		() => [
