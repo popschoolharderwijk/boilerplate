@@ -136,11 +136,7 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 					if (error) throw error;
 					groupId = group.id;
 				} else {
-					const { data, error } = await supabase
-						.from('lesson_groups')
-						.insert(payload)
-						.select('id')
-						.single();
+					const { data, error } = await supabase.from('lesson_groups').insert(payload).select('id').single();
 					if (error) throw error;
 					groupId = data.id;
 				}
@@ -205,8 +201,8 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 				<DialogHeader>
 					<DialogTitle>{group ? 'Lesgroep bewerken' : 'Nieuwe lesgroep'}</DialogTitle>
 					<DialogDescription>
-						Bundel leerlingen die samen een groepsles volgen. Deelnemers verschijnen automatisch in
-						hun agenda zodra de groep ingepland is.
+						Bundel leerlingen die samen een groepsles volgen. Deelnemers verschijnen automatisch in hun
+						agenda zodra de groep ingepland is.
 					</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSave} className="grid gap-4 py-2">
@@ -279,10 +275,7 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 					<div className="grid grid-cols-3 gap-4">
 						<div>
 							<Label>Dag</Label>
-							<Select
-								value={String(dayOfWeek)}
-								onValueChange={(v) => setDayOfWeek(Number(v))}
-							>
+							<Select value={String(dayOfWeek)} onValueChange={(v) => setDayOfWeek(Number(v))}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
@@ -297,11 +290,7 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 						</div>
 						<div>
 							<Label>Starttijd</Label>
-							<Input
-								type="time"
-								value={startTime}
-								onChange={(e) => setStartTime(e.target.value)}
-							/>
+							<Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
 						</div>
 						<div>
 							<Label>Status</Label>
@@ -322,19 +311,11 @@ export function LessonGroupFormDialog({ open, onOpenChange, group, onSaved }: Le
 					<div className="grid grid-cols-2 gap-4">
 						<div>
 							<Label>Startdatum</Label>
-							<Input
-								type="date"
-								value={startDate}
-								onChange={(e) => setStartDate(e.target.value)}
-							/>
+							<Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
 						</div>
 						<div>
 							<Label>Einddatum (optioneel)</Label>
-							<Input
-								type="date"
-								value={endDate}
-								onChange={(e) => setEndDate(e.target.value)}
-							/>
+							<Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
 						</div>
 					</div>
 					<div>

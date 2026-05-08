@@ -80,7 +80,9 @@ Deno.serve(async (req) => {
 				current_period_start: sub.current_period_start
 					? new Date(sub.current_period_start * 1000).toISOString()
 					: null,
-				current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+				current_period_end: sub.current_period_end
+					? new Date(sub.current_period_end * 1000).toISOString()
+					: null,
 				cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
 				canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
 				default_payment_method_brand: pmBrand,

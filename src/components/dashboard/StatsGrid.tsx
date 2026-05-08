@@ -1,12 +1,5 @@
+import { LuCalendar, LuClock, LuFileText, LuGraduationCap, LuMusic, LuUsers } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
-import {
-	LuCalendar,
-	LuClock,
-	LuFileText,
-	LuGraduationCap,
-	LuMusic,
-	LuUsers,
-} from 'react-icons/lu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardStats } from '@/hooks/useDashboardData';

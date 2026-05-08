@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { LuUsers } from 'react-icons/lu';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -72,13 +72,11 @@ export function RecentStudents({ students, isLoading = false }: RecentStudentsPr
 				) : (
 					<div className="space-y-3">
 						{students.map((student) => (
-							<div
+							<button
 								key={student.user_id}
-								className="flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors"
+								type="button"
+								className="w-full flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors text-left"
 								onClick={() => navigate('/students')}
-								onKeyDown={(e) => e.key === 'Enter' && navigate('/students')}
-								role="button"
-								tabIndex={0}
 							>
 								<div className="flex items-center gap-3">
 									<Avatar className="h-9 w-9">
@@ -97,7 +95,7 @@ export function RecentStudents({ students, isLoading = false }: RecentStudentsPr
 										{student.created_at ? formatDateTimeShort(new Date(student.created_at)) : ''}
 									</span>
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				)}

@@ -70,7 +70,9 @@ export default function PublicSignup() {
 		(async () => {
 			const { data: lg } = await supabase
 				.from('lesson_groups')
-				.select('id, name, day_of_week, start_time, duration_minutes, frequency, price_per_lesson, teacher_user_id')
+				.select(
+					'id, name, day_of_week, start_time, duration_minutes, frequency, price_per_lesson, teacher_user_id',
+				)
 				.eq('lesson_type_id', selectedType.id)
 				.eq('is_active', true);
 			if (!lg?.length) {
@@ -81,7 +83,11 @@ export default function PublicSignup() {
 			const groupIds = lg.map((g) => g.id);
 			const [{ data: profiles }, { data: members }] = await Promise.all([
 				supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', teacherIds),
-				supabase.from('lesson_group_members').select('lesson_group_id').in('lesson_group_id', groupIds).is('left_date', null),
+				supabase
+					.from('lesson_group_members')
+					.select('lesson_group_id')
+					.in('lesson_group_id', groupIds)
+					.is('left_date', null),
 			]);
 			const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
 			const counts = new Map<string, number>();
@@ -188,11 +194,15 @@ export default function PublicSignup() {
 											setSelectedGroupId(null);
 										}}
 										className={`p-4 rounded-lg border-2 text-left transition ${
-											selectedType?.id === lt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+											selectedType?.id === lt.id
+												? 'border-primary bg-primary/5'
+												: 'border-border hover:border-primary/50'
 										}`}
 									>
 										<div className="font-medium">{lt.name}</div>
-										{lt.is_group_lesson && <div className="text-xs text-muted-foreground mt-1">Groepsles</div>}
+										{lt.is_group_lesson && (
+											<div className="text-xs text-muted-foreground mt-1">Groepsles</div>
+										)}
 									</button>
 								))}
 							</div>
@@ -212,7 +222,9 @@ export default function PublicSignup() {
 							{selectedType.is_group_lesson ? (
 								<div className="space-y-2">
 									{groups.length === 0 && (
-										<p className="text-sm text-muted-foreground">Geen actieve groepen beschikbaar.</p>
+										<p className="text-sm text-muted-foreground">
+											Geen actieve groepen beschikbaar.
+										</p>
 									)}
 									{groups.map((g) => (
 										<button
@@ -220,17 +232,21 @@ export default function PublicSignup() {
 											key={g.id}
 											onClick={() => setSelectedGroupId(g.id)}
 											className={`w-full p-4 rounded-lg border-2 text-left transition ${
-												selectedGroupId === g.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+												selectedGroupId === g.id
+													? 'border-primary bg-primary/5'
+													: 'border-border hover:border-primary/50'
 											}`}
 										>
 											<div className="font-medium">{g.name}</div>
 											<div className="text-sm text-muted-foreground mt-1">
-												{DAY_LABELS[g.day_of_week]} {g.start_time.slice(0, 5)} · {g.duration_minutes} min ·{' '}
-												{frequencyLabels[g.frequency as keyof typeof frequencyLabels] ?? g.frequency}
+												{DAY_LABELS[g.day_of_week]} {g.start_time.slice(0, 5)} ·{' '}
+												{g.duration_minutes} min ·{' '}
+												{frequencyLabels[g.frequency as keyof typeof frequencyLabels] ??
+													g.frequency}
 											</div>
 											<div className="text-sm text-muted-foreground">
-												{g.teacher_name ? `Docent: ${g.teacher_name}` : ''} · {g.members_count} deelnemers · €
-												{Number(g.price_per_lesson).toFixed(2)} per les
+												{g.teacher_name ? `Docent: ${g.teacher_name}` : ''} · {g.members_count}{' '}
+												deelnemers · €{Number(g.price_per_lesson).toFixed(2)} per les
 											</div>
 										</button>
 									))}
@@ -244,13 +260,15 @@ export default function PublicSignup() {
 										}`}
 									>
 										<div className="font-medium">Zet me op de wachtlijst</div>
-										<div className="text-sm text-muted-foreground">We nemen contact op zodra een plek beschikbaar is.</div>
+										<div className="text-sm text-muted-foreground">
+											We nemen contact op zodra een plek beschikbaar is.
+										</div>
 									</button>
 								</div>
 							) : (
 								<p className="text-sm text-muted-foreground">
-									Je meldt je aan voor individuele {selectedType.name}-les. Onze administratie neemt contact op om docent en
-									tijdstip af te stemmen.
+									Je meldt je aan voor individuele {selectedType.name}-les. Onze administratie neemt
+									contact op om docent en tijdstip af te stemmen.
 								</p>
 							)}
 							<div className="flex justify-between pt-4">
@@ -276,11 +294,31 @@ export default function PublicSignup() {
 								</div>
 							)}
 							<div className="grid grid-cols-2 gap-3">
-								<Field label="Voornaam *" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required />
-								<Field label="Achternaam *" value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required />
+								<Field
+									label="Voornaam *"
+									value={form.first_name}
+									onChange={(v) => setForm({ ...form, first_name: v })}
+									required
+								/>
+								<Field
+									label="Achternaam *"
+									value={form.last_name}
+									onChange={(v) => setForm({ ...form, last_name: v })}
+									required
+								/>
 							</div>
-							<Field label="E-mail *" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
-							<Field label="Telefoonnummer" value={form.phone_number} onChange={(v) => setForm({ ...form, phone_number: v })} />
+							<Field
+								label="E-mail *"
+								type="email"
+								value={form.email}
+								onChange={(v) => setForm({ ...form, email: v })}
+								required
+							/>
+							<Field
+								label="Telefoonnummer"
+								value={form.phone_number}
+								onChange={(v) => setForm({ ...form, phone_number: v })}
+							/>
 							<Field
 								label="Geboortedatum"
 								type="date"
@@ -289,8 +327,17 @@ export default function PublicSignup() {
 							/>
 							<div className="border-t pt-4 space-y-3">
 								<p className="text-sm font-medium">Ouder/verzorger (indien minderjarig)</p>
-								<Field label="Naam ouder" value={form.parent_name} onChange={(v) => setForm({ ...form, parent_name: v })} />
-								<Field label="E-mail ouder" type="email" value={form.parent_email} onChange={(v) => setForm({ ...form, parent_email: v })} />
+								<Field
+									label="Naam ouder"
+									value={form.parent_name}
+									onChange={(v) => setForm({ ...form, parent_name: v })}
+								/>
+								<Field
+									label="E-mail ouder"
+									type="email"
+									value={form.parent_email}
+									onChange={(v) => setForm({ ...form, parent_email: v })}
+								/>
 								<Field
 									label="Telefoon ouder"
 									value={form.parent_phone_number}
@@ -339,7 +386,13 @@ function Field({
 	return (
 		<div>
 			<Label>{label}</Label>
-			<Input className="mt-1" type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
+			<Input
+				className="mt-1"
+				type={type}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				required={required}
+			/>
 		</div>
 	);
 }

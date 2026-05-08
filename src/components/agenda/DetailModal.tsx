@@ -272,36 +272,33 @@ export function DetailModal({
 					</DialogFooter>
 				)}
 
-				{isLessonEvent &&
-					canEdit &&
-					onCancelLesson != null &&
-					onOpenCancelConfirm != null && (
-						<DialogFooter>
-							{selectedEvent?.resource.isCancelled ? (
-								<Button onClick={onCancelLesson} disabled={isCancelling}>
-									{isCancelling ? (
-										<>
-											<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-											Bezig...
-										</>
-									) : (
-										'Les herstellen'
-									)}
-								</Button>
-							) : (
-								<Button variant="destructive" onClick={onOpenCancelConfirm} disabled={isCancelling}>
-									{isCancelling ? (
-										<>
-											<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-											Bezig...
-										</>
-									) : (
-										'Les annuleren'
-									)}
-								</Button>
-							)}
-						</DialogFooter>
-					)}
+				{isLessonEvent && canEdit && onCancelLesson != null && onOpenCancelConfirm != null && (
+					<DialogFooter>
+						{selectedEvent?.resource.isCancelled ? (
+							<Button onClick={onCancelLesson} disabled={isCancelling}>
+								{isCancelling ? (
+									<>
+										<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+										Bezig...
+									</>
+								) : (
+									'Les herstellen'
+								)}
+							</Button>
+						) : (
+							<Button variant="destructive" onClick={onOpenCancelConfirm} disabled={isCancelling}>
+								{isCancelling ? (
+									<>
+										<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+										Bezig...
+									</>
+								) : (
+									'Les annuleren'
+								)}
+							</Button>
+						)}
+					</DialogFooter>
+				)}
 			</DialogContent>
 		</Dialog>
 	);

@@ -21,7 +21,12 @@ interface Row extends SubscriptionRow {
 		id: string;
 		student_user_id: string;
 		teacher_user_id: string;
-		profiles: { first_name: string | null; last_name: string | null; email: string; avatar_url: string | null } | null;
+		profiles: {
+			first_name: string | null;
+			last_name: string | null;
+			email: string;
+			avatar_url: string | null;
+		} | null;
 	} | null;
 }
 
@@ -79,7 +84,9 @@ export default function Subscriptions() {
 			label: 'Status',
 			render: (row) => {
 				const status = row.status as SubscriptionStatus;
-				return <Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>{SUBSCRIPTION_STATUS_LABELS[status]}</Badge>;
+				return (
+					<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>{SUBSCRIPTION_STATUS_LABELS[status]}</Badge>
+				);
 			},
 		},
 		{

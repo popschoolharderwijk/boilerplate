@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { LuGraduationCap } from 'react-icons/lu';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,13 +58,11 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 				) : (
 					<div className="space-y-3">
 						{teachers.map((teacher) => (
-							<div
+							<button
 								key={teacher.user_id}
-								className="flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors"
+								type="button"
+								className="w-full flex items-center justify-between rounded-lg p-2 hover:bg-muted/50 cursor-pointer transition-colors text-left"
 								onClick={() => navigate(`/teachers/${teacher.user_id}`)}
-								onKeyDown={(e) => e.key === 'Enter' && navigate(`/teachers/${teacher.user_id}`)}
-								role="button"
-								tabIndex={0}
 							>
 								<div className="flex items-center gap-3">
 									<Avatar className="h-9 w-9">
@@ -77,7 +75,11 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 										<div className="flex flex-wrap gap-1 mt-0.5">
 											{teacher.lessonTypeNames.length > 0 ? (
 												teacher.lessonTypeNames.map((name) => (
-													<Badge key={name} variant="secondary" className="text-[10px] px-1.5 py-0">
+													<Badge
+														key={name}
+														variant="secondary"
+														className="text-[10px] px-1.5 py-0"
+													>
 														{name}
 													</Badge>
 												))
@@ -91,7 +93,7 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 									<span className="text-sm font-medium">{teacher.availableSlotCount}</span>
 									<p className="text-[10px] text-muted-foreground">slots</p>
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				)}

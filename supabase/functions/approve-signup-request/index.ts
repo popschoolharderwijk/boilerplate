@@ -60,11 +60,7 @@ Deno.serve(async (req) => {
 	} = await userClient.auth.getUser();
 	if (userErr || !user) return json(401, { error: 'Invalid token' });
 
-	const { data: roleRow } = await userClient
-		.from('user_roles')
-		.select('role')
-		.eq('user_id', user.id)
-		.single();
+	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
 	if (role !== 'admin' && role !== 'site_admin') return json(403, { error: 'Geen rechten' });
 
