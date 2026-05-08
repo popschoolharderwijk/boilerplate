@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LuCreditCard } from 'react-icons/lu';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -32,7 +32,6 @@ interface Row extends SubscriptionRow {
 
 export default function Subscriptions() {
 	const { isPrivileged, isLoading } = useAuth();
-	const navigate = useNavigate();
 	const [rows, setRows] = useState<Row[]>([]);
 	const [loading, setLoading] = useState(true);
 
