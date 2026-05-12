@@ -2,6 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
+function getHashParams(): URLSearchParams {
+	return new URLSearchParams(window.location.hash.slice(1));
+}
+
+function getHashError(): string | null {
+	if (!window.location.hash.includes('error=')) return null;
+	const hashParams = getHashParams();
+	const code = hashParams.get('error_code');
+	if (code === 'otp_expired') return 'Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.';
+	return hashParams.get('error_description') ?? 'Inloggen via deze link is mislukt.';
+}
+
 /**
  * Landing page voor de magic-link uit de incasso-uitnodigingsmail.
  * 1. Verwerkt de PKCE-code (Supabase Auth) als die in de URL staat.
@@ -26,6 +38,12 @@ export default function IncassoStart() {
 				return;
 			}
 
+			const hashError = getHashError();
+			if (hashError) {
+				setError(hashError);
+				return;
+			}
+
 			// Variant A: PKCE-code in querystring (?code=...)
 			if (window.location.search.includes('code=')) {
 				const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(window.location.href);
@@ -39,7 +57,7 @@ export default function IncassoStart() {
 			// Treedt op als Supabase de magic link via de oude implicit-flow uitlevert
 			// (bijvoorbeeld bij verkeerd geconfigureerde Site URL).
 			if (window.location.hash.includes('access_token=')) {
-				const hashParams = new URLSearchParams(window.location.hash.slice(1));
+				const hashParams = getHashParams();
 				const accessToken = hashParams.get('access_token');
 				const refreshToken = hashParams.get('refresh_token');
 				if (accessToken && refreshToken) {
@@ -54,6 +72,24 @@ export default function IncassoStart() {
 					// Ruim hash op zodat tokens niet in browser-history blijven staan
 					window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 				}
+			}
+
+			// Variant C: custom email-template met token_hash voorkomt dat mail-scanners
+			// de Supabase ConfirmationURL alvast consumeren.
+			if (window.location.hash.includes('token_hash=')) {
+				const hashParams = getHashParams();
+				const tokenHash = hashParams.get('token_hash');
+				const type = hashParams.get('type') ?? 'email';
+				if (!tokenHash || type !== 'email') {
+					setError('Ongeldige uitnodigingslink. Vraag een nieuwe link aan.');
+					return;
+				}
+				const { error: verifyErr } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+				if (verifyErr) {
+					setError(`Inloggen mislukt: ${verifyErr.message}. De link is mogelijk verlopen.`);
+					return;
+				}
+				window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 			}
 
 			const { data: sessionData } = await supabase.auth.getSession();
@@ -71,7 +107,9 @@ export default function IncassoStart() {
 					},
 				});
 				if (completeErr || (data as { error?: string })?.error) {
-					setError((data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.');
+					setError(
+						(data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.',
+					);
 					return;
 				}
 				setSuccess(true);
@@ -101,7 +139,9 @@ export default function IncassoStart() {
 			<div className="flex min-h-screen items-center justify-center p-4">
 				<div className="max-w-md space-y-4 text-center">
 					<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
-					<p className="text-muted-foreground">De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.</p>
+					<p className="text-muted-foreground">
+						De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.
+					</p>
 				</div>
 			</div>
 		);
