@@ -38,6 +38,7 @@ export interface UseAgendaDataResult {
 	participantNamesByEventId: Map<string, string[]>;
 	projectsMap: Map<string, ProjectInfo>;
 	lessonGroupsMap: Map<string, LessonGroupInfo>;
+	noLessonPeriods: NoLessonPeriod[];
 	loading: boolean;
 	loadData: (showLoading?: boolean) => Promise<void>;
 	getEnrichedEvents: (currentDate: Date, effectiveUserId: string | undefined) => CalendarEvent[];
