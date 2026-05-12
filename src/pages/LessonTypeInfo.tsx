@@ -134,6 +134,8 @@ export default function LessonTypeInfo() {
 				duration_minutes: o.duration_minutes.toString(),
 				frequency: o.frequency,
 				price_per_lesson: o.price_per_lesson.toString(),
+				price_per_lesson_under_21: centsToInput(o.price_per_lesson_under_21_cents),
+				price_per_lesson_adult: centsToInput(o.price_per_lesson_adult_cents),
 			})),
 		);
 		setLoading(false);
