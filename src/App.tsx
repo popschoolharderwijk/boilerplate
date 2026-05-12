@@ -8,6 +8,7 @@ import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
+import IncassoStart from './pages/IncassoStart';
 import Dashboard from './pages/Dashboard';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
