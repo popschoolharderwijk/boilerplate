@@ -285,10 +285,7 @@ export interface NoLessonPeriod {
 	name?: string | null;
 }
 
-export function findNoLessonPeriod(
-	date: Date,
-	periods: NoLessonPeriod[] | undefined,
-): NoLessonPeriod | undefined {
+export function findNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): NoLessonPeriod | undefined {
 	if (!periods?.length) return undefined;
 	const dateStr = formatDateToDb(date);
 	return periods.find((p) => p.start_date <= dateStr && dateStr <= p.end_date);
