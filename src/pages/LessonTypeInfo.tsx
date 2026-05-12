@@ -795,15 +795,33 @@ export default function LessonTypeInfo() {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
-							<Label>Prijs (€)</Label>
-							<PriceInput
-								value={optionModalForm.price_per_lesson}
-								onChange={(e) =>
-									setOptionModalForm((prev) => ({ ...prev, price_per_lesson: e.target.value }))
-								}
-								className="h-10"
-							/>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<Label>Prijs per les &lt;21 (€)</Label>
+								<PriceInput
+									value={optionModalForm.price_per_lesson_under_21}
+									onChange={(e) =>
+										setOptionModalForm((prev) => ({
+											...prev,
+											price_per_lesson_under_21: e.target.value,
+										}))
+									}
+									className="h-10"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label>Prijs per les 21+ (€)</Label>
+								<PriceInput
+									value={optionModalForm.price_per_lesson_adult}
+									onChange={(e) =>
+										setOptionModalForm((prev) => ({
+											...prev,
+											price_per_lesson_adult: e.target.value,
+										}))
+									}
+									className="h-10"
+								/>
+							</div>
 						</div>
 					</div>
 					<DialogFooter>
