@@ -2,6 +2,7 @@
 // Admin/site_admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 
 interface Body {
@@ -65,32 +66,29 @@ Deno.serve(async (req) => {
 			return json(400, { error: 'Subscription mist lesson_agreement_id metadata' });
 		}
 		const priceId = sub.items.data[0]?.price?.id ?? '';
+		const firstItem = sub.items.data[0];
+		const currentPeriodStart = sub.current_period_start ?? firstItem?.current_period_start ?? null;
+		const currentPeriodEnd = sub.current_period_end ?? firstItem?.current_period_end ?? null;
 		const pmBrand =
 			typeof sub.default_payment_method === 'object' && sub.default_payment_method
 				? (sub.default_payment_method.type ?? null)
 				: null;
 
-		await admin.from('subscriptions').upsert(
-			{
-				lesson_agreement_id: lessonAgreementId,
-				stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
-				stripe_subscription_id: sub.id,
-				stripe_price_id: priceId,
-				status: sub.status,
-				current_period_start: sub.current_period_start
-					? new Date(sub.current_period_start * 1000).toISOString()
-					: null,
-				current_period_end: sub.current_period_end
-					? new Date(sub.current_period_end * 1000).toISOString()
-					: null,
-				cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
-				canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
-				default_payment_method_brand: pmBrand,
-				latest_invoice_id:
-					typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
-			},
-			{ onConflict: 'stripe_subscription_id' },
-		);
+		await writeSubscriptionState(admin, {
+			lesson_agreement_id: lessonAgreementId,
+			stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+			stripe_subscription_id: sub.id,
+			stripe_price_id: priceId,
+			stripe_schedule_id: typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? null),
+			status: sub.status,
+			current_period_start: currentPeriodStart ? new Date(currentPeriodStart * 1000).toISOString() : null,
+			current_period_end: currentPeriodEnd ? new Date(currentPeriodEnd * 1000).toISOString() : null,
+			cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+			canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+			default_payment_method_brand: pmBrand,
+			latest_invoice_id:
+				typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
+		});
 
 		return json(200, { synced: true });
 	} catch (err) {
