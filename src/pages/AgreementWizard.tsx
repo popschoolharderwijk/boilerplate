@@ -621,7 +621,19 @@ export default function AgreementWizard() {
 				.eq('id', fromRequestId);
 		}
 
-		toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
+		// Bij een nieuwe overeenkomst: stuur direct een betaaluitnodiging (Magic Link → Stripe)
+		if (!agreement && insertResult.data?.id) {
+			const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
+				body: { lesson_agreement_id: insertResult.data.id },
+			});
+			if (inviteErr) {
+				toast.warning('Overeenkomst opgeslagen, maar betaaluitnodiging kon niet worden verstuurd');
+			} else {
+				toast.success('Overeenkomst toegevoegd — betaaluitnodiging verstuurd naar de leerling');
+			}
+		} else {
+			toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
+		}
 		navigate(fromRequestId ? '/aanmeldingen' : '/agreements');
 	};
 
