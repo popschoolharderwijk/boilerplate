@@ -24,12 +24,33 @@ export default function IncassoStart() {
 				return;
 			}
 
-			// Wissel PKCE-code in voor sessie indien aanwezig
+			// Variant A: PKCE-code in querystring (?code=...)
 			if (window.location.search.includes('code=')) {
 				const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(window.location.href);
 				if (exchangeErr) {
 					setError(`Inloggen mislukt: ${exchangeErr.message}. De link is mogelijk verlopen.`);
 					return;
+				}
+			}
+
+			// Variant B: implicit-flow tokens in URL hash (#access_token=...&refresh_token=...)
+			// Treedt op als Supabase de magic link via de oude implicit-flow uitlevert
+			// (bijvoorbeeld bij verkeerd geconfigureerde Site URL).
+			if (window.location.hash.includes('access_token=')) {
+				const hashParams = new URLSearchParams(window.location.hash.slice(1));
+				const accessToken = hashParams.get('access_token');
+				const refreshToken = hashParams.get('refresh_token');
+				if (accessToken && refreshToken) {
+					const { error: setErr } = await supabase.auth.setSession({
+						access_token: accessToken,
+						refresh_token: refreshToken,
+					});
+					if (setErr) {
+						setError(`Inloggen mislukt: ${setErr.message}. De link is mogelijk verlopen.`);
+						return;
+					}
+					// Ruim hash op zodat tokens niet in browser-history blijven staan
+					window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 				}
 			}
 
