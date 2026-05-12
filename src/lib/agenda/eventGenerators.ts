@@ -279,6 +279,17 @@ function toLessonFrequency(freq: string | null): LessonFrequency {
 	return 'weekly';
 }
 
+export interface NoLessonPeriod {
+	start_date: string;
+	end_date: string;
+}
+
+function isInNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): boolean {
+	if (!periods?.length) return false;
+	const dateStr = formatDateToDb(date);
+	return periods.some((p) => p.start_date <= dateStr && dateStr <= p.end_date);
+}
+
 /**
  * Generate calendar events from agenda_events (manual events). Uses lessonHelpers for recurrence.
  */
@@ -289,6 +300,7 @@ export function generateAgendaEvents(
 	deviationsByEventId: Map<string, Map<string, AgendaEventDeviationRow>>,
 	recurringByEventId?: Map<string, AgendaEventDeviationRow[]>,
 	agreementsMap?: Map<string, LessonAgreementWithStudent>,
+	noLessonPeriods?: NoLessonPeriod[],
 ): CalendarEvent[] {
 	const events: CalendarEvent[] = [];
 
