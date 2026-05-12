@@ -360,11 +360,45 @@ export async function createScheduleForAgreement(
 		typeof schedule.subscription === 'string' ? schedule.subscription : (schedule.subscription?.id ?? null);
 
 	await admin.from('lesson_agreements').update({ stripe_schedule_id: schedule.id }).eq('id', ctx.lessonAgreementId);
+
+	// Insert/refresh een 'scheduled' rij in subscriptions zodat het abonnement direct
+	// zichtbaar is, ook al heeft Stripe nog geen echte subscription aangemaakt
+	// (dat gebeurt pas op de start_date van het schedule).
+	const firstPriceId = (stripePhases[0]?.items?.[0] as { price?: string } | undefined)?.price ?? '';
+	const periodStartIso = new Date(phases[0].startUnix * 1000).toISOString();
+	const periodEndIso = new Date(phases[0].endUnix * 1000).toISOString();
+
 	if (subscriptionId) {
-		await admin
-			.from('subscriptions')
-			.update({ stripe_schedule_id: schedule.id })
-			.eq('stripe_subscription_id', subscriptionId);
+		await admin.from('subscriptions').upsert(
+			{
+				lesson_agreement_id: ctx.lessonAgreementId,
+				stripe_customer_id: ctx.customerId,
+				stripe_subscription_id: subscriptionId,
+				stripe_price_id: firstPriceId,
+				stripe_schedule_id: schedule.id,
+				status: 'scheduled',
+				current_period_start: periodStartIso,
+				current_period_end: periodEndIso,
+				default_payment_method_brand: ctx.defaultPaymentMethod ? 'sepa_debit' : null,
+			},
+			{ onConflict: 'stripe_subscription_id' },
+		);
+	} else {
+		// Nog geen Stripe subscription — placeholder op schedule_id.
+		await admin.from('subscriptions').upsert(
+			{
+				lesson_agreement_id: ctx.lessonAgreementId,
+				stripe_customer_id: ctx.customerId,
+				stripe_subscription_id: null,
+				stripe_price_id: firstPriceId,
+				stripe_schedule_id: schedule.id,
+				status: 'scheduled',
+				current_period_start: periodStartIso,
+				current_period_end: periodEndIso,
+				default_payment_method_brand: ctx.defaultPaymentMethod ? 'sepa_debit' : null,
+			},
+			{ onConflict: 'stripe_schedule_id' },
+		);
 	}
 
 	return {
