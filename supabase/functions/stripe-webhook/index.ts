@@ -140,6 +140,37 @@ Deno.serve(async (req) => {
 						typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
 					const sub = await stripe.subscriptions.retrieve(subId, { expand: ['default_payment_method'] });
 					await upsertSubscription(admin, sub);
+				} else if (session.mode === 'setup' && session.metadata?.flow === 'schedule_setup') {
+					// SEPA mandate just collected → attach as default + create the schedule.
+					const lessonAgreementId = session.metadata.lesson_agreement_id;
+					const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+					if (!lessonAgreementId || !customerId) {
+						console.warn('setup session missing agreement/customer', session.id);
+						break;
+					}
+					const setupIntentId =
+						typeof session.setup_intent === 'string' ? session.setup_intent : session.setup_intent?.id;
+					let pmId: string | null = null;
+					if (setupIntentId) {
+						const si = await stripe.setupIntents.retrieve(setupIntentId);
+						pmId = typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
+					}
+					if (!pmId) {
+						console.warn('setup session without payment_method', session.id);
+						break;
+					}
+					await stripe.customers.update(customerId, {
+						invoice_settings: { default_payment_method: pmId },
+					});
+					try {
+						await createScheduleForAgreement(admin, stripe, {
+							lessonAgreementId,
+							customerId,
+							defaultPaymentMethod: pmId,
+						});
+					} catch (err) {
+						console.error('failed to create schedule from setup session', err);
+					}
 				}
 				break;
 			}
