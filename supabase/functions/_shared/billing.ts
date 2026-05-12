@@ -2,7 +2,7 @@
 // Reimplements the client-side billing logic in Deno (no @/ imports possible).
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type Stripe from 'https://esm.sh/stripe@17.5.0?target=deno';
+import type Stripe from 'npm:stripe@17.5.0';
 
 export type LessonFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
