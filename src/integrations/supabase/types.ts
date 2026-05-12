@@ -201,6 +201,41 @@ export type Database = {
           },
         ]
       }
+      incasso_invitations: {
+        Row: {
+          created_at: string
+          id: string
+          lesson_agreement_id: string
+          recipient_email: string
+          sent_at: string
+          sent_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson_agreement_id: string
+          recipient_email: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson_agreement_id?: string
+          recipient_email?: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incasso_invitations_lesson_agreement_id_fkey"
+            columns: ["lesson_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_agreements: {
         Row: {
           created_at: string
