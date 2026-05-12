@@ -343,7 +343,7 @@ export async function createScheduleForAgreement(
 	);
 	if (phases.length === 0) throw new Error('Geen incassomaanden te plannen.');
 
-	const stripePhases = toStripePhasePayloads(phases, ctx.lessonAgreementId, ctx.defaultPaymentMethod);
+	const stripePhases = await toStripePhasePayloads(stripe, phases, ctx.lessonAgreementId, ctx.defaultPaymentMethod);
 
 	const schedule = await stripe.subscriptionSchedules.create({
 		customer: ctx.customerId,
