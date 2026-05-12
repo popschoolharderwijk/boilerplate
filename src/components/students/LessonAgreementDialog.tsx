@@ -126,9 +126,7 @@ export function LessonAgreementDialog({
 					{showPreviewBlock && (
 						<div className="rounded-md border bg-muted/30 p-4">
 							<p className="text-sm font-medium text-muted-foreground mb-3">Incasso-preview</p>
-							{previewLoading && (
-								<p className="text-sm text-muted-foreground">Berekenen…</p>
-							)}
+							{previewLoading && <p className="text-sm text-muted-foreground">Berekenen…</p>}
 							{!previewLoading && previewError && (
 								<p className="text-sm text-destructive">{previewError}</p>
 							)}

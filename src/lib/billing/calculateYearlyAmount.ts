@@ -68,9 +68,7 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 	const allDates = getOccurrenceDatesInRange(dayOfWeek, start, end, frequency);
 
 	// Filter augustus + lesvrije periodes weg.
-	const lessonDates = allDates.filter(
-		(d) => !isNonBillingMonthString(d) && !isInNoLessonPeriod(d, noLessonPeriods),
-	);
+	const lessonDates = allDates.filter((d) => !isNonBillingMonthString(d) && !isInNoLessonPeriod(d, noLessonPeriods));
 
 	const lessonsCount = lessonDates.length;
 	const yearlyCents = lessonsCount * pricePerLessonCents;

@@ -10,13 +10,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { pickAgeTariff, pickPriceCents } from '@/lib/billing/ageTariff';
-import {
-	type CalculateYearlyAmountResult,
-	calculateYearlyAmount,
-} from '@/lib/billing/calculateYearlyAmount';
-import { clampToSchoolYear, getSchoolYearForDateString } from '@/lib/billing/schoolYear';
 import { supabase } from '@/integrations/supabase/client';
+import { pickAgeTariff, pickPriceCents } from '@/lib/billing/ageTariff';
+import { type CalculateYearlyAmountResult, calculateYearlyAmount } from '@/lib/billing/calculateYearlyAmount';
+import { clampToSchoolYear, getSchoolYearForDateString } from '@/lib/billing/schoolYear';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 interface AgreementInput {

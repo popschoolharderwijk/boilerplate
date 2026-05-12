@@ -83,7 +83,11 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 						</p>
 						{!hideStartAction && isPrivileged && (
 							<div className="flex flex-wrap gap-2">
-								<Button onClick={() => handleStartCheckout('checkout')} disabled={busy} className="w-fit">
+								<Button
+									onClick={() => handleStartCheckout('checkout')}
+									disabled={busy}
+									className="w-fit"
+								>
 									Start incasso (checkout)
 								</Button>
 								<Button
