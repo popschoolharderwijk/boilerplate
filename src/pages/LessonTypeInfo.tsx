@@ -510,22 +510,25 @@ export default function LessonTypeInfo() {
 				lessonTypeId = inserted?.id ?? '';
 			}
 
-			const sorted = [...optionsForm].sort(optionSort);
+		const sorted = [...optionsForm].sort(optionSort);
 			for (const o of sorted) {
 				const duration_minutes = parseInt(o.duration_minutes, 10);
-				const price_per_lesson = parseFloat(o.price_per_lesson);
+				const price_per_lesson_under_21_cents = inputToCents(o.price_per_lesson_under_21);
+				const price_per_lesson_adult_cents = inputToCents(o.price_per_lesson_adult);
+				const price_per_lesson = parseFloat(o.price_per_lesson_adult);
+				const payload = {
+					duration_minutes,
+					frequency: o.frequency,
+					price_per_lesson,
+					price_per_lesson_under_21_cents,
+					price_per_lesson_adult_cents,
+				};
 				if (o.id) {
+					await supabase.from('lesson_type_options').update(payload).eq('id', o.id);
+				} else {
 					await supabase
 						.from('lesson_type_options')
-						.update({ duration_minutes, frequency: o.frequency, price_per_lesson })
-						.eq('id', o.id);
-				} else {
-					await supabase.from('lesson_type_options').insert({
-						lesson_type_id: lessonTypeId,
-						duration_minutes,
-						frequency: o.frequency,
-						price_per_lesson,
-					});
+						.insert({ lesson_type_id: lessonTypeId, ...payload });
 				}
 			}
 
