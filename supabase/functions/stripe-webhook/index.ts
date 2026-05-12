@@ -200,9 +200,8 @@ Deno.serve(async (req) => {
 						typeof session.setup_intent === 'string' ? session.setup_intent : session.setup_intent?.id;
 					let pmId: string | null = null;
 					if (setupIntentId) {
-						const si = await stripe.setupIntents.retrieve(setupIntentId);
-						pmId =
-							typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
+						const si = await stripe.setupIntents.retrieve(setupIntentId, { expand: ['latest_attempt'] });
+						pmId = getReusablePaymentMethodIdFromSetupIntent(si);
 					}
 					await createScheduleFromSetupPaymentMethod(admin, stripe, {
 						lessonAgreementId,
@@ -216,10 +215,11 @@ Deno.serve(async (req) => {
 			case 'setup_intent.succeeded': {
 				const setupIntent = event.data.object as Stripe.SetupIntent;
 				if (setupIntent.metadata?.flow !== 'schedule_setup') break;
+				const expandedSetupIntent = await stripe.setupIntents.retrieve(setupIntent.id, { expand: ['latest_attempt'] });
 				await createScheduleFromSetupPaymentMethod(admin, stripe, {
-					lessonAgreementId: setupIntent.metadata.lesson_agreement_id ?? null,
-					customerId: getStripeId(setupIntent.customer),
-					paymentMethodId: getStripeId(setupIntent.payment_method),
+					lessonAgreementId: expandedSetupIntent.metadata.lesson_agreement_id ?? null,
+					customerId: getStripeId(expandedSetupIntent.customer),
+					paymentMethodId: getReusablePaymentMethodIdFromSetupIntent(expandedSetupIntent),
 					sourceId: setupIntent.id,
 				});
 				break;
