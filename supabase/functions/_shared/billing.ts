@@ -161,7 +161,6 @@ function buildPhases(periodStart: string, periodEnd: string, monthlyCents: numbe
 	const phases: Phase[] = [];
 	const start = new Date(`${periodStart}T00:00:00Z`);
 	const end = new Date(`${periodEnd}T00:00:00Z`);
-	// Walk first day of each month from periodStart's month to periodEnd's month
 	let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
 	const months: Date[] = [];
 	while (cursor <= end) {
@@ -173,7 +172,7 @@ function buildPhases(periodStart: string, periodEnd: string, monthlyCents: numbe
 		const m = months[i];
 		const next =
 			i + 1 < months.length ? months[i + 1] : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
-		const phaseStart = i === 0 ? start : m; // first phase begins at the agreement start (may be mid-month)
+		const phaseStart = i === 0 ? start : m;
 		const startUnix = Math.floor(phaseStart.getTime() / 1000);
 		const endUnix = Math.floor(next.getTime() / 1000);
 		const isLast = i === months.length - 1;
@@ -187,24 +186,72 @@ function buildPhases(periodStart: string, periodEnd: string, monthlyCents: numbe
 	return phases;
 }
 
-/** Create a Stripe Subscription Schedule with one phase per billing month. */
-export async function createScheduleForAgreement(
+interface StripePhasePayload {
+	items: Array<Record<string, unknown>>;
+	iterations?: number;
+	start_date?: number;
+	end_date?: number;
+	proration_behavior: 'none';
+	collection_method: 'charge_automatically';
+	metadata: Record<string, string>;
+	default_payment_method?: string;
+}
+
+function toStripePhasePayloads(phases: Phase[], lessonAgreementId: string, defaultPm?: string): StripePhasePayload[] {
+	return phases.map((p) => ({
+		items: [
+			{
+				price_data: {
+					currency: 'eur',
+					product_data: { name: `Lesgeld ${p.label}` },
+					unit_amount: p.amountCents,
+					recurring: { interval: 'month', interval_count: 1 },
+				},
+				quantity: 1,
+			},
+		],
+		iterations: 1,
+		proration_behavior: 'none',
+		collection_method: 'charge_automatically',
+		metadata: { phase_label: p.label, lesson_agreement_id: lessonAgreementId },
+		...(defaultPm ? { default_payment_method: defaultPm } : {}),
+	}));
+}
+
+export interface BillingComputation {
+	agreement: {
+		id: string;
+		student_user_id: string;
+		lesson_type_id: string;
+		frequency: LessonFrequency;
+		duration_minutes: number;
+		day_of_week: number;
+		start_date: string;
+		end_date: string | null;
+	};
+	yearly: YearlyResult;
+	tariff: AgeTariff;
+	pricePerLessonCents: number;
+	periodStart: string;
+	periodEnd: string;
+	schoolYear: SchoolYearWindow;
+}
+
+/** Pure DB lookup + math: returns the current billing computation for an agreement. */
+export async function computeBillingForAgreement(
 	admin: SupabaseClient,
-	stripe: Stripe,
-	ctx: ScheduleContext,
-): Promise<BuiltSchedule> {
-	// 1) Load agreement with all needed fields
+	lessonAgreementId: string,
+): Promise<BillingComputation> {
 	const { data: ag, error: agErr } = await admin
 		.from('lesson_agreements')
 		.select(
 			'id, student_user_id, lesson_type_id, frequency, duration_minutes, day_of_week, start_date, end_date, is_active',
 		)
-		.eq('id', ctx.lessonAgreementId)
+		.eq('id', lessonAgreementId)
 		.maybeSingle();
 	if (agErr || !ag) throw new Error('Lesovereenkomst niet gevonden');
 	if (!ag.is_active) throw new Error('Lesovereenkomst is niet actief');
 
-	// 2) Load price option, student dob, no_lesson_periods
 	const [{ data: option, error: optErr }, { data: student }, { data: noPeriods }] = await Promise.all([
 		admin
 			.from('lesson_type_options')
@@ -219,7 +266,6 @@ export async function createScheduleForAgreement(
 	if (optErr) throw new Error(`Kon prijsopties niet laden: ${optErr.message}`);
 	if (!option) throw new Error('Geen prijs ingesteld voor deze duur/frequentie.');
 
-	// 3) Compute window + tariff + yearly
 	const today = new Date().toISOString().slice(0, 10);
 	const ref = ag.start_date > today ? ag.start_date : today;
 	const sy = getSchoolYearForDateString(ref);
@@ -242,30 +288,35 @@ export async function createScheduleForAgreement(
 		noLessonPeriods: noPeriods ?? [],
 	});
 
-	if (yearly.yearlyCents <= 0) throw new Error('Geen lessen in dit schooljaar; geen incasso aangemaakt.');
+	return {
+		agreement: { ...ag, frequency: ag.frequency as LessonFrequency },
+		yearly,
+		tariff,
+		pricePerLessonCents,
+		periodStart: win.start,
+		periodEnd: win.end,
+		schoolYear: sy,
+	};
+}
 
-	// 4) Build phases and the schedule
-	const phases = buildPhases(win.start, win.end, yearly.monthlyCents, yearly.leftoverCents);
+/** Create a Stripe Subscription Schedule with one phase per billing month. */
+export async function createScheduleForAgreement(
+	admin: SupabaseClient,
+	stripe: Stripe,
+	ctx: ScheduleContext,
+): Promise<BuiltSchedule> {
+	const billing = await computeBillingForAgreement(admin, ctx.lessonAgreementId);
+	if (billing.yearly.yearlyCents <= 0) throw new Error('Geen lessen in dit schooljaar; geen incasso aangemaakt.');
+
+	const phases = buildPhases(
+		billing.periodStart,
+		billing.periodEnd,
+		billing.yearly.monthlyCents,
+		billing.yearly.leftoverCents,
+	);
 	if (phases.length === 0) throw new Error('Geen incassomaanden te plannen.');
 
-	const stripePhases = phases.map((p) => ({
-		items: [
-			{
-				price_data: {
-					currency: 'eur',
-					product_data: { name: `Lesgeld ${p.label}` },
-					unit_amount: p.amountCents,
-					recurring: { interval: 'month' as const, interval_count: 1 },
-				},
-				quantity: 1,
-			},
-		],
-		iterations: 1,
-		proration_behavior: 'none' as const,
-		collection_method: 'charge_automatically' as const,
-		metadata: { phase_label: p.label, lesson_agreement_id: ctx.lessonAgreementId },
-		...(ctx.defaultPaymentMethod ? { default_payment_method: ctx.defaultPaymentMethod } : {}),
-	}));
+	const stripePhases = toStripePhasePayloads(phases, ctx.lessonAgreementId, ctx.defaultPaymentMethod);
 
 	const schedule = await stripe.subscriptionSchedules.create({
 		customer: ctx.customerId,
@@ -274,14 +325,13 @@ export async function createScheduleForAgreement(
 		phases: stripePhases,
 		metadata: {
 			lesson_agreement_id: ctx.lessonAgreementId,
-			school_year: `${sy.startYear}/${sy.startYear + 1}`,
+			school_year: `${billing.schoolYear.startYear}/${billing.schoolYear.startYear + 1}`,
 		},
 	});
 
 	const subscriptionId =
 		typeof schedule.subscription === 'string' ? schedule.subscription : (schedule.subscription?.id ?? null);
 
-	// 5) Persist schedule_id on lesson_agreements (subscription row is upserted by webhook)
 	await admin.from('lesson_agreements').update({ stripe_schedule_id: schedule.id }).eq('id', ctx.lessonAgreementId);
 	if (subscriptionId) {
 		await admin
@@ -293,10 +343,140 @@ export async function createScheduleForAgreement(
 	return {
 		scheduleId: schedule.id,
 		subscriptionId,
-		yearly,
-		tariff,
-		pricePerLessonCents,
-		periodStart: win.start,
-		periodEnd: win.end,
+		yearly: billing.yearly,
+		tariff: billing.tariff,
+		pricePerLessonCents: billing.pricePerLessonCents,
+		periodStart: billing.periodStart,
+		periodEnd: billing.periodEnd,
 	};
 }
+
+export interface RebuildResult {
+	scheduleId: string;
+	keptPhases: number;
+	updatedPhases: number;
+	newMonthlyCents: number;
+	newLeftoverCents: number;
+	skipped?: 'no_future_phases';
+}
+
+/**
+ * Recompute prices for an existing schedule and replace only the **future** phases.
+ * Past and the currently-active phase are kept verbatim (they have been or are
+ * being invoiced). The new tariff therefore takes effect at the next month boundary.
+ */
+export async function rebuildScheduleForAgreement(
+	admin: SupabaseClient,
+	stripe: Stripe,
+	lessonAgreementId: string,
+): Promise<RebuildResult> {
+	const { data: ag } = await admin
+		.from('lesson_agreements')
+		.select('stripe_schedule_id')
+		.eq('id', lessonAgreementId)
+		.maybeSingle();
+	const scheduleId = ag?.stripe_schedule_id;
+	if (!scheduleId) throw new Error('Geen schedule gekoppeld aan deze lesovereenkomst.');
+
+	const sched = await stripe.subscriptionSchedules.retrieve(scheduleId);
+	if (sched.status === 'canceled' || sched.status === 'completed' || sched.status === 'released') {
+		throw new Error(`Schedule is ${sched.status}; kan niet worden bijgewerkt.`);
+	}
+
+	const billing = await computeBillingForAgreement(admin, lessonAgreementId);
+	const newPhases = buildPhases(
+		billing.periodStart,
+		billing.periodEnd,
+		billing.yearly.monthlyCents,
+		billing.yearly.leftoverCents,
+	);
+
+	const nowUnix = Math.floor(Date.now() / 1000);
+	const existing = sched.phases ?? [];
+
+	// Past + currently active phase = keep verbatim with their existing price IDs.
+	const keptPayloads: Array<Record<string, unknown>> = [];
+	let firstFutureIndex = -1;
+	for (let i = 0; i < existing.length; i++) {
+		const p = existing[i];
+		const startsInFuture = (p.start_date ?? 0) > nowUnix;
+		if (startsInFuture) {
+			firstFutureIndex = i;
+			break;
+		}
+		const dpm = p.default_payment_method;
+		const dpmId = typeof dpm === 'string' ? dpm : (dpm as { id?: string } | null)?.id;
+		keptPayloads.push({
+			start_date: p.start_date,
+			end_date: p.end_date,
+			proration_behavior: 'none',
+			collection_method: 'charge_automatically',
+			items: p.items.map((it) => ({
+				price: typeof it.price === 'string' ? it.price : (it.price as { id: string }).id,
+				quantity: it.quantity ?? 1,
+			})),
+			...(dpmId ? { default_payment_method: dpmId } : {}),
+			metadata: p.metadata ?? {},
+		});
+	}
+
+	if (firstFutureIndex === -1) {
+		return {
+			scheduleId,
+			keptPhases: keptPayloads.length,
+			updatedPhases: 0,
+			newMonthlyCents: billing.yearly.monthlyCents,
+			newLeftoverCents: billing.yearly.leftoverCents,
+			skipped: 'no_future_phases',
+		};
+	}
+
+	// Inherit default payment method from the active phase (if any).
+	const activePhase = keptPayloads[keptPayloads.length - 1];
+	const inheritedPm =
+		typeof activePhase?.default_payment_method === 'string'
+			? (activePhase.default_payment_method as string)
+			: undefined;
+
+	// Align the new future-phase payloads to the same month grid as the original schedule.
+	const futurePhases = newPhases.slice(firstFutureIndex);
+	const futurePayloads = toStripePhasePayloads(futurePhases, lessonAgreementId, inheritedPm).map((payload, idx) => {
+		const original = newPhases[firstFutureIndex + idx];
+		const { iterations: _ignored, ...rest } = payload;
+		return {
+			...rest,
+			start_date: original.startUnix,
+			end_date: original.endUnix,
+		};
+	});
+
+	if (futurePayloads.length === 0) {
+		return {
+			scheduleId,
+			keptPhases: keptPayloads.length,
+			updatedPhases: 0,
+			newMonthlyCents: billing.yearly.monthlyCents,
+			newLeftoverCents: billing.yearly.leftoverCents,
+			skipped: 'no_future_phases',
+		};
+	}
+
+	await stripe.subscriptionSchedules.update(scheduleId, {
+		phases: [...keptPayloads, ...futurePayloads],
+		proration_behavior: 'none',
+		metadata: {
+			...(sched.metadata ?? {}),
+			lesson_agreement_id: lessonAgreementId,
+			last_rebuild_at: new Date().toISOString(),
+		},
+	});
+
+	return {
+		scheduleId,
+		keptPhases: keptPayloads.length,
+		updatedPhases: futurePayloads.length,
+		newMonthlyCents: billing.yearly.monthlyCents,
+		newLeftoverCents: billing.yearly.leftoverCents,
+	};
+}
+
