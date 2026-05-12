@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
-import { generateAgendaEvents } from '@/lib/agenda/eventGenerators';
+import { generateAgendaEvents, type NoLessonPeriod } from '@/lib/agenda/eventGenerators';
 import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
 import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
@@ -67,12 +67,17 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [projectsMap, setProjectsMap] = useState<Map<string, ProjectInfo>>(new Map());
 	const [lessonGroupsMap, setLessonGroupsMap] = useState<Map<string, LessonGroupInfo>>(new Map());
 	const [profileMap, setProfileMap] = useState<Map<string, User>>(new Map());
+	const [noLessonPeriods, setNoLessonPeriods] = useState<NoLessonPeriod[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	const loadData = useCallback(
 		async (showLoading = true) => {
 			if (!effectiveUserId) return;
 			if (showLoading) setLoading(true);
+
+			// Lesvrije periodes (vakanties) — leesbaar voor alle ingelogde gebruikers via RLS
+			const { data: noLessonData } = await supabase.from('no_lesson_periods').select('start_date, end_date');
+			setNoLessonPeriods(noLessonData ?? []);
 
 			const { data: participantRows, error: partError } = await supabase
 				.from('agenda_participants')
@@ -362,6 +367,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				deviationsByEventId,
 				recurringByEventId,
 				agreementsMap,
+				noLessonPeriods,
 			);
 
 			return baseEvents.map((ev) => {
@@ -484,6 +490,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			participantCountByDeviationId,
 			participantNamesByDeviationId,
 			profileMap,
+			noLessonPeriods,
 		],
 	);
 

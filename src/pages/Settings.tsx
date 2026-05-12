@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { NoLessonPeriodsManager } from '@/components/settings/NoLessonPeriodsManager';
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,7 +27,7 @@ import { cn } from '@/lib/utils';
 
 export default function Settings() {
 	const { theme, setTheme } = useTheme();
-	const { user } = useAuth();
+	const { user, isAdmin, isSiteAdmin } = useAuth();
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -325,6 +326,7 @@ export default function Settings() {
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
+					{(isAdmin || isSiteAdmin) && <TabsTrigger value="no-lesson-periods">Lesvrije periodes</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
@@ -475,6 +477,12 @@ export default function Settings() {
 						</CardContent>
 					</Card>
 				</TabsContent>
+
+				{(isAdmin || isSiteAdmin) && (
+					<TabsContent value="no-lesson-periods" className="space-y-6 mt-6">
+						<NoLessonPeriodsManager />
+					</TabsContent>
+				)}
 
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}

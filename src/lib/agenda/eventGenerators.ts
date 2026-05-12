@@ -279,6 +279,17 @@ function toLessonFrequency(freq: string | null): LessonFrequency {
 	return 'weekly';
 }
 
+export interface NoLessonPeriod {
+	start_date: string;
+	end_date: string;
+}
+
+function isInNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): boolean {
+	if (!periods?.length) return false;
+	const dateStr = formatDateToDb(date);
+	return periods.some((p) => p.start_date <= dateStr && dateStr <= p.end_date);
+}
+
 /**
  * Generate calendar events from agenda_events (manual events). Uses lessonHelpers for recurrence.
  */
@@ -289,6 +300,7 @@ export function generateAgendaEvents(
 	deviationsByEventId: Map<string, Map<string, AgendaEventDeviationRow>>,
 	recurringByEventId?: Map<string, AgendaEventDeviationRow[]>,
 	agreementsMap?: Map<string, LessonAgreementWithStudent>,
+	noLessonPeriods?: NoLessonPeriod[],
 ): CalendarEvent[] {
 	const events: CalendarEvent[] = [];
 
@@ -368,6 +380,16 @@ export function generateAgendaEvents(
 			);
 
 			const effective = deviation ?? recurringDeviation;
+
+			// Skip lessons that fall in a no-lesson period (e.g. school holidays).
+			// We only skip lesson-like sources, and only when there is no manual deviation
+			// (admins may have explicitly moved a lesson into a holiday week).
+			const isLessonSource = sourceType === 'lesson_agreement' || sourceType === 'lesson_group';
+			if (isLessonSource && !effective && isInNoLessonPeriod(current, noLessonPeriods)) {
+				addIntervalHelper(current, frequency);
+				continue;
+			}
+
 			let start: Date;
 			let end: Date;
 			let isCancelled = false;
