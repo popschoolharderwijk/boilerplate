@@ -52,7 +52,12 @@ export type LessonTypeOptionFormRow = {
 	id?: string;
 	duration_minutes: string;
 	frequency: LessonFrequency;
+	/** Snapshot price (legacy column, kept for backwards compat). */
 	price_per_lesson: string;
+	/** Per-les prijs voor cursisten tot 21 jaar (in euro's, als string voor input). */
+	price_per_lesson_under_21: string;
+	/** Per-les prijs voor cursisten van 21 jaar en ouder (in euro's, als string voor input). */
+	price_per_lesson_adult: string;
 };
 
 /** Lesson type option row (duration/frequency/price) for selects; from Supabase lesson_type_options */
