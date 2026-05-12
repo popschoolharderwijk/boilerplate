@@ -33,7 +33,10 @@ function getStripeId(value: unknown): string | null {
 	return null;
 }
 
-async function hasExistingSchedule(admin: ReturnType<typeof createClient>, lessonAgreementId: string): Promise<boolean> {
+async function hasExistingSchedule(
+	admin: ReturnType<typeof createClient>,
+	lessonAgreementId: string,
+): Promise<boolean> {
 	const { data } = await admin
 		.from('lesson_agreements')
 		.select('stripe_schedule_id')
@@ -45,7 +48,12 @@ async function hasExistingSchedule(admin: ReturnType<typeof createClient>, lesso
 async function createScheduleFromSetupPaymentMethod(
 	admin: ReturnType<typeof createClient>,
 	stripe: Stripe,
-	input: { lessonAgreementId: string | null; customerId: string | null; paymentMethodId: string | null; sourceId: string },
+	input: {
+		lessonAgreementId: string | null;
+		customerId: string | null;
+		paymentMethodId: string | null;
+		sourceId: string;
+	},
 ): Promise<void> {
 	if (!input.lessonAgreementId || !input.customerId || !input.paymentMethodId) {
 		console.warn('setup event missing agreement/customer/payment_method', input.sourceId);
@@ -54,6 +62,19 @@ async function createScheduleFromSetupPaymentMethod(
 
 	if (await hasExistingSchedule(admin, input.lessonAgreementId)) {
 		console.log('schedule already exists for agreement', input.lessonAgreementId);
+		return;
+	}
+
+	try {
+		const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
+		if (!pm.customer) {
+			await stripe.paymentMethods.attach(input.paymentMethodId, { customer: input.customerId });
+		} else if (pm.customer !== input.customerId) {
+			console.warn('payment method belongs to different customer', pm.customer, input.customerId);
+			return;
+		}
+	} catch (e) {
+		console.error('attach payment method failed', e);
 		return;
 	}
 

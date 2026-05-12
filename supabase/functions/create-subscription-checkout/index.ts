@@ -119,13 +119,24 @@ Deno.serve(async (req) => {
 			const customerId = getStripeId(session.customer);
 			const setupIntent = session.setup_intent;
 			const paymentMethodId =
-				typeof setupIntent === 'object' && setupIntent
-					? getStripeId(setupIntent.payment_method)
-					: null;
+				typeof setupIntent === 'object' && setupIntent ? getStripeId(setupIntent.payment_method) : null;
 			if (!customerId || !paymentMethodId) {
 				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
 			}
 
+			// Ensure the PM is attached to this customer (SEPA via Checkout setup may not auto-attach)
+			try {
+				const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+				if (!pm.customer) {
+					await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+				} else if (pm.customer !== customerId) {
+					console.warn('payment method belongs to different customer', pm.customer, customerId);
+					return json(409, { error: 'Betaalmethode hoort bij een andere klant' });
+				}
+			} catch (e) {
+				console.error('attach payment method failed', e);
+				return json(500, { error: 'Kon betaalmethode niet koppelen aan klant' });
+			}
 			await stripe.customers.update(customerId, {
 				invoice_settings: { default_payment_method: paymentMethodId },
 			});
@@ -134,7 +145,11 @@ Deno.serve(async (req) => {
 				customerId,
 				defaultPaymentMethod: paymentMethodId,
 			});
-			return json(200, { mode: 'complete', schedule_id: built.scheduleId, subscription_id: built.subscriptionId });
+			return json(200, {
+				mode: 'complete',
+				schedule_id: built.scheduleId,
+				subscription_id: built.subscriptionId,
+			});
 		}
 
 		// Find or create Stripe Customer
