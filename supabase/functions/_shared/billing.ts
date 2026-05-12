@@ -411,7 +411,7 @@ export async function rebuildScheduleForAgreement(
 			end_date: p.end_date,
 			proration_behavior: 'none',
 			collection_method: 'charge_automatically',
-			items: p.items.map((it) => ({
+			items: p.items.map((it: Stripe.SubscriptionSchedule.Phase.Item) => ({
 				price: typeof it.price === 'string' ? it.price : (it.price as { id: string }).id,
 				quantity: it.quantity ?? 1,
 			})),
