@@ -14,12 +14,37 @@ interface Body {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FALLBACK_SITE_URL = 'https://mcp.mplifi.nl';
+const ALLOWED_SITE_HOSTS = new Set([
+	'mcp.mplifi.nl',
+	'instant-setup-kit.lovable.app',
+	'id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app',
+	'098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com',
+]);
 
 function json(status: number, payload: unknown) {
 	return new Response(JSON.stringify(payload), {
 		status,
 		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 	});
+}
+
+function getRedirectBaseUrl(req: Request) {
+	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), FALLBACK_SITE_URL];
+
+	for (const candidate of candidates) {
+		if (!candidate) continue;
+		try {
+			const url = new URL(candidate);
+			if (url.protocol === 'https:' && ALLOWED_SITE_HOSTS.has(url.hostname)) {
+				return url.origin;
+			}
+		} catch {
+			// Ignore invalid environment/header values and continue with the next candidate.
+		}
+	}
+
+	return FALLBACK_SITE_URL;
 }
 
 Deno.serve(async (req) => {
@@ -42,9 +67,7 @@ Deno.serve(async (req) => {
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-	const siteUrl = (Deno.env.get('SITE_URL') ?? '').replace(/\/$/, '');
-
-	if (!siteUrl) return json(500, { error: 'SITE_URL is not configured' });
+	const siteUrl = getRedirectBaseUrl(req);
 
 	const userClient = createClient(supabaseUrl, anonKey, {
 		global: { headers: { Authorization: authHeader } },
