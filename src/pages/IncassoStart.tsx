@@ -107,7 +107,9 @@ export default function IncassoStart() {
 					},
 				});
 				if (completeErr || (data as { error?: string })?.error) {
-					setError((data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.');
+					setError(
+						(data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.',
+					);
 					return;
 				}
 				setSuccess(true);
@@ -137,7 +139,9 @@ export default function IncassoStart() {
 			<div className="flex min-h-screen items-center justify-center p-4">
 				<div className="max-w-md space-y-4 text-center">
 					<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
-					<p className="text-muted-foreground">De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.</p>
+					<p className="text-muted-foreground">
+						De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.
+					</p>
 				</div>
 			</div>
 		);
