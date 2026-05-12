@@ -1,13 +1,19 @@
-// Create a Stripe Checkout Session (mode=subscription) for a lesson_agreement.
+// Create a Stripe billing flow for a lesson_agreement.
+// Two modes:
+//   - mode: 'checkout'  → Stripe Checkout in `setup` mode (iDEAL→SEPA mandate);
+//                         the schedule is created by the webhook on completion.
+//   - mode: 'direct'    → Build the Subscription Schedule immediately on the
+//                         customer's existing default payment method.
+//
 // Auth required. Allowed initiators: privileged staff/admin or the student themselves.
-// Payment methods: iDEAL (first payment + mandate) → SEPA Direct Debit (recurring).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 
 interface Body {
 	lesson_agreement_id: string;
-	stripe_price_id?: string; // optional override; otherwise read from lesson_agreement
+	mode?: 'checkout' | 'direct';
 	success_url?: string;
 	cancel_url?: string;
 }
@@ -37,6 +43,7 @@ Deno.serve(async (req) => {
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
 		return json(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
+	const mode: 'checkout' | 'direct' = body.mode === 'direct' ? 'direct' : 'checkout';
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -56,22 +63,17 @@ Deno.serve(async (req) => {
 	} = await userClient.auth.getUser();
 	if (userErr || !user) return json(401, { error: 'Invalid token' });
 
-	// Load agreement (RLS-checked via userClient ensures caller has access)
+	// RLS-checked agreement load (caller must have access)
 	const { data: agreement, error: agreementErr } = await userClient
 		.from('lesson_agreements')
-		.select('id, student_user_id, teacher_user_id, stripe_price_id, is_active')
+		.select('id, student_user_id, is_active')
 		.eq('id', body.lesson_agreement_id)
 		.maybeSingle();
 	if (agreementErr || !agreement) return json(404, { error: 'Lesovereenkomst niet gevonden' });
 	if (!agreement.is_active) return json(409, { error: 'Lesovereenkomst is niet actief' });
 
-	const priceId = body.stripe_price_id ?? agreement.stripe_price_id;
-	if (!priceId) return json(400, { error: 'Geen Stripe prijs gekoppeld aan deze lesovereenkomst' });
-
-	// Determine billing user: student is debtor by default
 	const billingUserId = agreement.student_user_id;
 
-	// Get profile (admin client; RLS irrelevant for this internal lookup)
 	const { data: profile } = await admin
 		.from('profiles')
 		.select('email, first_name, last_name')
@@ -100,33 +102,65 @@ Deno.serve(async (req) => {
 			await admin.from('stripe_customers').insert({ user_id: billingUserId, stripe_customer_id: customerId });
 		}
 
+		if (mode === 'direct') {
+			// Verify the customer has a usable default payment method
+			const customer = await stripe.customers.retrieve(customerId);
+			if (customer.deleted) return json(400, { error: 'Stripe customer is verwijderd' });
+			const defaultPm = customer.invoice_settings?.default_payment_method;
+			const defaultPmId = typeof defaultPm === 'string' ? defaultPm : defaultPm?.id;
+			if (!defaultPmId) {
+				return json(409, {
+					error:
+						'Geen standaard betaalmethode op deze klant. Start eerst een checkout om een SEPA-mandaat te koppelen.',
+				});
+			}
+
+			const built = await createScheduleForAgreement(admin, stripe, {
+				lessonAgreementId: agreement.id,
+				customerId,
+				defaultPaymentMethod: defaultPmId,
+			});
+
+			return json(200, {
+				mode: 'direct',
+				schedule_id: built.scheduleId,
+				subscription_id: built.subscriptionId,
+				yearly_cents: built.yearly.yearlyCents,
+				monthly_cents: built.yearly.monthlyCents,
+				lessons_count: built.yearly.lessonsCount,
+				period: { start: built.periodStart, end: built.periodEnd },
+				tariff: built.tariff,
+			});
+		}
+
+		// mode === 'checkout' → setup-mode session for SEPA mandate
 		const origin = req.headers.get('origin') ?? '';
 		const successUrl = body.success_url ?? `${origin}/agreements/${agreement.id}?subscription=success`;
 		const cancelUrl = body.cancel_url ?? `${origin}/agreements/${agreement.id}?subscription=canceled`;
 
 		const session = await stripe.checkout.sessions.create({
-			mode: 'subscription',
+			mode: 'setup',
 			customer: customerId,
 			payment_method_types: ['ideal', 'sepa_debit'],
-			payment_method_collection: 'always',
 			locale: 'nl',
-			line_items: [{ price: priceId, quantity: 1 }],
-			subscription_data: {
+			currency: 'eur',
+			setup_intent_data: {
 				metadata: {
 					lesson_agreement_id: agreement.id,
-					student_user_id: agreement.student_user_id,
+					flow: 'schedule_setup',
 				},
 			},
 			metadata: {
 				lesson_agreement_id: agreement.id,
+				flow: 'schedule_setup',
 			},
 			success_url: successUrl,
 			cancel_url: cancelUrl,
 		});
 
-		return json(200, { url: session.url, session_id: session.id });
+		return json(200, { mode: 'checkout', url: session.url, session_id: session.id });
 	} catch (err) {
-		console.error('checkout error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Kon Stripe checkout niet aanmaken') });
+		console.error('checkout/schedule error', err);
+		return json(500, { error: getSafeErrorMessage(err, 'Kon Stripe flow niet starten') });
 	}
 });
