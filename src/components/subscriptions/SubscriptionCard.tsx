@@ -29,14 +29,19 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 	const { subscription, invoices, loading, refresh } = useSubscription(lessonAgreementId);
 	const [busy, setBusy] = useState(false);
 
-	const handleStartCheckout = async () => {
+	const handleStartCheckout = async (mode: 'checkout' | 'direct') => {
 		setBusy(true);
 		const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
-			body: { lesson_agreement_id: lessonAgreementId },
+			body: { lesson_agreement_id: lessonAgreementId, mode },
 		});
 		setBusy(false);
 		if (error || (data as { error?: string })?.error) {
 			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon incasso niet starten');
+			return;
+		}
+		if (mode === 'direct') {
+			toast.success('Incasso geactiveerd op bestaand mandaat');
+			void refresh();
 			return;
 		}
 		const url = (data as { url?: string })?.url;
@@ -77,9 +82,19 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							Nog geen abonnement gekoppeld aan deze lesovereenkomst.
 						</p>
 						{!hideStartAction && isPrivileged && (
-							<Button onClick={handleStartCheckout} disabled={busy} className="w-fit">
-								Start incasso
-							</Button>
+							<div className="flex flex-wrap gap-2">
+								<Button onClick={() => handleStartCheckout('checkout')} disabled={busy} className="w-fit">
+									Start incasso (checkout)
+								</Button>
+								<Button
+									onClick={() => handleStartCheckout('direct')}
+									disabled={busy}
+									variant="outline"
+									className="w-fit"
+								>
+									Activeer op bestaand mandaat
+								</Button>
+							</div>
 						)}
 					</div>
 				)}
