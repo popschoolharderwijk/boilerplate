@@ -9,7 +9,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import {
+	attachDefaultPaymentMethod,
+	getReusablePaymentMethodIdFromSetupIntent,
+	getSafeErrorMessage,
+	getStripe,
+	getStripeId,
+} from '../_shared/stripe.ts';
 
 interface Body {
 	lesson_agreement_id: string;
@@ -26,15 +32,6 @@ function json(status: number, payload: unknown) {
 		status,
 		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 	});
-}
-
-function getStripeId(value: unknown): string | null {
-	if (typeof value === 'string') return value;
-	if (typeof value === 'object' && value !== null && 'id' in value) {
-		const id = (value as { id?: unknown }).id;
-		return typeof id === 'string' ? id : null;
-	}
-	return null;
 }
 
 Deno.serve(async (req) => {
@@ -110,7 +107,7 @@ Deno.serve(async (req) => {
 			}
 
 			const session = await stripe.checkout.sessions.retrieve(body.checkout_session_id, {
-				expand: ['setup_intent'],
+				expand: ['setup_intent.latest_attempt'],
 			});
 			if (session.mode !== 'setup' || session.metadata?.lesson_agreement_id !== agreement.id) {
 				return json(409, { error: 'Checkout sessie hoort niet bij deze lesovereenkomst' });
@@ -119,27 +116,17 @@ Deno.serve(async (req) => {
 			const customerId = getStripeId(session.customer);
 			const setupIntent = session.setup_intent;
 			const paymentMethodId =
-				typeof setupIntent === 'object' && setupIntent ? getStripeId(setupIntent.payment_method) : null;
+				typeof setupIntent === 'object' && setupIntent ? getReusablePaymentMethodIdFromSetupIntent(setupIntent) : null;
 			if (!customerId || !paymentMethodId) {
 				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
 			}
 
-			// Ensure the PM is attached to this customer (SEPA via Checkout setup may not auto-attach)
 			try {
-				const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-				if (!pm.customer) {
-					await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
-				} else if (pm.customer !== customerId) {
-					console.warn('payment method belongs to different customer', pm.customer, customerId);
-					return json(409, { error: 'Betaalmethode hoort bij een andere klant' });
-				}
+				await attachDefaultPaymentMethod(stripe, customerId, paymentMethodId);
 			} catch (e) {
 				console.error('attach payment method failed', e);
-				return json(500, { error: 'Kon betaalmethode niet koppelen aan klant' });
+				return json(409, { error: getSafeErrorMessage(e, 'Kon betaalmethode niet koppelen aan klant') });
 			}
-			await stripe.customers.update(customerId, {
-				invoice_settings: { default_payment_method: paymentMethodId },
-			});
 			const built = await createScheduleForAgreement(admin, stripe, {
 				lessonAgreementId: agreement.id,
 				customerId,
