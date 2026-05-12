@@ -67,8 +67,7 @@ export default function Subscriptions() {
 			.select(
 				`*, lesson_agreement:lesson_agreements!inner(
 					id, student_user_id, teacher_user_id, lesson_type_id, frequency,
-					duration_minutes, day_of_week, start_date, end_date,
-					profiles!lesson_agreements_student_user_id_fkey(first_name, last_name, email, avatar_url)
+					duration_minutes, day_of_week, start_date, end_date
 				)`,
 			)
 			.order('created_at', { ascending: false });
@@ -79,18 +78,32 @@ export default function Subscriptions() {
 			return;
 		}
 
-		const subs = (data ?? []) as Row[];
-		setRows(subs);
+		const raw = (data ?? []) as Array<
+			Omit<Row, 'lesson_agreement'> & { lesson_agreement: Omit<AgreementInfo, 'profiles'> | null }
+		>;
 
-		// Batch helpers
 		const studentIds = Array.from(
-			new Set(subs.map((s) => s.lesson_agreement?.student_user_id).filter((v): v is string => !!v)),
+			new Set(raw.map((s) => s.lesson_agreement?.student_user_id).filter((v): v is string => !!v)),
 		);
 		const lessonTypeIds = Array.from(
-			new Set(subs.map((s) => s.lesson_agreement?.lesson_type_id).filter((v): v is string => !!v)),
+			new Set(raw.map((s) => s.lesson_agreement?.lesson_type_id).filter((v): v is string => !!v)),
 		);
 
-		const [{ data: students }, { data: options }, { data: holidays }] = await Promise.all([
+		const [{ data: profiles }, { data: students }, { data: options }, { data: holidays }] = await Promise.all([
+			studentIds.length
+				? supabase
+						.from('profiles')
+						.select('user_id, first_name, last_name, email, avatar_url')
+						.in('user_id', studentIds)
+				: Promise.resolve({
+						data: [] as Array<{
+							user_id: string;
+							first_name: string | null;
+							last_name: string | null;
+							email: string;
+							avatar_url: string | null;
+						}>,
+					}),
 			studentIds.length
 				? supabase.from('students').select('user_id, date_of_birth').in('user_id', studentIds)
 				: Promise.resolve({ data: [] as Array<{ user_id: string; date_of_birth: string | null }> }),
@@ -112,6 +125,25 @@ export default function Subscriptions() {
 					}),
 			supabase.from('no_lesson_periods').select('start_date, end_date'),
 		]);
+
+		const profileByUser = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+		const subs: Row[] = raw.map((s) => ({
+			...s,
+			lesson_agreement: s.lesson_agreement
+				? {
+						...s.lesson_agreement,
+						profiles: profileByUser.get(s.lesson_agreement.student_user_id)
+							? {
+									first_name: profileByUser.get(s.lesson_agreement.student_user_id)!.first_name,
+									last_name: profileByUser.get(s.lesson_agreement.student_user_id)!.last_name,
+									email: profileByUser.get(s.lesson_agreement.student_user_id)!.email,
+									avatar_url: profileByUser.get(s.lesson_agreement.student_user_id)!.avatar_url,
+								}
+							: null,
+					}
+				: null,
+		}));
+		setRows(subs);
 
 		const dobByUser = new Map((students ?? []).map((s) => [s.user_id, s.date_of_birth]));
 		const optionKey = (lt: string, f: string, d: number) => `${lt}|${f}|${d}`;
