@@ -481,15 +481,17 @@ export async function rebuildScheduleForAgreement(
 
 	// Align the new future-phase payloads to the same month grid as the original schedule.
 	const futurePhases = newPhases.slice(firstFutureIndex);
-	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map((payload, idx) => {
-		const original = newPhases[firstFutureIndex + idx];
-		const { iterations: _ignored, ...rest } = payload;
-		return {
-			...rest,
-			start_date: original.startUnix,
-			end_date: original.endUnix,
-		};
-	});
+	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map(
+		(payload, idx) => {
+			const original = newPhases[firstFutureIndex + idx];
+			const { iterations: _ignored, ...rest } = payload;
+			return {
+				...rest,
+				start_date: original.startUnix,
+				end_date: original.endUnix,
+			};
+		},
+	);
 
 	if (futurePayloads.length === 0) {
 		return {

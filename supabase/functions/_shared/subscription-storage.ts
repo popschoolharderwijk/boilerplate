@@ -17,10 +17,7 @@ export interface SubscriptionState {
 	latest_invoice_id?: string | null;
 }
 
-async function findExistingSubscriptionId(
-	admin: SupabaseClient,
-	state: SubscriptionState,
-): Promise<string | null> {
+async function findExistingSubscriptionId(admin: SupabaseClient, state: SubscriptionState): Promise<string | null> {
 	if (state.stripe_subscription_id) {
 		const { data, error } = await admin
 			.from('subscriptions')
