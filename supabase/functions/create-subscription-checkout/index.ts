@@ -119,9 +119,7 @@ Deno.serve(async (req) => {
 			const customerId = getStripeId(session.customer);
 			const setupIntent = session.setup_intent;
 			const paymentMethodId =
-				typeof setupIntent === 'object' && setupIntent
-					? getStripeId(setupIntent.payment_method)
-					: null;
+				typeof setupIntent === 'object' && setupIntent ? getStripeId(setupIntent.payment_method) : null;
 			if (!customerId || !paymentMethodId) {
 				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
 			}
@@ -147,7 +145,11 @@ Deno.serve(async (req) => {
 				customerId,
 				defaultPaymentMethod: paymentMethodId,
 			});
-			return json(200, { mode: 'complete', schedule_id: built.scheduleId, subscription_id: built.subscriptionId });
+			return json(200, {
+				mode: 'complete',
+				schedule_id: built.scheduleId,
+				subscription_id: built.subscriptionId,
+			});
 		}
 
 		// Find or create Stripe Customer
