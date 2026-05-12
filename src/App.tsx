@@ -47,6 +47,7 @@ const App = () => (
 					<Route path="/login" element={<Login />} />
 					<Route path="/auth/callback" element={<AuthCallback />} />
 					<Route path="/aanmelden" element={<PublicSignup />} />
+					<Route path="/incasso/start" element={<IncassoStart />} />
 
 					{/* Protected dashboard routes */}
 					<Route
