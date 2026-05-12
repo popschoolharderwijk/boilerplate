@@ -16,6 +16,9 @@ interface LessonAgreementItemProps {
 	agreement: LessonAgreement;
 	className?: string;
 	readOnly?: boolean;
+	/** Optioneel: nodig om incasso-preview te tonen in de detail-dialog. */
+	studentUserId?: string;
+	lessonTypeId?: string;
 }
 
 function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: string): string {
@@ -24,7 +27,13 @@ function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: stri
 	return `${agreement.lesson_type.name}\n${teacherName}\n${dayName} om ${time}`;
 }
 
-export function LessonAgreementItem({ agreement, className, readOnly = false }: LessonAgreementItemProps) {
+export function LessonAgreementItem({
+	agreement,
+	className,
+	readOnly = false,
+	studentUserId,
+	lessonTypeId,
+}: LessonAgreementItemProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 
 	const teacherName = getDisplayName(agreement.teacher);
@@ -117,7 +126,13 @@ export function LessonAgreementItem({ agreement, className, readOnly = false }: 
 				</Tooltip>
 			</TooltipProvider>
 
-			<LessonAgreementDialog open={dialogOpen} onOpenChange={handleOpenChange} agreement={agreement} />
+			<LessonAgreementDialog
+				open={dialogOpen}
+				onOpenChange={handleOpenChange}
+				agreement={agreement}
+				studentUserId={studentUserId}
+				lessonTypeId={lessonTypeId}
+			/>
 		</>
 	);
 }

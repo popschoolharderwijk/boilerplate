@@ -199,7 +199,11 @@ export default function StudentDetail() {
 						<div className="space-y-4">
 							{agreements.map((a) => (
 								<div key={a.id} className="space-y-2">
-									<LessonAgreementItem agreement={a} />
+									<LessonAgreementItem
+										agreement={a}
+										studentUserId={userId}
+										lessonTypeId={a.lesson_type.id}
+									/>
 									<SubscriptionCard lessonAgreementId={a.id} />
 								</div>
 							))}
