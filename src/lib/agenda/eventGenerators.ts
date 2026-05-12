@@ -282,12 +282,20 @@ function toLessonFrequency(freq: string | null): LessonFrequency {
 export interface NoLessonPeriod {
 	start_date: string;
 	end_date: string;
+	name?: string | null;
+}
+
+export function findNoLessonPeriod(
+	date: Date,
+	periods: NoLessonPeriod[] | undefined,
+): NoLessonPeriod | undefined {
+	if (!periods?.length) return undefined;
+	const dateStr = formatDateToDb(date);
+	return periods.find((p) => p.start_date <= dateStr && dateStr <= p.end_date);
 }
 
 function isInNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): boolean {
-	if (!periods?.length) return false;
-	const dateStr = formatDateToDb(date);
-	return periods.some((p) => p.start_date <= dateStr && dateStr <= p.end_date);
+	return findNoLessonPeriod(date, periods) !== undefined;
 }
 
 /**
