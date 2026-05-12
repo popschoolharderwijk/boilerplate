@@ -28,6 +28,38 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 	const { isPrivileged } = useAuth();
 	const { subscription, invoices, loading, refresh } = useSubscription(lessonAgreementId);
 	const [busy, setBusy] = useState(false);
+	const [lastInviteAt, setLastInviteAt] = useState<string | null>(null);
+
+	useEffect(() => {
+		let cancelled = false;
+		void supabase
+			.from('incasso_invitations')
+			.select('sent_at')
+			.eq('lesson_agreement_id', lessonAgreementId)
+			.order('sent_at', { ascending: false })
+			.limit(1)
+			.maybeSingle()
+			.then(({ data }) => {
+				if (!cancelled) setLastInviteAt(data?.sent_at ?? null);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [lessonAgreementId]);
+
+	const handleSendInvite = async () => {
+		setBusy(true);
+		const { error } = await supabase.functions.invoke('send-incasso-invite', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		if (error) {
+			toast.error(error.message ?? 'Kon uitnodiging niet versturen');
+			return;
+		}
+		setLastInviteAt(new Date().toISOString());
+		toast.success('Betaaluitnodiging verstuurd');
+	};
 
 	const handleStartCheckout = async (mode: 'checkout' | 'direct') => {
 		setBusy(true);
