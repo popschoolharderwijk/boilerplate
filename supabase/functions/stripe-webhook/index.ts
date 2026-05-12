@@ -38,12 +38,15 @@ async function upsertSubscription(admin: ReturnType<typeof createClient>, sub: S
 		return null;
 	})();
 
+	const scheduleId = typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? null);
+
 	const { error } = await admin.from('subscriptions').upsert(
 		{
 			lesson_agreement_id: lessonAgreementId,
 			stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
 			stripe_subscription_id: sub.id,
 			stripe_price_id: priceId,
+			stripe_schedule_id: scheduleId,
 			status,
 			current_period_start: sub.current_period_start
 				? new Date(sub.current_period_start * 1000).toISOString()
