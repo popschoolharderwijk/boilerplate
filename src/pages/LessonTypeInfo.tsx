@@ -452,13 +452,18 @@ export default function LessonTypeInfo() {
 		for (let i = 0; i < optionsForm.length; i++) {
 			const o = optionsForm[i];
 			const dur = parseInt(o.duration_minutes, 10);
-			const price = parseFloat(o.price_per_lesson);
+			const priceUnder21 = parseFloat(o.price_per_lesson_under_21);
+			const priceAdult = parseFloat(o.price_per_lesson_adult);
 			if (Number.isNaN(dur) || dur <= 0) {
 				toast.error(`Optie ${i + 1}: duur moet een positief getal zijn`);
 				return;
 			}
-			if (Number.isNaN(price) || price < 0) {
-				toast.error(`Optie ${i + 1}: prijs moet een positief getal zijn`);
+			if (Number.isNaN(priceUnder21) || priceUnder21 <= 0) {
+				toast.error(`Optie ${i + 1}: prijs <21 moet een positief getal zijn`);
+				return;
+			}
+			if (Number.isNaN(priceAdult) || priceAdult <= 0) {
+				toast.error(`Optie ${i + 1}: prijs 21+ moet een positief getal zijn`);
 				return;
 			}
 		}
