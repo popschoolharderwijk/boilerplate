@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDate } from '@/lib/date/date-format';
+import { formatDbDateToUi } from '@/lib/date/date-format';
 
 interface NoLessonPeriod {
 	id: string;
