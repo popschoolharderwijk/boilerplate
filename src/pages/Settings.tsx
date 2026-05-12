@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 
 export default function Settings() {
 	const { theme, setTheme } = useTheme();
-	const { user } = useAuth();
+	const { user, isAdmin, isSiteAdmin } = useAuth();
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
