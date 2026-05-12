@@ -80,9 +80,19 @@ export default function LessonTypeInfo() {
 	const [optionModalForm, setOptionModalForm] = useState<{
 		duration_minutes: string;
 		frequency: LessonFrequency;
-		price_per_lesson: string;
-	}>({ duration_minutes: '', frequency: 'weekly', price_per_lesson: '' });
+		price_per_lesson_under_21: string;
+		price_per_lesson_adult: string;
+	}>({
+		duration_minutes: '',
+		frequency: 'weekly',
+		price_per_lesson_under_21: '',
+		price_per_lesson_adult: '',
+	});
 	const newOptionIdRef = useRef(0);
+
+	const centsToInput = (cents: number | null | undefined): string =>
+		cents == null ? '' : (cents / 100).toFixed(2);
+	const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
 
 	const loadLessonType = useCallback(async () => {
 		if (!id || id === 'new') return;
