@@ -90,8 +90,7 @@ export default function LessonTypeInfo() {
 	});
 	const newOptionIdRef = useRef(0);
 
-	const centsToInput = (cents: number | null | undefined): string =>
-		cents == null ? '' : (cents / 100).toFixed(2);
+	const centsToInput = (cents: number | null | undefined): string => (cents == null ? '' : (cents / 100).toFixed(2));
 	const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
 
 	const loadLessonType = useCallback(async () => {
@@ -357,9 +356,7 @@ export default function LessonTypeInfo() {
 						setSaving(false);
 						return;
 					}
-					setOptions((prev) =>
-						prev.map((o) => (o.id === editingOption.id ? { ...o, ...dbPayload } : o)),
-					);
+					setOptions((prev) => prev.map((o) => (o.id === editingOption.id ? { ...o, ...dbPayload } : o)));
 					toast.success('Optie bijgewerkt');
 				} catch (e) {
 					console.error(e);
@@ -510,7 +507,7 @@ export default function LessonTypeInfo() {
 				lessonTypeId = inserted?.id ?? '';
 			}
 
-		const sorted = [...optionsForm].sort(optionSort);
+			const sorted = [...optionsForm].sort(optionSort);
 			for (const o of sorted) {
 				const duration_minutes = parseInt(o.duration_minutes, 10);
 				const price_per_lesson_under_21_cents = inputToCents(o.price_per_lesson_under_21);
@@ -526,9 +523,7 @@ export default function LessonTypeInfo() {
 				if (o.id) {
 					await supabase.from('lesson_type_options').update(payload).eq('id', o.id);
 				} else {
-					await supabase
-						.from('lesson_type_options')
-						.insert({ lesson_type_id: lessonTypeId, ...payload });
+					await supabase.from('lesson_type_options').insert({ lesson_type_id: lessonTypeId, ...payload });
 				}
 			}
 
