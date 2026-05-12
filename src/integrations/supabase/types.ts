@@ -987,7 +987,7 @@ export type Database = {
           stripe_customer_id: string
           stripe_price_id: string
           stripe_schedule_id: string | null
-          stripe_subscription_id: string
+          stripe_subscription_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -1006,7 +1006,7 @@ export type Database = {
           stripe_customer_id: string
           stripe_price_id: string
           stripe_schedule_id?: string | null
-          stripe_subscription_id: string
+          stripe_subscription_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1025,7 +1025,7 @@ export type Database = {
           stripe_customer_id?: string
           stripe_price_id?: string
           stripe_schedule_id?: string | null
-          stripe_subscription_id?: string
+          stripe_subscription_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
