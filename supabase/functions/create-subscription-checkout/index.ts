@@ -116,7 +116,9 @@ Deno.serve(async (req) => {
 			const customerId = getStripeId(session.customer);
 			const setupIntent = session.setup_intent;
 			const paymentMethodId =
-				typeof setupIntent === 'object' && setupIntent ? getReusablePaymentMethodIdFromSetupIntent(setupIntent) : null;
+				typeof setupIntent === 'object' && setupIntent
+					? getReusablePaymentMethodIdFromSetupIntent(setupIntent)
+					: null;
 			if (!customerId || !paymentMethodId) {
 				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
 			}

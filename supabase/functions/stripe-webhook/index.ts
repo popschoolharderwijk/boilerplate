@@ -215,7 +215,9 @@ Deno.serve(async (req) => {
 			case 'setup_intent.succeeded': {
 				const setupIntent = event.data.object as Stripe.SetupIntent;
 				if (setupIntent.metadata?.flow !== 'schedule_setup') break;
-				const expandedSetupIntent = await stripe.setupIntents.retrieve(setupIntent.id, { expand: ['latest_attempt'] });
+				const expandedSetupIntent = await stripe.setupIntents.retrieve(setupIntent.id, {
+					expand: ['latest_attempt'],
+				});
 				await createScheduleFromSetupPaymentMethod(admin, stripe, {
 					lessonAgreementId: expandedSetupIntent.metadata.lesson_agreement_id ?? null,
 					customerId: getStripeId(expandedSetupIntent.customer),
