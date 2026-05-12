@@ -90,9 +90,6 @@ export default function LessonTypeInfo() {
 	});
 	const newOptionIdRef = useRef(0);
 
-	const centsToInput = (cents: number | null | undefined): string => (cents == null ? '' : (cents / 100).toFixed(2));
-	const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
-
 	const loadLessonType = useCallback(async () => {
 		if (!id || id === 'new') return;
 
