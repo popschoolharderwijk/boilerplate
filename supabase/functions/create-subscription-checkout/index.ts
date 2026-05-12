@@ -13,7 +13,8 @@ import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 
 interface Body {
 	lesson_agreement_id: string;
-	mode?: 'checkout' | 'direct';
+	mode?: 'checkout' | 'direct' | 'complete';
+	checkout_session_id?: string;
 	success_url?: string;
 	cancel_url?: string;
 }
@@ -25,6 +26,15 @@ function json(status: number, payload: unknown) {
 		status,
 		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
 	});
+}
+
+function getStripeId(value: unknown): string | null {
+	if (typeof value === 'string') return value;
+	if (typeof value === 'object' && value !== null && 'id' in value) {
+		const id = (value as { id?: unknown }).id;
+		return typeof id === 'string' ? id : null;
+	}
+	return null;
 }
 
 Deno.serve(async (req) => {
@@ -43,7 +53,8 @@ Deno.serve(async (req) => {
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
 		return json(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
-	const mode: 'checkout' | 'direct' = body.mode === 'direct' ? 'direct' : 'checkout';
+	const mode: 'checkout' | 'direct' | 'complete' =
+		body.mode === 'direct' || body.mode === 'complete' ? body.mode : 'checkout';
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -83,6 +94,48 @@ Deno.serve(async (req) => {
 
 	try {
 		const stripe = getStripe();
+
+		if (mode === 'complete') {
+			if (!body.checkout_session_id || !body.checkout_session_id.startsWith('cs_')) {
+				return json(400, { error: 'Ongeldige checkout sessie' });
+			}
+
+			const { data: existingAgreement } = await admin
+				.from('lesson_agreements')
+				.select('stripe_schedule_id')
+				.eq('id', agreement.id)
+				.maybeSingle();
+			if (existingAgreement?.stripe_schedule_id) {
+				return json(200, { mode: 'complete', schedule_id: existingAgreement.stripe_schedule_id });
+			}
+
+			const session = await stripe.checkout.sessions.retrieve(body.checkout_session_id, {
+				expand: ['setup_intent'],
+			});
+			if (session.mode !== 'setup' || session.metadata?.lesson_agreement_id !== agreement.id) {
+				return json(409, { error: 'Checkout sessie hoort niet bij deze lesovereenkomst' });
+			}
+
+			const customerId = getStripeId(session.customer);
+			const setupIntent = session.setup_intent;
+			const paymentMethodId =
+				typeof setupIntent === 'object' && setupIntent
+					? getStripeId(setupIntent.payment_method)
+					: null;
+			if (!customerId || !paymentMethodId) {
+				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
+			}
+
+			await stripe.customers.update(customerId, {
+				invoice_settings: { default_payment_method: paymentMethodId },
+			});
+			const built = await createScheduleForAgreement(admin, stripe, {
+				lessonAgreementId: agreement.id,
+				customerId,
+				defaultPaymentMethod: paymentMethodId,
+			});
+			return json(200, { mode: 'complete', schedule_id: built.scheduleId, subscription_id: built.subscriptionId });
+		}
 
 		// Find or create Stripe Customer
 		const { data: existingCustomer } = await admin
@@ -134,7 +187,8 @@ Deno.serve(async (req) => {
 
 		// mode === 'checkout' → setup-mode session for SEPA mandate
 		const origin = req.headers.get('origin') ?? '';
-		const successUrl = body.success_url ?? `${origin}/agreements/${agreement.id}?subscription=success`;
+		const successUrl =
+			body.success_url ?? `${origin}/incasso/start?agreement=${agreement.id}&session_id={CHECKOUT_SESSION_ID}`;
 		const cancelUrl = body.cancel_url ?? `${origin}/agreements/${agreement.id}?subscription=canceled`;
 
 		const session = await stripe.checkout.sessions.create({
