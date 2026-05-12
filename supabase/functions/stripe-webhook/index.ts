@@ -4,7 +4,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import {
+	attachDefaultPaymentMethod,
+	getReusablePaymentMethodIdFromSetupIntent,
+	getSafeErrorMessage,
+	getStripe,
+	getStripeId,
+} from '../_shared/stripe.ts';
 
 function json(status: number, payload: unknown) {
 	return new Response(JSON.stringify(payload), {
@@ -23,15 +29,6 @@ const ALLOWED_STATUSES = new Set([
 	'incomplete_expired',
 	'paused',
 ]);
-
-function getStripeId(value: unknown): string | null {
-	if (typeof value === 'string') return value;
-	if (typeof value === 'object' && value !== null && 'id' in value) {
-		const id = (value as { id?: unknown }).id;
-		return typeof id === 'string' ? id : null;
-	}
-	return null;
-}
 
 async function hasExistingSchedule(
 	admin: ReturnType<typeof createClient>,
