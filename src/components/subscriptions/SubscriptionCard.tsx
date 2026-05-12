@@ -45,7 +45,19 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 			return;
 		}
 		const url = (data as { url?: string })?.url;
-		if (url) window.location.href = url;
+		if (url) {
+			// Open in new tab — Stripe Checkout sets X-Frame-Options: DENY,
+			// so navigating the (Lovable preview) iframe results in a black screen.
+			const win = window.open(url, '_blank', 'noopener,noreferrer');
+			if (!win) {
+				// Popup blocked: fall back to top-level navigation.
+				try {
+					window.top!.location.href = url;
+				} catch {
+					window.location.href = url;
+				}
+			}
+		}
 	};
 
 	const handleOpenPortal = async () => {
