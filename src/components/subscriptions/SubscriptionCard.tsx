@@ -62,6 +62,27 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 		if (url) window.open(url, '_blank', 'noopener,noreferrer');
 	};
 
+	const handleRebuild = async () => {
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('rebuild-subscription-schedule', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		if (error || (data as { error?: string })?.error) {
+			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon tarieven niet bijwerken');
+			return;
+		}
+		const result = (data as { results?: Array<{ ok: boolean; detail?: { updatedPhases?: number } }> })
+			?.results?.[0];
+		const updated = result?.detail?.updatedPhases ?? 0;
+		toast.success(
+			updated > 0
+				? `Nieuwe tarieven toegepast op ${updated} toekomstige maand(en)`
+				: 'Geen toekomstige maanden om bij te werken',
+		);
+		void refresh();
+	};
+
 	const status = subscription?.status as SubscriptionStatus | undefined;
 
 	return (
@@ -126,6 +147,17 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
 								Beheer betaling
 							</Button>
+							{isPrivileged && subscription.stripe_schedule_id && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleRebuild}
+									disabled={busy}
+									title="Herbereken toekomstige maanden met de huidige tarieven"
+								>
+									Pas nieuwe tarieven toe
+								</Button>
+							)}
 						</div>
 
 						{invoices.length > 0 && (
