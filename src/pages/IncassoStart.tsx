@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function IncassoStart() {
 	const [params] = useSearchParams();
 	const [error, setError] = useState<string | null>(null);
+	const [success, setSuccess] = useState(false);
 	const startedRef = useRef(false);
 
 	useEffect(() => {
@@ -19,6 +20,7 @@ export default function IncassoStart() {
 
 		const run = async () => {
 			const agreementId = params.get('agreement');
+			const checkoutSessionId = params.get('session_id');
 			if (!agreementId) {
 				setError('Ongeldige uitnodigingslink (overeenkomst ontbreekt).');
 				return;
@@ -60,6 +62,22 @@ export default function IncassoStart() {
 				return;
 			}
 
+			if (checkoutSessionId) {
+				const { data, error: completeErr } = await supabase.functions.invoke('create-subscription-checkout', {
+					body: {
+						lesson_agreement_id: agreementId,
+						mode: 'complete',
+						checkout_session_id: checkoutSessionId,
+					},
+				});
+				if (completeErr || (data as { error?: string })?.error) {
+					setError((data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.');
+					return;
+				}
+				setSuccess(true);
+				return;
+			}
+
 			const { data, error: invokeErr } = await supabase.functions.invoke('create-subscription-checkout', {
 				body: { lesson_agreement_id: agreementId, mode: 'checkout' },
 			});
@@ -77,6 +95,17 @@ export default function IncassoStart() {
 
 		void run();
 	}, [params]);
+
+	if (success) {
+		return (
+			<div className="flex min-h-screen items-center justify-center p-4">
+				<div className="max-w-md space-y-4 text-center">
+					<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
+					<p className="text-muted-foreground">De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (error) {
 		return (

@@ -23,7 +23,7 @@ Alle tabellen hebben RLS + audit trail. Schrijfrechten zijn alleen voor service-
 
 | Functie | Auth | Doel |
 |---|---|---|
-| `create-subscription-checkout` | JWT | Maakt Checkout Session (mode=subscription, ideal+sepa_debit) |
+| `create-subscription-checkout` | JWT | Maakt Checkout Session (setup-mode, iDEAL+SEPA-mandaat) |
 | `create-customer-portal` | JWT | Opent Stripe Customer Portal voor de ingelogde gebruiker |
 | `sync-stripe-subscription` | JWT | Trekt status van een subscription opnieuw uit Stripe |
 | `stripe-webhook` | publiek (signature) | Verwerkt subscription/invoice events |
@@ -36,7 +36,7 @@ Alle tabellen hebben RLS + audit trail. Schrijfrechten zijn alleen voor service-
 4. **Customer portal** activeren (Settings → Billing → Customer portal). Sta minimaal toe: betaalmethode wijzigen, factuurhistorie bekijken, abonnement annuleren.
 5. **Webhook endpoint** registreren:
    - URL: `https://<project-ref>.supabase.co/functions/v1/stripe-webhook`
-   - Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.created`, `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`
+   - Events: `checkout.session.completed`, `setup_intent.succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.created`, `invoice.paid`, `invoice.payment_failed`, `invoice.finalized`
    - Kopieer de signing secret naar `STRIPE_WEBHOOK_SECRET`.
 
 ## Secrets

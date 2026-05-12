@@ -24,6 +24,50 @@ const ALLOWED_STATUSES = new Set([
 	'paused',
 ]);
 
+function getStripeId(value: unknown): string | null {
+	if (typeof value === 'string') return value;
+	if (typeof value === 'object' && value !== null && 'id' in value) {
+		const id = (value as { id?: unknown }).id;
+		return typeof id === 'string' ? id : null;
+	}
+	return null;
+}
+
+async function hasExistingSchedule(admin: ReturnType<typeof createClient>, lessonAgreementId: string): Promise<boolean> {
+	const { data } = await admin
+		.from('lesson_agreements')
+		.select('stripe_schedule_id')
+		.eq('id', lessonAgreementId)
+		.maybeSingle();
+	return Boolean(data?.stripe_schedule_id);
+}
+
+async function createScheduleFromSetupPaymentMethod(
+	admin: ReturnType<typeof createClient>,
+	stripe: Stripe,
+	input: { lessonAgreementId: string | null; customerId: string | null; paymentMethodId: string | null; sourceId: string },
+): Promise<void> {
+	if (!input.lessonAgreementId || !input.customerId || !input.paymentMethodId) {
+		console.warn('setup event missing agreement/customer/payment_method', input.sourceId);
+		return;
+	}
+
+	if (await hasExistingSchedule(admin, input.lessonAgreementId)) {
+		console.log('schedule already exists for agreement', input.lessonAgreementId);
+		return;
+	}
+
+	await stripe.customers.update(input.customerId, {
+		invoice_settings: { default_payment_method: input.paymentMethodId },
+	});
+
+	await createScheduleForAgreement(admin, stripe, {
+		lessonAgreementId: input.lessonAgreementId,
+		customerId: input.customerId,
+		defaultPaymentMethod: input.paymentMethodId,
+	});
+}
+
 async function upsertSubscription(admin: ReturnType<typeof createClient>, sub: Stripe.Subscription): Promise<void> {
 	const lessonAgreementId = sub.metadata?.lesson_agreement_id;
 	if (!lessonAgreementId) {
@@ -143,11 +187,7 @@ Deno.serve(async (req) => {
 				} else if (session.mode === 'setup' && session.metadata?.flow === 'schedule_setup') {
 					// SEPA mandate just collected → attach as default + create the schedule.
 					const lessonAgreementId = session.metadata.lesson_agreement_id;
-					const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-					if (!lessonAgreementId || !customerId) {
-						console.warn('setup session missing agreement/customer', session.id);
-						break;
-					}
+					const customerId = getStripeId(session.customer);
 					const setupIntentId =
 						typeof session.setup_intent === 'string' ? session.setup_intent : session.setup_intent?.id;
 					let pmId: string | null = null;
@@ -156,23 +196,24 @@ Deno.serve(async (req) => {
 						pmId =
 							typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
 					}
-					if (!pmId) {
-						console.warn('setup session without payment_method', session.id);
-						break;
-					}
-					await stripe.customers.update(customerId, {
-						invoice_settings: { default_payment_method: pmId },
+					await createScheduleFromSetupPaymentMethod(admin, stripe, {
+						lessonAgreementId,
+						customerId,
+						paymentMethodId: pmId,
+						sourceId: session.id,
 					});
-					try {
-						await createScheduleForAgreement(admin, stripe, {
-							lessonAgreementId,
-							customerId,
-							defaultPaymentMethod: pmId,
-						});
-					} catch (err) {
-						console.error('failed to create schedule from setup session', err);
-					}
 				}
+				break;
+			}
+			case 'setup_intent.succeeded': {
+				const setupIntent = event.data.object as Stripe.SetupIntent;
+				if (setupIntent.metadata?.flow !== 'schedule_setup') break;
+				await createScheduleFromSetupPaymentMethod(admin, stripe, {
+					lessonAgreementId: setupIntent.metadata.lesson_agreement_id ?? null,
+					customerId: getStripeId(setupIntent.customer),
+					paymentMethodId: getStripeId(setupIntent.payment_method),
+					sourceId: setupIntent.id,
+				});
 				break;
 			}
 			case 'invoice.paid':
