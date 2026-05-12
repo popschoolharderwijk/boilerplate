@@ -13,3 +13,56 @@ export function getStripe(): Stripe {
 		httpClient: Stripe.createFetchHttpClient(),
 	});
 }
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+	return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function readStringProperty(value: Record<string, unknown> | null, key: string): string | null {
+	const property = value?.[key];
+	return typeof property === 'string' ? property : null;
+}
+
+export function getStripeId(value: unknown): string | null {
+	if (typeof value === 'string') return value;
+	return readStringProperty(asRecord(value), 'id');
+}
+
+function getGeneratedSepaDebitPaymentMethodId(latestAttempt: unknown): string | null {
+	const details = asRecord(asRecord(latestAttempt)?.payment_method_details);
+	const direct = readStringProperty(details, 'generated_sepa_debit');
+	if (direct) return direct;
+
+	for (const value of Object.values(details ?? {})) {
+		const nested = readStringProperty(asRecord(value), 'generated_sepa_debit');
+		if (nested) return nested;
+	}
+
+	return null;
+}
+
+export function getReusablePaymentMethodIdFromSetupIntent(setupIntent: Stripe.SetupIntent): string | null {
+	return getGeneratedSepaDebitPaymentMethodId(setupIntent.latest_attempt) ?? getStripeId(setupIntent.payment_method);
+}
+
+export async function attachDefaultPaymentMethod(
+	stripe: Stripe,
+	customerId: string,
+	paymentMethodId: string,
+): Promise<void> {
+	const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+	if (pm.type === 'ideal') {
+		throw new Error('iDEAL kan niet als herbruikbare betaalmethode worden opgeslagen; SEPA-mandaat ontbreekt.');
+	}
+
+	const existingCustomerId = getStripeId(pm.customer);
+	if (!existingCustomerId) {
+		await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+	} else if (existingCustomerId !== customerId) {
+		throw new Error('Betaalmethode hoort bij een andere klant');
+	}
+
+	await stripe.customers.update(customerId, {
+		invoice_settings: { default_payment_method: paymentMethodId },
+	});
+}
