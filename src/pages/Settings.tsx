@@ -479,6 +479,12 @@ export default function Settings() {
 					</Card>
 				</TabsContent>
 
+				{(isAdmin || isSiteAdmin) && (
+					<TabsContent value="no-lesson-periods" className="space-y-6 mt-6">
+						<NoLessonPeriodsManager />
+					</TabsContent>
+				)}
+
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}
 					<Card className="border-destructive/50">
