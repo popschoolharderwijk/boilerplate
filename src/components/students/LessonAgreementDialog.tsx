@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,19 +44,19 @@ export function LessonAgreementDialog({
 	studentUserId,
 	lessonTypeId,
 }: LessonAgreementDialogProps) {
-	const previewInput =
-		agreement && studentUserId && lessonTypeId
-			? {
-					id: agreement.id,
-					student_user_id: studentUserId,
-					lesson_type_id: lessonTypeId,
-					frequency: agreement.frequency,
-					duration_minutes: agreement.duration_minutes,
-					day_of_week: agreement.day_of_week,
-					start_date: agreement.start_date,
-					end_date: agreement.end_date,
-				}
-			: null;
+	const previewInput = useMemo(() => {
+		if (!agreement || !studentUserId || !lessonTypeId) return null;
+		return {
+			id: agreement.id,
+			student_user_id: studentUserId,
+			lesson_type_id: lessonTypeId,
+			frequency: agreement.frequency,
+			duration_minutes: agreement.duration_minutes,
+			day_of_week: agreement.day_of_week,
+			start_date: agreement.start_date,
+			end_date: agreement.end_date,
+		};
+	}, [agreement, studentUserId, lessonTypeId]);
 	const { preview, loading: previewLoading, error: previewError } = useAgreementBillingPreview(previewInput);
 
 	if (!agreement) {
