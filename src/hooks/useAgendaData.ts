@@ -67,6 +67,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [projectsMap, setProjectsMap] = useState<Map<string, ProjectInfo>>(new Map());
 	const [lessonGroupsMap, setLessonGroupsMap] = useState<Map<string, LessonGroupInfo>>(new Map());
 	const [profileMap, setProfileMap] = useState<Map<string, User>>(new Map());
+	const [noLessonPeriods, setNoLessonPeriods] = useState<NoLessonPeriod[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	const loadData = useCallback(
