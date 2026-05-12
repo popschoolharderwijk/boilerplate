@@ -63,21 +63,11 @@ async function createScheduleFromSetupPaymentMethod(
 	}
 
 	try {
-		const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
-		if (!pm.customer) {
-			await stripe.paymentMethods.attach(input.paymentMethodId, { customer: input.customerId });
-		} else if (pm.customer !== input.customerId) {
-			console.warn('payment method belongs to different customer', pm.customer, input.customerId);
-			return;
-		}
+		await attachDefaultPaymentMethod(stripe, input.customerId, input.paymentMethodId);
 	} catch (e) {
 		console.error('attach payment method failed', e);
 		return;
 	}
-
-	await stripe.customers.update(input.customerId, {
-		invoice_settings: { default_payment_method: input.paymentMethodId },
-	});
 
 	await createScheduleForAgreement(admin, stripe, {
 		lessonAgreementId: input.lessonAgreementId,
