@@ -22,19 +22,6 @@ function json(status: number, payload: unknown) {
 	});
 }
 
-function isMinor(dob: string | null): boolean {
-	if (!dob) return false;
-	const birth = new Date(dob);
-	const now = new Date();
-	const age =
-		now.getFullYear() -
-		birth.getFullYear() -
-		(now.getMonth() < birth.getMonth() ||
-		(now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
-			? 1
-			: 0);
-	return age < 18;
-}
 
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
