@@ -166,7 +166,8 @@ export default function LessonTypeInfo() {
 			setOptionModalForm({
 				duration_minutes: editingOption.duration_minutes,
 				frequency: editingOption.frequency,
-				price_per_lesson: editingOption.price_per_lesson,
+				price_per_lesson_under_21: editingOption.price_per_lesson_under_21,
+				price_per_lesson_adult: editingOption.price_per_lesson_adult,
 			});
 		}
 	}, [editingOption]);
@@ -176,7 +177,9 @@ export default function LessonTypeInfo() {
 			_newId: `new-${++newOptionIdRef.current}`,
 			duration_minutes: String(DEFAULT_DURATION_MINUTES),
 			frequency: 'weekly',
-			price_per_lesson: '30',
+			price_per_lesson: '0',
+			price_per_lesson_under_21: '',
+			price_per_lesson_adult: '',
 		});
 	};
 
