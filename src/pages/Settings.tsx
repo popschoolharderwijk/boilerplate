@@ -326,9 +326,7 @@ export default function Settings() {
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
-					{(isAdmin || isSiteAdmin) && (
-						<TabsTrigger value="no-lesson-periods">Lesvrije periodes</TabsTrigger>
-					)}
+					{(isAdmin || isSiteAdmin) && <TabsTrigger value="no-lesson-periods">Lesvrije periodes</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
