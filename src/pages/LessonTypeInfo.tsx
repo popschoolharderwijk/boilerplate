@@ -245,15 +245,28 @@ export default function LessonTypeInfo() {
 				render: (opt) => frequencyLabels[opt.frequency],
 			},
 			{
-				key: 'price_per_lesson',
-				label: 'Prijs (€)',
+				key: 'price_per_lesson_under_21',
+				label: 'Prijs <21 (€)',
 				sortable: true,
-				sortValue: (opt) => parseFloat(opt.price_per_lesson) || 0,
-				className: 'w-[7rem] min-w-0',
+				sortValue: (opt) => parseFloat(opt.price_per_lesson_under_21) || 0,
+				className: 'w-[8rem] min-w-0',
 				render: (opt) => {
-					const n = parseFloat(opt.price_per_lesson);
+					const n = parseFloat(opt.price_per_lesson_under_21);
 					return Number.isNaN(n)
-						? opt.price_per_lesson
+						? '—'
+						: `€ ${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				},
+			},
+			{
+				key: 'price_per_lesson_adult',
+				label: 'Prijs 21+ (€)',
+				sortable: true,
+				sortValue: (opt) => parseFloat(opt.price_per_lesson_adult) || 0,
+				className: 'w-[8rem] min-w-0',
+				render: (opt) => {
+					const n = parseFloat(opt.price_per_lesson_adult);
+					return Number.isNaN(n)
+						? '—'
 						: `€ ${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 				},
 			},
