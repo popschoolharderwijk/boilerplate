@@ -4,7 +4,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import {
+	attachDefaultPaymentMethod,
+	getReusablePaymentMethodIdFromSetupIntent,
+	getSafeErrorMessage,
+	getStripe,
+	getStripeId,
+} from '../_shared/stripe.ts';
 
 function json(status: number, payload: unknown) {
 	return new Response(JSON.stringify(payload), {
@@ -23,15 +29,6 @@ const ALLOWED_STATUSES = new Set([
 	'incomplete_expired',
 	'paused',
 ]);
-
-function getStripeId(value: unknown): string | null {
-	if (typeof value === 'string') return value;
-	if (typeof value === 'object' && value !== null && 'id' in value) {
-		const id = (value as { id?: unknown }).id;
-		return typeof id === 'string' ? id : null;
-	}
-	return null;
-}
 
 async function hasExistingSchedule(
 	admin: ReturnType<typeof createClient>,
@@ -66,21 +63,11 @@ async function createScheduleFromSetupPaymentMethod(
 	}
 
 	try {
-		const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
-		if (!pm.customer) {
-			await stripe.paymentMethods.attach(input.paymentMethodId, { customer: input.customerId });
-		} else if (pm.customer !== input.customerId) {
-			console.warn('payment method belongs to different customer', pm.customer, input.customerId);
-			return;
-		}
+		await attachDefaultPaymentMethod(stripe, input.customerId, input.paymentMethodId);
 	} catch (e) {
 		console.error('attach payment method failed', e);
 		return;
 	}
-
-	await stripe.customers.update(input.customerId, {
-		invoice_settings: { default_payment_method: input.paymentMethodId },
-	});
 
 	await createScheduleForAgreement(admin, stripe, {
 		lessonAgreementId: input.lessonAgreementId,
@@ -213,9 +200,8 @@ Deno.serve(async (req) => {
 						typeof session.setup_intent === 'string' ? session.setup_intent : session.setup_intent?.id;
 					let pmId: string | null = null;
 					if (setupIntentId) {
-						const si = await stripe.setupIntents.retrieve(setupIntentId);
-						pmId =
-							typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
+						const si = await stripe.setupIntents.retrieve(setupIntentId, { expand: ['latest_attempt'] });
+						pmId = getReusablePaymentMethodIdFromSetupIntent(si);
 					}
 					await createScheduleFromSetupPaymentMethod(admin, stripe, {
 						lessonAgreementId,
@@ -229,10 +215,13 @@ Deno.serve(async (req) => {
 			case 'setup_intent.succeeded': {
 				const setupIntent = event.data.object as Stripe.SetupIntent;
 				if (setupIntent.metadata?.flow !== 'schedule_setup') break;
+				const expandedSetupIntent = await stripe.setupIntents.retrieve(setupIntent.id, {
+					expand: ['latest_attempt'],
+				});
 				await createScheduleFromSetupPaymentMethod(admin, stripe, {
-					lessonAgreementId: setupIntent.metadata.lesson_agreement_id ?? null,
-					customerId: getStripeId(setupIntent.customer),
-					paymentMethodId: getStripeId(setupIntent.payment_method),
+					lessonAgreementId: expandedSetupIntent.metadata.lesson_agreement_id ?? null,
+					customerId: getStripeId(expandedSetupIntent.customer),
+					paymentMethodId: getReusablePaymentMethodIdFromSetupIntent(expandedSetupIntent),
 					sourceId: setupIntent.id,
 				});
 				break;

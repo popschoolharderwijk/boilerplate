@@ -14,6 +14,25 @@ function getHashError(): string | null {
 	return hashParams.get('error_description') ?? 'Inloggen via deze link is mislukt.';
 }
 
+async function getFunctionErrorMessage(data: unknown, error: unknown, fallback: string): Promise<string> {
+	const dataError = typeof data === 'object' && data !== null && 'error' in data ? data.error : null;
+	if (typeof dataError === 'string') return dataError;
+
+	const context = typeof error === 'object' && error !== null && 'context' in error ? error.context : null;
+	if (context instanceof Response) {
+		try {
+			const payload: unknown = await context.clone().json();
+			const payloadError =
+				typeof payload === 'object' && payload !== null && 'error' in payload ? payload.error : null;
+			if (typeof payloadError === 'string') return payloadError;
+		} catch {
+			// Ignore malformed error bodies and fall back below.
+		}
+	}
+
+	return error instanceof Error ? error.message : fallback;
+}
+
 /**
  * Landing page voor de magic-link uit de incasso-uitnodigingsmail.
  * 1. Verwerkt de PKCE-code (Supabase Auth) als die in de URL staat.
@@ -107,9 +126,7 @@ export default function IncassoStart() {
 					},
 				});
 				if (completeErr || (data as { error?: string })?.error) {
-					setError(
-						(data as { error?: string })?.error ?? completeErr?.message ?? 'Kon incasso niet afronden.',
-					);
+					setError(await getFunctionErrorMessage(data, completeErr, 'Kon incasso niet afronden.'));
 					return;
 				}
 				setSuccess(true);
@@ -120,7 +137,7 @@ export default function IncassoStart() {
 				body: { lesson_agreement_id: agreementId, mode: 'checkout' },
 			});
 			if (invokeErr || (data as { error?: string })?.error) {
-				setError((data as { error?: string })?.error ?? invokeErr?.message ?? 'Kon incasso niet starten.');
+				setError(await getFunctionErrorMessage(data, invokeErr, 'Kon incasso niet starten.'));
 				return;
 			}
 			const url = (data as { url?: string })?.url;
