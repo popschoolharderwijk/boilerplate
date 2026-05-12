@@ -10,7 +10,7 @@
   <p>Klik op de onderstaande link om in te loggen:</p>
 
   <p>
-    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+    <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
       Inloggen
     </a>
   </p>
