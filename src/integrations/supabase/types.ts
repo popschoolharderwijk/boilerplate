@@ -219,6 +219,7 @@ export type Database = {
           start_date: string
           start_time: string
           stripe_price_id: string | null
+          stripe_schedule_id: string | null
           student_user_id: string
           teacher_user_id: string
           updated_at: string
@@ -241,6 +242,7 @@ export type Database = {
           start_date: string
           start_time: string
           stripe_price_id?: string | null
+          stripe_schedule_id?: string | null
           student_user_id: string
           teacher_user_id: string
           updated_at?: string
@@ -263,6 +265,7 @@ export type Database = {
           start_date?: string
           start_time?: string
           stripe_price_id?: string | null
+          stripe_schedule_id?: string | null
           student_user_id?: string
           teacher_user_id?: string
           updated_at?: string
@@ -508,6 +511,8 @@ export type Database = {
           id: string
           lesson_type_id: string
           price_per_lesson: number
+          price_per_lesson_adult_cents: number | null
+          price_per_lesson_under_21_cents: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -519,6 +524,8 @@ export type Database = {
           id?: string
           lesson_type_id: string
           price_per_lesson: number
+          price_per_lesson_adult_cents?: number | null
+          price_per_lesson_under_21_cents?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -530,6 +537,8 @@ export type Database = {
           id?: string
           lesson_type_id?: string
           price_per_lesson?: number
+          price_per_lesson_adult_cents?: number | null
+          price_per_lesson_under_21_cents?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -942,6 +951,7 @@ export type Database = {
           status: string
           stripe_customer_id: string
           stripe_price_id: string
+          stripe_schedule_id: string | null
           stripe_subscription_id: string
           updated_at: string
           updated_by: string | null
@@ -960,6 +970,7 @@ export type Database = {
           status: string
           stripe_customer_id: string
           stripe_price_id: string
+          stripe_schedule_id?: string | null
           stripe_subscription_id: string
           updated_at?: string
           updated_by?: string | null
@@ -978,6 +989,7 @@ export type Database = {
           status?: string
           stripe_customer_id?: string
           stripe_price_id?: string
+          stripe_schedule_id?: string | null
           stripe_subscription_id?: string
           updated_at?: string
           updated_by?: string | null
