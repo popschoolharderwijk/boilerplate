@@ -2,6 +2,7 @@
 // Verifies signature against STRIPE_WEBHOOK_SECRET and upserts subscription/invoice state.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'https://esm.sh/stripe@17.5.0?target=deno';
+import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 
@@ -37,12 +38,15 @@ async function upsertSubscription(admin: ReturnType<typeof createClient>, sub: S
 		return null;
 	})();
 
+	const scheduleId = typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? null);
+
 	const { error } = await admin.from('subscriptions').upsert(
 		{
 			lesson_agreement_id: lessonAgreementId,
 			stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
 			stripe_subscription_id: sub.id,
 			stripe_price_id: priceId,
+			stripe_schedule_id: scheduleId,
 			status,
 			current_period_start: sub.current_period_start
 				? new Date(sub.current_period_start * 1000).toISOString()
@@ -136,6 +140,38 @@ Deno.serve(async (req) => {
 						typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
 					const sub = await stripe.subscriptions.retrieve(subId, { expand: ['default_payment_method'] });
 					await upsertSubscription(admin, sub);
+				} else if (session.mode === 'setup' && session.metadata?.flow === 'schedule_setup') {
+					// SEPA mandate just collected → attach as default + create the schedule.
+					const lessonAgreementId = session.metadata.lesson_agreement_id;
+					const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+					if (!lessonAgreementId || !customerId) {
+						console.warn('setup session missing agreement/customer', session.id);
+						break;
+					}
+					const setupIntentId =
+						typeof session.setup_intent === 'string' ? session.setup_intent : session.setup_intent?.id;
+					let pmId: string | null = null;
+					if (setupIntentId) {
+						const si = await stripe.setupIntents.retrieve(setupIntentId);
+						pmId =
+							typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
+					}
+					if (!pmId) {
+						console.warn('setup session without payment_method', session.id);
+						break;
+					}
+					await stripe.customers.update(customerId, {
+						invoice_settings: { default_payment_method: pmId },
+					});
+					try {
+						await createScheduleForAgreement(admin, stripe, {
+							lessonAgreementId,
+							customerId,
+							defaultPaymentMethod: pmId,
+						});
+					} catch (err) {
+						console.error('failed to create schedule from setup session', err);
+					}
 				}
 				break;
 			}
