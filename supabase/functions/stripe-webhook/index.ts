@@ -2,6 +2,7 @@
 // Verifies signature against STRIPE_WEBHOOK_SECRET and upserts subscription/invoice state.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'https://esm.sh/stripe@17.5.0?target=deno';
+import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 
