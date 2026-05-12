@@ -380,6 +380,16 @@ export function generateAgendaEvents(
 			);
 
 			const effective = deviation ?? recurringDeviation;
+
+			// Skip lessons that fall in a no-lesson period (e.g. school holidays).
+			// We only skip lesson-like sources, and only when there is no manual deviation
+			// (admins may have explicitly moved a lesson into a holiday week).
+			const isLessonSource = sourceType === 'lesson_agreement' || sourceType === 'lesson_group';
+			if (isLessonSource && !effective && isInNoLessonPeriod(current, noLessonPeriods)) {
+				addIntervalHelper(current, frequency);
+				continue;
+			}
+
 			let start: Date;
 			let end: Date;
 			let isCancelled = false;
