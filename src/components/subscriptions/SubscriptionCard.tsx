@@ -147,22 +147,34 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							Nog geen abonnement gekoppeld aan deze lesovereenkomst.
 						</p>
 						{!hideStartAction && isPrivileged && (
-							<div className="flex flex-wrap gap-2">
-								<Button
-									onClick={() => handleStartCheckout('checkout')}
-									disabled={busy}
-									className="w-fit"
-								>
-									Start incasso (checkout)
-								</Button>
-								<Button
-									onClick={() => handleStartCheckout('direct')}
-									disabled={busy}
-									variant="outline"
-									className="w-fit"
-								>
-									Activeer op bestaand mandaat
-								</Button>
+							<div className="flex flex-col gap-2">
+								<div className="flex flex-wrap gap-2">
+									<Button onClick={handleSendInvite} disabled={busy} className="w-fit">
+										<LuMail className="mr-1.5 h-4 w-4" />
+										{lastInviteAt ? 'Stuur uitnodiging opnieuw' : 'Stuur betaaluitnodiging'}
+									</Button>
+									<Button
+										onClick={() => handleStartCheckout('checkout')}
+										disabled={busy}
+										variant="outline"
+										className="w-fit"
+									>
+										Start incasso (checkout)
+									</Button>
+									<Button
+										onClick={() => handleStartCheckout('direct')}
+										disabled={busy}
+										variant="outline"
+										className="w-fit"
+									>
+										Activeer op bestaand mandaat
+									</Button>
+								</div>
+								{lastInviteAt && (
+									<p className="text-muted-foreground text-xs">
+										Laatst verstuurd op {formatDbDateToUi(lastInviteAt.split('T')[0])}
+									</p>
+								)}
 							</div>
 						)}
 					</div>
