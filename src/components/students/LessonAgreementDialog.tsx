@@ -30,6 +30,8 @@ function formatDate(date: string): string {
 }
 
 export function LessonAgreementDialog({ open, onOpenChange, agreement }: LessonAgreementDialogProps) {
+	const { preview, loading, error } = useAgreementBillingPreview(agreement);
+
 	if (!agreement) {
 		return null;
 	}
