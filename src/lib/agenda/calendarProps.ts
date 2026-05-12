@@ -5,6 +5,7 @@ import { agendaMessages, getEventStyle } from '@/components/agenda/agenda-calend
 import { CalendarToolbar } from '@/components/agenda/CalendarToolbar';
 import type { CalendarEvent } from '@/components/agenda/types';
 import { dutchFormats } from '@/lib/agenda/calendarFormats';
+import { findNoLessonPeriod, type NoLessonPeriod } from '@/lib/agenda/eventGenerators';
 import { buildTooltipText } from '@/lib/agenda/tooltip';
 import { AVAILABILITY_CONFIG } from '@/lib/availability';
 import { calendarLocalizer } from '@/lib/calendar';
@@ -21,6 +22,7 @@ export interface GetCalendarPropsParams {
 	onSelectSlot: ((slotInfo: { start: Date; end: Date }) => void) | undefined;
 	setCurrentView: (view: View) => void;
 	setCurrentDate: (date: Date) => void;
+	noLessonPeriods?: NoLessonPeriod[];
 }
 
 export function getCalendarProps(params: GetCalendarPropsParams) {
@@ -36,7 +38,17 @@ export function getCalendarProps(params: GetCalendarPropsParams) {
 		onSelectSlot,
 		setCurrentView,
 		setCurrentDate,
+		noLessonPeriods,
 	} = params;
+
+	const dayPropGetter = (date: Date) => {
+		const period = findNoLessonPeriod(date, noLessonPeriods);
+		if (!period) return {};
+		return {
+			className: 'rbc-day-no-lesson',
+			'aria-label': period.name ? `Lesvrij: ${period.name}` : 'Lesvrije periode',
+		};
+	};
 
 	return {
 		localizer: calendarLocalizer,
@@ -58,6 +70,8 @@ export function getCalendarProps(params: GetCalendarPropsParams) {
 		resizableAccessor: () => false,
 		eventPropGetter: (event: unknown) => getEventStyle(event as CalendarEvent, currentView),
 		tooltipAccessor: (event: unknown) => buildTooltipText(event as CalendarEvent),
+		dayPropGetter,
+		slotPropGetter: dayPropGetter,
 		components: {
 			toolbar: CalendarToolbar,
 			// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar event component typing

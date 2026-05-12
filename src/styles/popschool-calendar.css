@@ -292,4 +292,19 @@
 	& .rbc-day-slot .rbc-events-container {
 		@apply mr-2;
 	}
+
+	/* No-lesson period (vacation) indication */
+	& .rbc-day-no-lesson {
+		background-color: hsl(var(--warning) / 0.12) !important;
+		background-image: repeating-linear-gradient(
+			135deg,
+			hsl(var(--warning) / 0.08) 0,
+			hsl(var(--warning) / 0.08) 6px,
+			transparent 6px,
+			transparent 12px
+		) !important;
+	}
+	& .rbc-day-no-lesson.rbc-today {
+		background-color: hsl(var(--warning) / 0.2) !important;
+	}
 }
