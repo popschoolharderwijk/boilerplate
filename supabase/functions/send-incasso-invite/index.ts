@@ -94,23 +94,16 @@ Deno.serve(async (req) => {
 		return json(403, { error: 'Geen rechten' });
 	}
 
-	// Bepaal ontvangeradres
-	const { data: student } = await admin
-		.from('students')
-		.select('date_of_birth, parent_email')
-		.eq('user_id', agreement.student_user_id)
-		.maybeSingle();
+	// Mailadres = het account-emailadres van de leerling. Dit is gegarandeerd
+	// een bestaand Supabase-auth-account (anders kan de Magic Link niet werken).
+	// Voor minderjarige leerlingen hebben ouders de aanmelding doorgaans op
+	// hun eigen e-mailadres gedaan, dus dit adres komt al bij de vertegenwoordiger uit.
 	const { data: profile } = await admin
 		.from('profiles')
 		.select('email')
 		.eq('user_id', agreement.student_user_id)
 		.maybeSingle();
-
-	const studentEmail = profile?.email ?? null;
-	const recipient = isMinor(student?.date_of_birth ?? null) && student?.parent_email
-		? student.parent_email
-		: studentEmail;
-
+	const recipient = profile?.email ?? null;
 	if (!recipient) return json(422, { error: 'Geen e-mailadres bekend voor leerling' });
 
 	const redirectTo = `${siteUrl}/incasso/start?agreement=${agreement.id}`;
