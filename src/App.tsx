@@ -9,6 +9,7 @@ import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import IncassoStart from './pages/IncassoStart';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
 import LessonTypeInfo from './pages/LessonTypeInfo';
@@ -46,6 +47,7 @@ const App = () => (
 					<Route path="/login" element={<Login />} />
 					<Route path="/auth/callback" element={<AuthCallback />} />
 					<Route path="/aanmelden" element={<PublicSignup />} />
+					<Route path="/incasso/start" element={<IncassoStart />} />
 
 					{/* Protected dashboard routes */}
 					<Route

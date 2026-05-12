@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LuCreditCard, LuExternalLink, LuRefreshCw } from 'react-icons/lu';
+import { useEffect, useState } from 'react';
+import { LuCreditCard, LuExternalLink, LuMail, LuRefreshCw } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,38 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 	const { isPrivileged } = useAuth();
 	const { subscription, invoices, loading, refresh } = useSubscription(lessonAgreementId);
 	const [busy, setBusy] = useState(false);
+	const [lastInviteAt, setLastInviteAt] = useState<string | null>(null);
+
+	useEffect(() => {
+		let cancelled = false;
+		void supabase
+			.from('incasso_invitations')
+			.select('sent_at')
+			.eq('lesson_agreement_id', lessonAgreementId)
+			.order('sent_at', { ascending: false })
+			.limit(1)
+			.maybeSingle()
+			.then(({ data }) => {
+				if (!cancelled) setLastInviteAt(data?.sent_at ?? null);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [lessonAgreementId]);
+
+	const handleSendInvite = async () => {
+		setBusy(true);
+		const { error } = await supabase.functions.invoke('send-incasso-invite', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		if (error) {
+			toast.error(error.message ?? 'Kon uitnodiging niet versturen');
+			return;
+		}
+		setLastInviteAt(new Date().toISOString());
+		toast.success('Betaaluitnodiging verstuurd');
+	};
 
 	const handleStartCheckout = async (mode: 'checkout' | 'direct') => {
 		setBusy(true);
@@ -115,22 +147,34 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							Nog geen abonnement gekoppeld aan deze lesovereenkomst.
 						</p>
 						{!hideStartAction && isPrivileged && (
-							<div className="flex flex-wrap gap-2">
-								<Button
-									onClick={() => handleStartCheckout('checkout')}
-									disabled={busy}
-									className="w-fit"
-								>
-									Start incasso (checkout)
-								</Button>
-								<Button
-									onClick={() => handleStartCheckout('direct')}
-									disabled={busy}
-									variant="outline"
-									className="w-fit"
-								>
-									Activeer op bestaand mandaat
-								</Button>
+							<div className="flex flex-col gap-2">
+								<div className="flex flex-wrap gap-2">
+									<Button onClick={handleSendInvite} disabled={busy} className="w-fit">
+										<LuMail className="mr-1.5 h-4 w-4" />
+										{lastInviteAt ? 'Stuur uitnodiging opnieuw' : 'Stuur betaaluitnodiging'}
+									</Button>
+									<Button
+										onClick={() => handleStartCheckout('checkout')}
+										disabled={busy}
+										variant="outline"
+										className="w-fit"
+									>
+										Start incasso (checkout)
+									</Button>
+									<Button
+										onClick={() => handleStartCheckout('direct')}
+										disabled={busy}
+										variant="outline"
+										className="w-fit"
+									>
+										Activeer op bestaand mandaat
+									</Button>
+								</div>
+								{lastInviteAt && (
+									<p className="text-muted-foreground text-xs">
+										Laatst verstuurd op {formatDbDateToUi(lastInviteAt.split('T')[0])}
+									</p>
+								)}
 							</div>
 						)}
 					</div>
