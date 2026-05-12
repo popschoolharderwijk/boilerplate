@@ -72,7 +72,8 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon tarieven niet bijwerken');
 			return;
 		}
-		const result = (data as { results?: Array<{ ok: boolean; detail?: { updatedPhases?: number } }> })?.results?.[0];
+		const result = (data as { results?: Array<{ ok: boolean; detail?: { updatedPhases?: number } }> })
+			?.results?.[0];
 		const updated = result?.detail?.updatedPhases ?? 0;
 		toast.success(
 			updated > 0

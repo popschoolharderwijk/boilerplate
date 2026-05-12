@@ -479,4 +479,3 @@ export async function rebuildScheduleForAgreement(
 		newLeftoverCents: billing.yearly.leftoverCents,
 	};
 }
-
