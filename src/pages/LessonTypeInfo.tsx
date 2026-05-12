@@ -725,14 +725,7 @@ export default function LessonTypeInfo() {
 							<AlertDialogDescription>
 								Weet je zeker dat je deze optie (
 								<strong>
-									{optionToDelete.duration_minutes} min, {frequencyLabels[optionToDelete.frequency]},{' '}
-									€{' '}
-									{Number.isNaN(parseFloat(optionToDelete.price_per_lesson))
-										? optionToDelete.price_per_lesson
-										: parseFloat(optionToDelete.price_per_lesson).toLocaleString('nl-NL', {
-												minimumFractionDigits: 2,
-												maximumFractionDigits: 2,
-											})}
+									{optionToDelete.duration_minutes} min, {frequencyLabels[optionToDelete.frequency]}
 								</strong>
 								) wilt verwijderen?
 							</AlertDialogDescription>
