@@ -52,6 +52,9 @@ const DEFAULT_DURATION_MINUTES = DURATION_OPTIONS[0];
 
 type OptionRowWithKey = LessonTypeOptionFormRow & { _newId?: string };
 
+const centsToInput = (cents: number | null | undefined): string => (cents == null ? '' : (cents / 100).toFixed(2));
+const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
+
 function optionSort(a: LessonTypeOptionFormRow, b: LessonTypeOptionFormRow): number {
 	const durA = parseInt(a.duration_minutes, 10) || 0;
 	const durB = parseInt(b.duration_minutes, 10) || 0;
@@ -80,8 +83,14 @@ export default function LessonTypeInfo() {
 	const [optionModalForm, setOptionModalForm] = useState<{
 		duration_minutes: string;
 		frequency: LessonFrequency;
-		price_per_lesson: string;
-	}>({ duration_minutes: '', frequency: 'weekly', price_per_lesson: '' });
+		price_per_lesson_under_21: string;
+		price_per_lesson_adult: string;
+	}>({
+		duration_minutes: '',
+		frequency: 'weekly',
+		price_per_lesson_under_21: '',
+		price_per_lesson_adult: '',
+	});
 	const newOptionIdRef = useRef(0);
 
 	const loadLessonType = useCallback(async () => {
@@ -124,6 +133,8 @@ export default function LessonTypeInfo() {
 				duration_minutes: o.duration_minutes.toString(),
 				frequency: o.frequency,
 				price_per_lesson: o.price_per_lesson.toString(),
+				price_per_lesson_under_21: centsToInput(o.price_per_lesson_under_21_cents),
+				price_per_lesson_adult: centsToInput(o.price_per_lesson_adult_cents),
 			})),
 		);
 		setLoading(false);
@@ -154,7 +165,8 @@ export default function LessonTypeInfo() {
 			setOptionModalForm({
 				duration_minutes: editingOption.duration_minutes,
 				frequency: editingOption.frequency,
-				price_per_lesson: editingOption.price_per_lesson,
+				price_per_lesson_under_21: editingOption.price_per_lesson_under_21,
+				price_per_lesson_adult: editingOption.price_per_lesson_adult,
 			});
 		}
 	}, [editingOption]);
@@ -164,7 +176,9 @@ export default function LessonTypeInfo() {
 			_newId: `new-${++newOptionIdRef.current}`,
 			duration_minutes: String(DEFAULT_DURATION_MINUTES),
 			frequency: 'weekly',
-			price_per_lesson: '30',
+			price_per_lesson: '0',
+			price_per_lesson_under_21: '',
+			price_per_lesson_adult: '',
 		});
 	};
 
@@ -230,15 +244,28 @@ export default function LessonTypeInfo() {
 				render: (opt) => frequencyLabels[opt.frequency],
 			},
 			{
-				key: 'price_per_lesson',
-				label: 'Prijs (€)',
+				key: 'price_per_lesson_under_21',
+				label: 'Prijs <21 (€)',
 				sortable: true,
-				sortValue: (opt) => parseFloat(opt.price_per_lesson) || 0,
-				className: 'w-[7rem] min-w-0',
+				sortValue: (opt) => parseFloat(opt.price_per_lesson_under_21) || 0,
+				className: 'w-[8rem] min-w-0',
 				render: (opt) => {
-					const n = parseFloat(opt.price_per_lesson);
+					const n = parseFloat(opt.price_per_lesson_under_21);
 					return Number.isNaN(n)
-						? opt.price_per_lesson
+						? '—'
+						: `€ ${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				},
+			},
+			{
+				key: 'price_per_lesson_adult',
+				label: 'Prijs 21+ (€)',
+				sortable: true,
+				sortValue: (opt) => parseFloat(opt.price_per_lesson_adult) || 0,
+				className: 'w-[8rem] min-w-0',
+				render: (opt) => {
+					const n = parseFloat(opt.price_per_lesson_adult);
+					return Number.isNaN(n)
+						? '—'
 						: `€ ${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 				},
 			},
@@ -249,49 +276,50 @@ export default function LessonTypeInfo() {
 	const saveOptionInModal = useCallback(async () => {
 		if (!editingOption) return;
 		const dur = parseInt(optionModalForm.duration_minutes, 10);
-		const price = parseFloat(optionModalForm.price_per_lesson);
+		const priceUnder21 = parseFloat(optionModalForm.price_per_lesson_under_21);
+		const priceAdult = parseFloat(optionModalForm.price_per_lesson_adult);
 		if (Number.isNaN(dur) || dur <= 0) {
 			toast.error('Duur moet een positief getal zijn');
 			return;
 		}
-		if (Number.isNaN(price) || price < 0) {
-			toast.error('Prijs moet een positief getal of nul zijn');
+		if (Number.isNaN(priceUnder21) || priceUnder21 <= 0) {
+			toast.error('Prijs <21 moet een positief getal zijn');
+			return;
+		}
+		if (Number.isNaN(priceAdult) || priceAdult <= 0) {
+			toast.error('Prijs 21+ moet een positief getal zijn');
 			return;
 		}
 
 		const isEditExisting = !!editingOption.id;
-		const duplicateMessage = 'Deze combinatie van duur, frequentie en prijs bestaat al voor deze lessoort.';
-		const priceRounded = Math.round(price * 100);
-		if (!isEditExisting) {
-			const duplicate = optionsForm.some(
-				(o) =>
-					o.duration_minutes === optionModalForm.duration_minutes &&
-					o.frequency === optionModalForm.frequency &&
-					Math.round(parseFloat(o.price_per_lesson) * 100) === priceRounded,
-			);
-			if (duplicate) {
-				toast.error(duplicateMessage);
-				return;
-			}
-		} else {
-			const otherOptions = optionsForm.filter(
-				(o) => o.id !== editingOption.id && (o as OptionRowWithKey)._newId !== editingOption._newId,
-			);
-			const duplicate = otherOptions.some(
-				(o) =>
-					o.duration_minutes === optionModalForm.duration_minutes &&
-					o.frequency === optionModalForm.frequency &&
-					Math.round(parseFloat(o.price_per_lesson) * 100) === priceRounded,
-			);
-			if (duplicate) {
-				toast.error(duplicateMessage);
-				return;
-			}
+		const duplicateMessage = 'Deze combinatie van duur en frequentie bestaat al voor deze lessoort.';
+		const duplicate = optionsForm.some(
+			(o) =>
+				o.duration_minutes === optionModalForm.duration_minutes &&
+				o.frequency === optionModalForm.frequency &&
+				(isEditExisting
+					? o.id !== editingOption.id && (o as OptionRowWithKey)._newId !== editingOption._newId
+					: true),
+		);
+		if (duplicate) {
+			toast.error(duplicateMessage);
+			return;
 		}
 
 		const duration_minutes = dur;
-		const price_per_lesson = price;
 		const frequency = optionModalForm.frequency;
+		const price_per_lesson_under_21_cents = inputToCents(optionModalForm.price_per_lesson_under_21);
+		const price_per_lesson_adult_cents = inputToCents(optionModalForm.price_per_lesson_adult);
+		// Legacy column: store adult price for backwards compat with existing snapshots/reports.
+		const price_per_lesson = priceAdult;
+
+		const dbPayload = {
+			duration_minutes,
+			frequency,
+			price_per_lesson,
+			price_per_lesson_under_21_cents,
+			price_per_lesson_adult_cents,
+		};
 
 		if (isEditExisting) {
 			const i = findOptionIndex(editingOption);
@@ -305,7 +333,9 @@ export default function LessonTypeInfo() {
 					...next[i],
 					duration_minutes: optionModalForm.duration_minutes,
 					frequency: optionModalForm.frequency,
-					price_per_lesson: optionModalForm.price_per_lesson,
+					price_per_lesson: priceAdult.toString(),
+					price_per_lesson_under_21: optionModalForm.price_per_lesson_under_21,
+					price_per_lesson_adult: optionModalForm.price_per_lesson_adult,
 				};
 				return next;
 			});
@@ -314,7 +344,7 @@ export default function LessonTypeInfo() {
 				try {
 					const { error } = await supabase
 						.from('lesson_type_options')
-						.update({ duration_minutes, frequency, price_per_lesson })
+						.update(dbPayload)
 						.eq('id', editingOption.id);
 					if (error) {
 						if (error.code === '23505') {
@@ -326,11 +356,7 @@ export default function LessonTypeInfo() {
 						setSaving(false);
 						return;
 					}
-					setOptions((prev) =>
-						prev.map((o) =>
-							o.id === editingOption.id ? { ...o, duration_minutes, frequency, price_per_lesson } : o,
-						),
-					);
+					setOptions((prev) => prev.map((o) => (o.id === editingOption.id ? { ...o, ...dbPayload } : o)));
 					toast.success('Optie bijgewerkt');
 				} catch (e) {
 					console.error(e);
@@ -350,7 +376,9 @@ export default function LessonTypeInfo() {
 			_newId: editingOption._newId,
 			duration_minutes: optionModalForm.duration_minutes,
 			frequency: optionModalForm.frequency,
-			price_per_lesson: optionModalForm.price_per_lesson,
+			price_per_lesson: priceAdult.toString(),
+			price_per_lesson_under_21: optionModalForm.price_per_lesson_under_21,
+			price_per_lesson_adult: optionModalForm.price_per_lesson_adult,
 		};
 		setOptionsForm((prev) => [...prev, newRow]);
 
@@ -359,12 +387,7 @@ export default function LessonTypeInfo() {
 			try {
 				const { data: inserted, error } = await supabase
 					.from('lesson_type_options')
-					.insert({
-						lesson_type_id: lessonType.id,
-						duration_minutes,
-						frequency,
-						price_per_lesson,
-					})
+					.insert({ lesson_type_id: lessonType.id, ...dbPayload })
 					.select()
 					.single();
 				if (error) {
@@ -426,13 +449,18 @@ export default function LessonTypeInfo() {
 		for (let i = 0; i < optionsForm.length; i++) {
 			const o = optionsForm[i];
 			const dur = parseInt(o.duration_minutes, 10);
-			const price = parseFloat(o.price_per_lesson);
+			const priceUnder21 = parseFloat(o.price_per_lesson_under_21);
+			const priceAdult = parseFloat(o.price_per_lesson_adult);
 			if (Number.isNaN(dur) || dur <= 0) {
 				toast.error(`Optie ${i + 1}: duur moet een positief getal zijn`);
 				return;
 			}
-			if (Number.isNaN(price) || price < 0) {
-				toast.error(`Optie ${i + 1}: prijs moet een positief getal zijn`);
+			if (Number.isNaN(priceUnder21) || priceUnder21 <= 0) {
+				toast.error(`Optie ${i + 1}: prijs <21 moet een positief getal zijn`);
+				return;
+			}
+			if (Number.isNaN(priceAdult) || priceAdult <= 0) {
+				toast.error(`Optie ${i + 1}: prijs 21+ moet een positief getal zijn`);
 				return;
 			}
 		}
@@ -482,19 +510,20 @@ export default function LessonTypeInfo() {
 			const sorted = [...optionsForm].sort(optionSort);
 			for (const o of sorted) {
 				const duration_minutes = parseInt(o.duration_minutes, 10);
-				const price_per_lesson = parseFloat(o.price_per_lesson);
+				const price_per_lesson_under_21_cents = inputToCents(o.price_per_lesson_under_21);
+				const price_per_lesson_adult_cents = inputToCents(o.price_per_lesson_adult);
+				const price_per_lesson = parseFloat(o.price_per_lesson_adult);
+				const payload = {
+					duration_minutes,
+					frequency: o.frequency,
+					price_per_lesson,
+					price_per_lesson_under_21_cents,
+					price_per_lesson_adult_cents,
+				};
 				if (o.id) {
-					await supabase
-						.from('lesson_type_options')
-						.update({ duration_minutes, frequency: o.frequency, price_per_lesson })
-						.eq('id', o.id);
+					await supabase.from('lesson_type_options').update(payload).eq('id', o.id);
 				} else {
-					await supabase.from('lesson_type_options').insert({
-						lesson_type_id: lessonTypeId,
-						duration_minutes,
-						frequency: o.frequency,
-						price_per_lesson,
-					});
+					await supabase.from('lesson_type_options').insert({ lesson_type_id: lessonTypeId, ...payload });
 				}
 			}
 
@@ -691,14 +720,7 @@ export default function LessonTypeInfo() {
 							<AlertDialogDescription>
 								Weet je zeker dat je deze optie (
 								<strong>
-									{optionToDelete.duration_minutes} min, {frequencyLabels[optionToDelete.frequency]},{' '}
-									€{' '}
-									{Number.isNaN(parseFloat(optionToDelete.price_per_lesson))
-										? optionToDelete.price_per_lesson
-										: parseFloat(optionToDelete.price_per_lesson).toLocaleString('nl-NL', {
-												minimumFractionDigits: 2,
-												maximumFractionDigits: 2,
-											})}
+									{optionToDelete.duration_minutes} min, {frequencyLabels[optionToDelete.frequency]}
 								</strong>
 								) wilt verwijderen?
 							</AlertDialogDescription>
@@ -768,15 +790,33 @@ export default function LessonTypeInfo() {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="space-y-2">
-							<Label>Prijs (€)</Label>
-							<PriceInput
-								value={optionModalForm.price_per_lesson}
-								onChange={(e) =>
-									setOptionModalForm((prev) => ({ ...prev, price_per_lesson: e.target.value }))
-								}
-								className="h-10"
-							/>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<Label>Prijs per les &lt;21 (€)</Label>
+								<PriceInput
+									value={optionModalForm.price_per_lesson_under_21}
+									onChange={(e) =>
+										setOptionModalForm((prev) => ({
+											...prev,
+											price_per_lesson_under_21: e.target.value,
+										}))
+									}
+									className="h-10"
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label>Prijs per les 21+ (€)</Label>
+								<PriceInput
+									value={optionModalForm.price_per_lesson_adult}
+									onChange={(e) =>
+										setOptionModalForm((prev) => ({
+											...prev,
+											price_per_lesson_adult: e.target.value,
+										}))
+									}
+									className="h-10"
+								/>
+							</div>
 						</div>
 					</div>
 					<DialogFooter>
