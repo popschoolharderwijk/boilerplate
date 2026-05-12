@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
-import { generateAgendaEvents } from '@/lib/agenda/eventGenerators';
+import { generateAgendaEvents, type NoLessonPeriod } from '@/lib/agenda/eventGenerators';
 import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
 import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
