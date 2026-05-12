@@ -8,6 +8,7 @@ import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
+import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
 import IncassoStart from './pages/IncassoStart';
 import LessonGroups from './pages/LessonGroups';
@@ -46,6 +47,7 @@ const App = () => (
 				<Routes>
 					<Route path="/login" element={<Login />} />
 					<Route path="/auth/callback" element={<AuthCallback />} />
+					<Route path="/auth/confirm" element={<AuthConfirm />} />
 					<Route path="/aanmelden" element={<PublicSignup />} />
 					<Route path="/incasso/start" element={<IncassoStart />} />
 
