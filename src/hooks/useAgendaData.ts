@@ -369,6 +369,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				deviationsByEventId,
 				recurringByEventId,
 				agreementsMap,
+				noLessonPeriods,
 			);
 
 			return baseEvents.map((ev) => {
