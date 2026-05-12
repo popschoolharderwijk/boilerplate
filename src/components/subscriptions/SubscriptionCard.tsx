@@ -146,6 +146,17 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
 								Beheer betaling
 							</Button>
+							{isPrivileged && subscription.stripe_schedule_id && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleRebuild}
+									disabled={busy}
+									title="Herbereken toekomstige maanden met de huidige tarieven"
+								>
+									Pas nieuwe tarieven toe
+								</Button>
+							)}
 						</div>
 
 						{invoices.length > 0 && (
