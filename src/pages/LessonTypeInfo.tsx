@@ -277,49 +277,50 @@ export default function LessonTypeInfo() {
 	const saveOptionInModal = useCallback(async () => {
 		if (!editingOption) return;
 		const dur = parseInt(optionModalForm.duration_minutes, 10);
-		const price = parseFloat(optionModalForm.price_per_lesson);
+		const priceUnder21 = parseFloat(optionModalForm.price_per_lesson_under_21);
+		const priceAdult = parseFloat(optionModalForm.price_per_lesson_adult);
 		if (Number.isNaN(dur) || dur <= 0) {
 			toast.error('Duur moet een positief getal zijn');
 			return;
 		}
-		if (Number.isNaN(price) || price < 0) {
-			toast.error('Prijs moet een positief getal of nul zijn');
+		if (Number.isNaN(priceUnder21) || priceUnder21 <= 0) {
+			toast.error('Prijs <21 moet een positief getal zijn');
+			return;
+		}
+		if (Number.isNaN(priceAdult) || priceAdult <= 0) {
+			toast.error('Prijs 21+ moet een positief getal zijn');
 			return;
 		}
 
 		const isEditExisting = !!editingOption.id;
-		const duplicateMessage = 'Deze combinatie van duur, frequentie en prijs bestaat al voor deze lessoort.';
-		const priceRounded = Math.round(price * 100);
-		if (!isEditExisting) {
-			const duplicate = optionsForm.some(
-				(o) =>
-					o.duration_minutes === optionModalForm.duration_minutes &&
-					o.frequency === optionModalForm.frequency &&
-					Math.round(parseFloat(o.price_per_lesson) * 100) === priceRounded,
-			);
-			if (duplicate) {
-				toast.error(duplicateMessage);
-				return;
-			}
-		} else {
-			const otherOptions = optionsForm.filter(
-				(o) => o.id !== editingOption.id && (o as OptionRowWithKey)._newId !== editingOption._newId,
-			);
-			const duplicate = otherOptions.some(
-				(o) =>
-					o.duration_minutes === optionModalForm.duration_minutes &&
-					o.frequency === optionModalForm.frequency &&
-					Math.round(parseFloat(o.price_per_lesson) * 100) === priceRounded,
-			);
-			if (duplicate) {
-				toast.error(duplicateMessage);
-				return;
-			}
+		const duplicateMessage = 'Deze combinatie van duur en frequentie bestaat al voor deze lessoort.';
+		const duplicate = optionsForm.some(
+			(o) =>
+				o.duration_minutes === optionModalForm.duration_minutes &&
+				o.frequency === optionModalForm.frequency &&
+				(isEditExisting
+					? o.id !== editingOption.id && (o as OptionRowWithKey)._newId !== editingOption._newId
+					: true),
+		);
+		if (duplicate) {
+			toast.error(duplicateMessage);
+			return;
 		}
 
 		const duration_minutes = dur;
-		const price_per_lesson = price;
 		const frequency = optionModalForm.frequency;
+		const price_per_lesson_under_21_cents = inputToCents(optionModalForm.price_per_lesson_under_21);
+		const price_per_lesson_adult_cents = inputToCents(optionModalForm.price_per_lesson_adult);
+		// Legacy column: store adult price for backwards compat with existing snapshots/reports.
+		const price_per_lesson = priceAdult;
+
+		const dbPayload = {
+			duration_minutes,
+			frequency,
+			price_per_lesson,
+			price_per_lesson_under_21_cents,
+			price_per_lesson_adult_cents,
+		};
 
 		if (isEditExisting) {
 			const i = findOptionIndex(editingOption);
@@ -333,7 +334,9 @@ export default function LessonTypeInfo() {
 					...next[i],
 					duration_minutes: optionModalForm.duration_minutes,
 					frequency: optionModalForm.frequency,
-					price_per_lesson: optionModalForm.price_per_lesson,
+					price_per_lesson: priceAdult.toString(),
+					price_per_lesson_under_21: optionModalForm.price_per_lesson_under_21,
+					price_per_lesson_adult: optionModalForm.price_per_lesson_adult,
 				};
 				return next;
 			});
@@ -342,7 +345,7 @@ export default function LessonTypeInfo() {
 				try {
 					const { error } = await supabase
 						.from('lesson_type_options')
-						.update({ duration_minutes, frequency, price_per_lesson })
+						.update(dbPayload)
 						.eq('id', editingOption.id);
 					if (error) {
 						if (error.code === '23505') {
@@ -355,9 +358,7 @@ export default function LessonTypeInfo() {
 						return;
 					}
 					setOptions((prev) =>
-						prev.map((o) =>
-							o.id === editingOption.id ? { ...o, duration_minutes, frequency, price_per_lesson } : o,
-						),
+						prev.map((o) => (o.id === editingOption.id ? { ...o, ...dbPayload } : o)),
 					);
 					toast.success('Optie bijgewerkt');
 				} catch (e) {
@@ -378,7 +379,9 @@ export default function LessonTypeInfo() {
 			_newId: editingOption._newId,
 			duration_minutes: optionModalForm.duration_minutes,
 			frequency: optionModalForm.frequency,
-			price_per_lesson: optionModalForm.price_per_lesson,
+			price_per_lesson: priceAdult.toString(),
+			price_per_lesson_under_21: optionModalForm.price_per_lesson_under_21,
+			price_per_lesson_adult: optionModalForm.price_per_lesson_adult,
 		};
 		setOptionsForm((prev) => [...prev, newRow]);
 
@@ -387,12 +390,7 @@ export default function LessonTypeInfo() {
 			try {
 				const { data: inserted, error } = await supabase
 					.from('lesson_type_options')
-					.insert({
-						lesson_type_id: lessonType.id,
-						duration_minutes,
-						frequency,
-						price_per_lesson,
-					})
+					.insert({ lesson_type_id: lessonType.id, ...dbPayload })
 					.select()
 					.single();
 				if (error) {
