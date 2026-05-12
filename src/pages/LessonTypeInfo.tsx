@@ -52,6 +52,9 @@ const DEFAULT_DURATION_MINUTES = DURATION_OPTIONS[0];
 
 type OptionRowWithKey = LessonTypeOptionFormRow & { _newId?: string };
 
+const centsToInput = (cents: number | null | undefined): string => (cents == null ? '' : (cents / 100).toFixed(2));
+const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
+
 function optionSort(a: LessonTypeOptionFormRow, b: LessonTypeOptionFormRow): number {
 	const durA = parseInt(a.duration_minutes, 10) || 0;
 	const durB = parseInt(b.duration_minutes, 10) || 0;
