@@ -94,8 +94,17 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 
 	const handleOpenPortal = async () => {
 		setBusy(true);
+		let targetUserId: string | undefined;
+		if (isPrivileged) {
+			const { data: agreement } = await supabase
+				.from('lesson_agreements')
+				.select('student_user_id')
+				.eq('id', lessonAgreementId)
+				.maybeSingle();
+			targetUserId = agreement?.student_user_id ?? undefined;
+		}
 		const { data, error } = await supabase.functions.invoke('create-customer-portal', {
-			body: {},
+			body: targetUserId ? { user_id: targetUserId } : {},
 		});
 		setBusy(false);
 		if (error || (data as { error?: string })?.error) {
