@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LuCreditCard, LuExternalLink, LuRefreshCw } from 'react-icons/lu';
+import { useEffect, useState } from 'react';
+import { LuCreditCard, LuExternalLink, LuMail, LuRefreshCw } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
