@@ -5,6 +5,7 @@ export type SubscriptionInvoiceRow = Tables<'subscription_invoices'>;
 export type StripeCustomerRow = Tables<'stripe_customers'>;
 
 export type SubscriptionStatus =
+	| 'scheduled'
 	| 'trialing'
 	| 'active'
 	| 'past_due'
@@ -15,6 +16,7 @@ export type SubscriptionStatus =
 	| 'paused';
 
 export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+	scheduled: 'Gepland',
 	trialing: 'Proefperiode',
 	active: 'Actief',
 	past_due: 'Achterstallig',
@@ -29,6 +31,7 @@ export const SUBSCRIPTION_STATUS_VARIANTS: Record<
 	SubscriptionStatus,
 	'default' | 'secondary' | 'destructive' | 'outline'
 > = {
+	scheduled: 'secondary',
 	trialing: 'secondary',
 	active: 'default',
 	past_due: 'destructive',
