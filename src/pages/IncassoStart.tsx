@@ -26,9 +26,7 @@ export default function IncassoStart() {
 
 			// Wissel PKCE-code in voor sessie indien aanwezig
 			if (window.location.search.includes('code=')) {
-				const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(
-					window.location.href,
-				);
+				const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(window.location.href);
 				if (exchangeErr) {
 					setError(`Inloggen mislukt: ${exchangeErr.message}. De link is mogelijk verlopen.`);
 					return;
@@ -41,14 +39,11 @@ export default function IncassoStart() {
 				return;
 			}
 
-			const { data, error: invokeErr } = await supabase.functions.invoke(
-				'create-subscription-checkout',
-				{ body: { lesson_agreement_id: agreementId, mode: 'checkout' } },
-			);
+			const { data, error: invokeErr } = await supabase.functions.invoke('create-subscription-checkout', {
+				body: { lesson_agreement_id: agreementId, mode: 'checkout' },
+			});
 			if (invokeErr || (data as { error?: string })?.error) {
-				setError(
-					(data as { error?: string })?.error ?? invokeErr?.message ?? 'Kon incasso niet starten.',
-				);
+				setError((data as { error?: string })?.error ?? invokeErr?.message ?? 'Kon incasso niet starten.');
 				return;
 			}
 			const url = (data as { url?: string })?.url;

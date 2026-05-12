@@ -22,7 +22,6 @@ function json(status: number, payload: unknown) {
 	});
 }
 
-
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
 	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
@@ -62,11 +61,7 @@ Deno.serve(async (req) => {
 	if (userErr || !user) return json(401, { error: 'Invalid token' });
 
 	// Authz: privileged of de leerling zelf
-	const { data: roleRow } = await userClient
-		.from('user_roles')
-		.select('role')
-		.eq('user_id', user.id)
-		.single();
+	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
 	const isPrivileged = role === 'admin' || role === 'site_admin' || role === 'teacher';
 
