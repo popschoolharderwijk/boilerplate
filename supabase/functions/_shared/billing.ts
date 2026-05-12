@@ -197,25 +197,52 @@ interface StripePhasePayload {
 	default_payment_method?: string;
 }
 
-function toStripePhasePayloads(phases: Phase[], lessonAgreementId: string, defaultPm?: string): StripePhasePayload[] {
-	return phases.map((p) => ({
-		items: [
-			{
-				price_data: {
-					currency: 'eur',
-					product_data: { name: `Lesgeld ${p.label}` },
-					unit_amount: p.amountCents,
-					recurring: { interval: 'month', interval_count: 1 },
-				},
-				quantity: 1,
-			},
-		],
-		iterations: 1,
-		proration_behavior: 'none',
-		collection_method: 'charge_automatically',
-		metadata: { phase_label: p.label, lesson_agreement_id: lessonAgreementId },
-		...(defaultPm ? { default_payment_method: defaultPm } : {}),
-	}));
+async function ensureLessonProduct(stripe: Stripe, lessonAgreementId: string): Promise<string> {
+	const product = await stripe.products.create({
+		name: `Lesgeld ${lessonAgreementId}`,
+		metadata: { lesson_agreement_id: lessonAgreementId },
+	});
+	return product.id;
+}
+
+async function createPhasePrice(
+	stripe: Stripe,
+	productId: string,
+	amountCents: number,
+	label: string,
+	lessonAgreementId: string,
+): Promise<string> {
+	const price = await stripe.prices.create({
+		currency: 'eur',
+		product: productId,
+		unit_amount: amountCents,
+		recurring: { interval: 'month', interval_count: 1 },
+		nickname: `Lesgeld ${label}`,
+		metadata: { phase_label: label, lesson_agreement_id: lessonAgreementId },
+	});
+	return price.id;
+}
+
+async function toStripePhasePayloads(
+	stripe: Stripe,
+	phases: Phase[],
+	lessonAgreementId: string,
+	defaultPm?: string,
+): Promise<StripePhasePayload[]> {
+	const productId = await ensureLessonProduct(stripe, lessonAgreementId);
+	const payloads: StripePhasePayload[] = [];
+	for (const p of phases) {
+		const priceId = await createPhasePrice(stripe, productId, p.amountCents, p.label, lessonAgreementId);
+		payloads.push({
+			items: [{ price: priceId, quantity: 1 }],
+			iterations: 1,
+			proration_behavior: 'none',
+			collection_method: 'charge_automatically',
+			metadata: { phase_label: p.label, lesson_agreement_id: lessonAgreementId },
+			...(defaultPm ? { default_payment_method: defaultPm } : {}),
+		});
+	}
+	return payloads;
 }
 
 export interface BillingComputation {
@@ -316,7 +343,7 @@ export async function createScheduleForAgreement(
 	);
 	if (phases.length === 0) throw new Error('Geen incassomaanden te plannen.');
 
-	const stripePhases = toStripePhasePayloads(phases, ctx.lessonAgreementId, ctx.defaultPaymentMethod);
+	const stripePhases = await toStripePhasePayloads(stripe, phases, ctx.lessonAgreementId, ctx.defaultPaymentMethod);
 
 	const schedule = await stripe.subscriptionSchedules.create({
 		customer: ctx.customerId,
@@ -440,7 +467,7 @@ export async function rebuildScheduleForAgreement(
 
 	// Align the new future-phase payloads to the same month grid as the original schedule.
 	const futurePhases = newPhases.slice(firstFutureIndex);
-	const futurePayloads = toStripePhasePayloads(futurePhases, lessonAgreementId, inheritedPm).map((payload, idx) => {
+	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map((payload, idx) => {
 		const original = newPhases[firstFutureIndex + idx];
 		const { iterations: _ignored, ...rest } = payload;
 		return {
