@@ -143,18 +143,7 @@ export function useAgreementBillingPreview(
 		return () => {
 			cancelled = true;
 		};
-		// Stabiele deps: object-referentie kan nieuw zijn elke render, maar inhoud telt.
-		// biome-ignore lint/correctness/useExhaustiveDependencies: bewust per veld
-	}, [
-		agreement?.id,
-		agreement?.student_user_id,
-		agreement?.lesson_type_id,
-		agreement?.frequency,
-		agreement?.duration_minutes,
-		agreement?.day_of_week,
-		agreement?.start_date,
-		agreement?.end_date,
-	]);
+	}, [agreement]);
 
 	return { preview, loading, error };
 }
