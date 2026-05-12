@@ -3,6 +3,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
+import { writeSubscriptionState } from './subscription-storage.ts';
 
 export type LessonFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
@@ -368,38 +369,17 @@ export async function createScheduleForAgreement(
 	const periodStartIso = new Date(phases[0].startUnix * 1000).toISOString();
 	const periodEndIso = new Date(phases[0].endUnix * 1000).toISOString();
 
-	if (subscriptionId) {
-		await admin.from('subscriptions').upsert(
-			{
-				lesson_agreement_id: ctx.lessonAgreementId,
-				stripe_customer_id: ctx.customerId,
-				stripe_subscription_id: subscriptionId,
-				stripe_price_id: firstPriceId,
-				stripe_schedule_id: schedule.id,
-				status: 'scheduled',
-				current_period_start: periodStartIso,
-				current_period_end: periodEndIso,
-				default_payment_method_brand: ctx.defaultPaymentMethod ? 'sepa_debit' : null,
-			},
-			{ onConflict: 'stripe_subscription_id' },
-		);
-	} else {
-		// Nog geen Stripe subscription — placeholder op schedule_id.
-		await admin.from('subscriptions').upsert(
-			{
-				lesson_agreement_id: ctx.lessonAgreementId,
-				stripe_customer_id: ctx.customerId,
-				stripe_subscription_id: null,
-				stripe_price_id: firstPriceId,
-				stripe_schedule_id: schedule.id,
-				status: 'scheduled',
-				current_period_start: periodStartIso,
-				current_period_end: periodEndIso,
-				default_payment_method_brand: ctx.defaultPaymentMethod ? 'sepa_debit' : null,
-			},
-			{ onConflict: 'stripe_schedule_id' },
-		);
-	}
+	await writeSubscriptionState(admin, {
+		lesson_agreement_id: ctx.lessonAgreementId,
+		stripe_customer_id: ctx.customerId,
+		stripe_subscription_id: subscriptionId,
+		stripe_price_id: firstPriceId,
+		stripe_schedule_id: schedule.id,
+		status: 'scheduled',
+		current_period_start: periodStartIso,
+		current_period_end: periodEndIso,
+		default_payment_method_brand: ctx.defaultPaymentMethod ? 'sepa_debit' : null,
+	});
 
 	return {
 		scheduleId: schedule.id,
@@ -501,15 +481,17 @@ export async function rebuildScheduleForAgreement(
 
 	// Align the new future-phase payloads to the same month grid as the original schedule.
 	const futurePhases = newPhases.slice(firstFutureIndex);
-	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map((payload, idx) => {
-		const original = newPhases[firstFutureIndex + idx];
-		const { iterations: _ignored, ...rest } = payload;
-		return {
-			...rest,
-			start_date: original.startUnix,
-			end_date: original.endUnix,
-		};
-	});
+	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map(
+		(payload, idx) => {
+			const original = newPhases[firstFutureIndex + idx];
+			const { iterations: _ignored, ...rest } = payload;
+			return {
+				...rest,
+				start_date: original.startUnix,
+				end_date: original.endUnix,
+			};
+		},
+	);
 
 	if (futurePayloads.length === 0) {
 		return {

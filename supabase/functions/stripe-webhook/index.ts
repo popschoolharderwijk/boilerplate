@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
+import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 import {
 	attachDefaultPaymentMethod,
 	getReusablePaymentMethodIdFromSetupIntent,
@@ -91,44 +92,25 @@ async function upsertSubscription(admin: ReturnType<typeof createClient>, sub: S
 	})();
 
 	const scheduleId = typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? null);
+	const firstItem = sub.items.data[0];
+	const currentPeriodStart = sub.current_period_start ?? firstItem?.current_period_start ?? null;
+	const currentPeriodEnd = sub.current_period_end ?? firstItem?.current_period_end ?? null;
 
-	const payload = {
+	await writeSubscriptionState(admin, {
 		lesson_agreement_id: lessonAgreementId,
 		stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
 		stripe_subscription_id: sub.id,
 		stripe_price_id: priceId,
 		stripe_schedule_id: scheduleId,
 		status,
-		current_period_start: sub.current_period_start
-			? new Date(sub.current_period_start * 1000).toISOString()
-			: null,
-		current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+		current_period_start: currentPeriodStart ? new Date(currentPeriodStart * 1000).toISOString() : null,
+		current_period_end: currentPeriodEnd ? new Date(currentPeriodEnd * 1000).toISOString() : null,
 		cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
 		canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
 		default_payment_method_brand: pmBrand,
 		latest_invoice_id:
 			typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
-	};
-
-	// Als er al een 'scheduled' rij voor deze schedule bestaat (zonder stripe_subscription_id),
-	// werk die bij in plaats van een dubbele rij te maken.
-	if (scheduleId) {
-		const { data: existing } = await admin
-			.from('subscriptions')
-			.select('id, stripe_subscription_id')
-			.eq('stripe_schedule_id', scheduleId)
-			.maybeSingle();
-		if (existing && !existing.stripe_subscription_id) {
-			const { error } = await admin.from('subscriptions').update(payload).eq('id', existing.id);
-			if (error) console.error('subscription update (scheduled→active) error', error);
-			return;
-		}
-	}
-
-	const { error } = await admin
-		.from('subscriptions')
-		.upsert(payload, { onConflict: 'stripe_subscription_id' });
-	if (error) console.error('subscription upsert error', error);
+	});
 }
 
 async function upsertInvoice(admin: ReturnType<typeof createClient>, inv: Stripe.Invoice): Promise<void> {
