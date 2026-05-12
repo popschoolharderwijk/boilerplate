@@ -157,7 +157,7 @@ export function NoLessonPeriodsManager() {
 								<div className="min-w-0 flex-1">
 									<p className="font-medium truncate">{period.name}</p>
 									<p className="text-sm text-muted-foreground">
-										{formatDate(period.start_date)} t/m {formatDate(period.end_date)}
+										{formatDbDateToUi(period.start_date)} t/m {formatDbDateToUi(period.end_date)}
 									</p>
 									{period.description && (
 										<p className="text-xs text-muted-foreground mt-0.5 truncate">
