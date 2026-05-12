@@ -171,7 +171,8 @@ function buildPhases(periodStart: string, periodEnd: string, monthlyCents: numbe
 	}
 	for (let i = 0; i < months.length; i++) {
 		const m = months[i];
-		const next = i + 1 < months.length ? months[i + 1] : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
+		const next =
+			i + 1 < months.length ? months[i + 1] : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
 		const phaseStart = i === 0 ? start : m; // first phase begins at the agreement start (may be mid-month)
 		const startUnix = Math.floor(phaseStart.getTime() / 1000);
 		const endUnix = Math.floor(next.getTime() / 1000);

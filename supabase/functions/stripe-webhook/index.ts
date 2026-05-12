@@ -153,7 +153,8 @@ Deno.serve(async (req) => {
 					let pmId: string | null = null;
 					if (setupIntentId) {
 						const si = await stripe.setupIntents.retrieve(setupIntentId);
-						pmId = typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
+						pmId =
+							typeof si.payment_method === 'string' ? si.payment_method : (si.payment_method?.id ?? null);
 					}
 					if (!pmId) {
 						console.warn('setup session without payment_method', session.id);

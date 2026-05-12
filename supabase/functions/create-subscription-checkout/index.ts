@@ -110,8 +110,7 @@ Deno.serve(async (req) => {
 			const defaultPmId = typeof defaultPm === 'string' ? defaultPm : defaultPm?.id;
 			if (!defaultPmId) {
 				return json(409, {
-					error:
-						'Geen standaard betaalmethode op deze klant. Start eerst een checkout om een SEPA-mandaat te koppelen.',
+					error: 'Geen standaard betaalmethode op deze klant. Start eerst een checkout om een SEPA-mandaat te koppelen.',
 				});
 			}
 
