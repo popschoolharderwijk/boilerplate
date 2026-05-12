@@ -42,8 +42,16 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	const canEdit = canEditProp ?? !!user;
 	const isOwnAgenda = !viewUserId;
 
-	const { agendaEvents, deviations, deviationsByEventId, agreementsMap, loading, loadData, getEnrichedEvents } =
-		useAgendaData(effectiveUserId);
+	const {
+		agendaEvents,
+		deviations,
+		deviationsByEventId,
+		agreementsMap,
+		loading,
+		loadData,
+		getEnrichedEvents,
+		noLessonPeriods,
+	} = useAgendaData(effectiveUserId);
 
 	const ui = useAgendaUI();
 	const {
@@ -301,6 +309,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		onSelectSlot: handleSelectSlot,
 		setCurrentView,
 		setCurrentDate,
+		noLessonPeriods,
 	});
 
 	if (loading) return <PageSkeleton variant="agenda" />;
