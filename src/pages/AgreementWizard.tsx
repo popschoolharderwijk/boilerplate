@@ -390,6 +390,24 @@ export default function AgreementWizard() {
 	const teachers = useTeachers(step, form.lessonTypeId);
 	const lessonTypeOptions = useLessonTypeOptions(form.lessonTypeId);
 
+	// Prefill option snapshot when staff opens wizard from a public signup request
+	useEffect(() => {
+		if (isEditMode || !prefillOptionId || lessonTypeOptions.length === 0) return;
+		setForm((f) => {
+			if (f.selectedOptionSnapshot) return f;
+			const opt = lessonTypeOptions.find((o) => o.id === prefillOptionId);
+			if (!opt) return f;
+			return {
+				...f,
+				selectedOptionSnapshot: {
+					duration_minutes: opt.duration_minutes,
+					frequency: opt.frequency,
+					price_per_lesson: opt.price_per_lesson,
+				},
+			};
+		});
+	}, [isEditMode, prefillOptionId, lessonTypeOptions]);
+
 	const selectedLessonType = useMemo((): WizardLessonTypeInfo | undefined => {
 		if (agreement) {
 			return {
