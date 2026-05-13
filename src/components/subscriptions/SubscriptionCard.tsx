@@ -136,6 +136,26 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 		void refresh();
 	};
 
+	const handleForceStart = async () => {
+		if (
+			!window.confirm(
+				'TEST: bestaand schedule wordt geannuleerd en er wordt direct een actief abonnement aangemaakt met onmiddellijke incasso. Doorgaan?',
+			)
+		)
+			return;
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('force-start-subscription', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		if (error || (data as { error?: string })?.error) {
+			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon niet forceren');
+			return;
+		}
+		toast.success('Abonnement direct geactiveerd in Stripe');
+		void refresh();
+	};
+
 	const status = subscription?.status as SubscriptionStatus | undefined;
 
 	return (
@@ -192,7 +212,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 				{subscription && status && (
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
-							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
+					<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
 								{SUBSCRIPTION_STATUS_LABELS[status]}
 							</Badge>
 							{subscription.default_payment_method_brand && (
@@ -221,6 +241,17 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 									title="Herbereken toekomstige maanden met de huidige tarieven"
 								>
 									Pas nieuwe tarieven toe
+								</Button>
+							)}
+							{isPrivileged && status === 'scheduled' && (
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={handleForceStart}
+									disabled={busy}
+									title="TEST: cancel schedule en start abonnement direct"
+								>
+									Forceer direct starten (test)
 								</Button>
 							)}
 						</div>
