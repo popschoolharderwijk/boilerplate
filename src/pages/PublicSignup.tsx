@@ -223,6 +223,7 @@ export default function PublicSignup() {
 										onClick={() => {
 											setSelectedType(lt);
 											setSelectedGroupId(null);
+											setSelectedOption(null);
 										}}
 										className={`p-4 rounded-lg border-2 text-left transition ${
 											selectedType?.id === lt.id
