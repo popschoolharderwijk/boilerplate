@@ -136,7 +136,9 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 					.in('teacher_user_id', teacherIds),
 				supabase
 					.from('lesson_agreements')
-					.select('teacher_user_id, day_of_week, start_time, start_date, end_date, duration_minutes, frequency')
+					.select(
+						'teacher_user_id, day_of_week, start_time, start_date, end_date, duration_minutes, frequency',
+					)
 					.in('teacher_user_id', teacherIds)
 					.lte('start_date', toDate),
 				supabase
@@ -305,7 +307,12 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 					<div className="grid grid-cols-3 gap-3">
 						<div>
 							<Label>Van</Label>
-							<Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} required />
+							<Input
+								type="date"
+								value={fromDate}
+								onChange={(e) => setFromDate(e.target.value)}
+								required
+							/>
 						</div>
 						<div>
 							<Label>Tot</Label>
@@ -352,7 +359,9 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 															selected?.start_time === slot.start_time &&
 															selected?.teacher_user_id === slot.teacher_user_id;
 														return (
-															<li key={`${slot.date}-${slot.start_time}-${slot.teacher_user_id}`}>
+															<li
+																key={`${slot.date}-${slot.start_time}-${slot.teacher_user_id}`}
+															>
 																<button
 																	type="button"
 																	onClick={() => setSelected(slot)}
@@ -361,14 +370,22 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 																	}`}
 																>
 																	<span className="w-24 font-mono tabular-nums">
-																		{slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)}
+																		{slot.start_time.slice(0, 5)}–
+																		{slot.end_time.slice(0, 5)}
 																	</span>
 																	<Avatar className="h-6 w-6">
 																		{t?.avatarUrl ? (
-																			<AvatarImage src={t.avatarUrl} alt={teacherName(t)} />
+																			<AvatarImage
+																				src={t.avatarUrl}
+																				alt={teacherName(t)}
+																			/>
 																		) : null}
 																		<AvatarFallback className="text-[10px]">
-																			{t ? teacherInitials(t) : <LuUser className="h-3 w-3" />}
+																			{t ? (
+																				teacherInitials(t)
+																			) : (
+																				<LuUser className="h-3 w-3" />
+																			)}
 																		</AvatarFallback>
 																	</Avatar>
 																	<span className="truncate">{teacherName(t)}</span>
