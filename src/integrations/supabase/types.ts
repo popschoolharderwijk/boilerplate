@@ -1388,10 +1388,15 @@ export type Database = {
         | "lesson_agreement"
         | "project"
         | "lesson_group"
+        | "trial_lesson"
       app_role: "site_admin" | "admin" | "staff"
       cancellation_type: "student" | "teacher"
       lesson_frequency: "daily" | "weekly" | "biweekly" | "monthly"
-      signup_request_status: "pending" | "approved" | "rejected"
+      signup_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "trial_scheduled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1524,11 +1529,17 @@ export const Constants = {
         "lesson_agreement",
         "project",
         "lesson_group",
+        "trial_lesson",
       ],
       app_role: ["site_admin", "admin", "staff"],
       cancellation_type: ["student", "teacher"],
       lesson_frequency: ["daily", "weekly", "biweekly", "monthly"],
-      signup_request_status: ["pending", "approved", "rejected"],
+      signup_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "trial_scheduled",
+      ],
     },
   },
 } as const
