@@ -346,13 +346,13 @@ export default function Agreements() {
 				key: 'student',
 				label: 'Leerling',
 				sortable: true,
-				render: (r) => <UserDisplay profile={r.student} showEmail />,
+				render: (r) => <UserDisplay profile={r.student} href={`/students/${r.student_user_id}`} showEmail />,
 			},
 			{
 				key: 'teacher',
 				label: 'Docent',
 				sortable: true,
-				render: (r) => <UserDisplay profile={r.teacher} />,
+				render: (r) => <UserDisplay profile={r.teacher} href={`/teachers/${r.teacher_user_id}`} />,
 			},
 			{
 				key: 'lesson',
