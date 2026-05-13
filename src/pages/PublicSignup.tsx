@@ -118,6 +118,20 @@ export default function PublicSignup() {
 		})();
 	}, [selectedType]);
 
+	useEffect(() => {
+		if (!selectedType || selectedType.is_group_lesson) {
+			setLessonTypeOptions([]);
+			return;
+		}
+		supabase
+			.from('lesson_type_options')
+			.select('id, duration_minutes, frequency, price_per_lesson')
+			.eq('lesson_type_id', selectedType.id)
+			.order('duration_minutes')
+			.order('frequency')
+			.then(({ data }) => setLessonTypeOptions((data ?? []) as LessonTypeOptionRow[]));
+	}, [selectedType]);
+
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!selectedType) return;
