@@ -120,8 +120,8 @@ export default function MyStudentProfile() {
 				console.error('Error loading lesson types:', lessonTypesRes.error);
 			}
 
-			const teacherById = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]));
-			const lessonTypeById = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
+			const teacherById = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p] as const));
+			const lessonTypeById = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt] as const));
 
 			const transformedAgreements: LessonAgreement[] = rows.map((row) => {
 				const p = teacherById.get(row.teacher_user_id);
