@@ -1,3 +1,4 @@
+import { LessonTypeOptionSelect, type OptionSnapshot } from '@/components/lesson-type-options/LessonTypeOptionSelect';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExistingOrNewUserSelect } from '@/components/ui/existing-or-new-user-select';
 import { Label } from '@/components/ui/label';
@@ -5,14 +6,8 @@ import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { type LessonTypeOption, LessonTypeSelect } from '@/components/ui/lesson-type-select';
 import { UserDisplay } from '@/components/ui/user-display';
 import { frequencyLabels } from '@/lib/frequencies';
-import type { LessonFrequency, LessonTypeOptionSnapshot, WizardLessonTypeInfo } from '@/types/lesson-agreements';
+import type { LessonTypeOptionSnapshot, WizardLessonTypeInfo } from '@/types/lesson-agreements';
 import type { User } from '@/types/users';
-
-interface OptionSnapshot {
-	duration_minutes: number;
-	frequency: LessonFrequency;
-	price_per_lesson: number;
-}
 
 interface UserStepContentProps {
 	isEditMode: boolean;
