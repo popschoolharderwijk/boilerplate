@@ -111,3 +111,121 @@ export function getSlotStatuses(
 
 	return result;
 }
+
+/** A scheduled trial lesson that can occupy a slot on a specific date */
+export interface ExistingTrialLessonForSlot {
+	teacher_user_id: string;
+	scheduled_date: string;
+	scheduled_start_time: string;
+	duration_minutes: number;
+}
+
+/** A free slot for a specific teacher on a specific date */
+export interface FreeSlotForTeacher {
+	date: string;
+	day_of_week: number;
+	start_time: string;
+	end_time: string;
+	teacher_user_id: string;
+}
+
+function* iterateDates(periodStart: Date, periodEnd: Date): Generator<Date> {
+	const cur = new Date(periodStart);
+	cur.setHours(12, 0, 0, 0);
+	const end = new Date(periodEnd);
+	end.setHours(12, 0, 0, 0);
+	while (cur <= end) {
+		yield new Date(cur);
+		cur.setDate(cur.getDate() + 1);
+	}
+}
+
+function toDateStr(d: Date): string {
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
+
+/**
+ * Compute free time slots across multiple teachers within a date period.
+ * Returns slots sorted chronologically by (date, start_time, teacher_user_id).
+ *
+ * A slot is "free" when it does not overlap with:
+ *  - any lesson_agreement occurrence on that date for that teacher
+ *  - any already scheduled trial lesson for that teacher on that date
+ */
+export function getFreeSlotsAcrossTeachers(
+	periodStart: Date,
+	periodEnd: Date,
+	availabilityByTeacher: Map<string, AvailabilitySlot[]>,
+	agreementsByTeacher: Map<string, ExistingAgreementForSlot[]>,
+	trialLessonsByTeacher: Map<string, ExistingTrialLessonForSlot[]>,
+	durationMinutes: number,
+): FreeSlotForTeacher[] {
+	const result: FreeSlotForTeacher[] = [];
+
+	for (const date of iterateDates(periodStart, periodEnd)) {
+		const dow = date.getDay();
+		const dateStr = toDateStr(date);
+
+		for (const [teacherId, availability] of availabilityByTeacher) {
+			const dayAvail = availability.filter((a) => a.day_of_week === dow);
+			if (dayAvail.length === 0) continue;
+
+			const agreements = agreementsByTeacher.get(teacherId) ?? [];
+			const trialLessons = trialLessonsByTeacher.get(teacherId) ?? [];
+
+			for (const avail of dayAvail) {
+				const subSlots = splitTimeRangeIntoSlots(avail.start_time, avail.end_time, durationMinutes);
+				for (const sub of subSlots) {
+					const startMin = timeToMinutes(sub.start_time);
+					if (startMin === null) continue;
+					const endMin = startMin + durationMinutes;
+
+					let occupied = false;
+
+					for (const a of agreements) {
+						if (!agreementHasOccurrenceOnDate(a, dateStr)) continue;
+						const aStart = timeToMinutes(a.start_time);
+						if (aStart === null) continue;
+						if (timeRangesOverlap(startMin, endMin, aStart, aStart + a.duration_minutes)) {
+							occupied = true;
+							break;
+						}
+					}
+
+					if (!occupied) {
+						for (const t of trialLessons) {
+							if (t.scheduled_date !== dateStr) continue;
+							const tStart = timeToMinutes(t.scheduled_start_time);
+							if (tStart === null) continue;
+							if (timeRangesOverlap(startMin, endMin, tStart, tStart + t.duration_minutes)) {
+								occupied = true;
+								break;
+							}
+						}
+					}
+
+					if (!occupied) {
+						result.push({
+							date: dateStr,
+							day_of_week: dow,
+							start_time: sub.start_time,
+							end_time: sub.end_time,
+							teacher_user_id: teacherId,
+						});
+					}
+				}
+			}
+		}
+	}
+
+	result.sort((a, b) => {
+		if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+		if (a.start_time !== b.start_time) return a.start_time < b.start_time ? -1 : 1;
+		return a.teacher_user_id < b.teacher_user_id ? -1 : 1;
+	});
+
+	return result;
+}
