@@ -213,30 +213,49 @@ export default function SignupRequests() {
 				key: 'status',
 				label: 'Status',
 				render: (r) => (
-					<Badge
-						variant={r.status === 'pending' ? 'default' : r.status === 'approved' ? 'secondary' : 'outline'}
-					>
-						{r.status}
-					</Badge>
+					<div className="space-y-1">
+						<Badge
+							variant={
+								r.status === 'pending'
+									? 'default'
+									: r.status === 'approved'
+										? 'secondary'
+										: r.status === 'trial_scheduled'
+											? 'secondary'
+											: 'outline'
+							}
+						>
+							{r.status === 'trial_scheduled' ? 'proefles ingepland' : r.status}
+						</Badge>
+						{r.status === 'trial_scheduled' && r.trial_scheduled_date && (
+							<div className="text-xs text-muted-foreground">
+								{formatDbDateLong(r.trial_scheduled_date)}
+								{r.trial_scheduled_time ? ` · ${r.trial_scheduled_time.slice(0, 5)}` : ''}
+								{r.trial_teacher_name ? ` · ${r.trial_teacher_name}` : ''}
+							</div>
+						)}
+					</div>
 				),
 			},
 			{
 				key: 'actions',
 				label: '',
 				render: (r) =>
-					r.status === 'pending' ? (
+					r.status === 'pending' || r.status === 'trial_scheduled' ? (
 						<div className="flex gap-2 justify-end">
 							<Button size="sm" variant="outline" onClick={() => reject(r)} disabled={busyId === r.id}>
 								<LuX className="h-4 w-4" />
 							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={() => setTrialFor(r)}
-								disabled={busyId === r.id}
-							>
-								<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
-							</Button>
+							{r.status === 'pending' && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => setTrialFor(r)}
+									disabled={busyId === r.id}
+								>
+									<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
+								</Button>
+							)}
 							<Button size="sm" onClick={() => process(r)} disabled={busyId === r.id}>
 								<LuCheck className="h-4 w-4 mr-1" /> Verwerken
 							</Button>
