@@ -51,16 +51,14 @@ export default function TrialLessons() {
 			new Set(trials.flatMap((t) => [t.student_user_id, t.teacher_user_id])),
 		);
 		const lessonTypeIds = Array.from(new Set(trials.map((t) => t.lesson_type_id)));
-		const [{ data: profs }, { data: lts }] = await Promise.all([
-			userIds.length
-				? supabase.from('profiles').select('user_id, first_name, last_name, email').in('user_id', userIds)
-				: Promise.resolve({ data: [] as { user_id: string; first_name: string | null; last_name: string | null; email: string }[] }),
-			lessonTypeIds.length
-				? supabase.from('lesson_types').select('id, name').in('id', lessonTypeIds)
-				: Promise.resolve({ data: [] as { id: string; name: string }[] }),
-		]);
-		const profMap = new Map(profs?.map((p) => [p.user_id, p]) ?? []);
-		const ltMap = new Map(lts?.map((l) => [l.id, l.name]) ?? []);
+		const profsRes = userIds.length
+			? await supabase.from('profiles').select('user_id, first_name, last_name, email').in('user_id', userIds)
+			: { data: [] };
+		const ltsRes = lessonTypeIds.length
+			? await supabase.from('lesson_types').select('id, name').in('id', lessonTypeIds)
+			: { data: [] };
+		const profMap = new Map((profsRes.data ?? []).map((p) => [p.user_id, p] as const));
+		const ltMap = new Map((ltsRes.data ?? []).map((l) => [l.id, l.name] as const));
 		setRows(
 			trials.map((t) => {
 				const sp = profMap.get(t.student_user_id);
@@ -201,12 +199,12 @@ export default function TrialLessons() {
 				icon={<LuGraduationCap className="h-6 w-6" />}
 				title="Proeflessen"
 				subtitle="Plan en beheer proeflessen voor leerlingen"
-				actions={
-					<Button onClick={() => setOpenSchedule(true)}>
-						<LuPlus className="h-4 w-4 mr-1" /> Proefles inplannen
-					</Button>
-				}
 			/>
+			<div className="mt-4 mb-3 flex justify-end">
+				<Button onClick={() => setOpenSchedule(true)}>
+					<LuPlus className="h-4 w-4 mr-1" /> Proefles inplannen
+				</Button>
+			</div>
 			<div className="mt-6">
 				<DataTable
 					title="Proeflessen"

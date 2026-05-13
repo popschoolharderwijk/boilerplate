@@ -42,19 +42,17 @@ export default function MyTrial() {
 			const list = data ?? [];
 			const teacherIds = Array.from(new Set(list.map((t) => t.teacher_user_id)));
 			const lessonTypeIds = Array.from(new Set(list.map((t) => t.lesson_type_id)));
-			const [{ data: profs }, { data: lts }] = await Promise.all([
-				teacherIds.length
-					? supabase
-							.from('profiles')
-							.select('user_id, first_name, last_name, email')
-							.in('user_id', teacherIds)
-					: Promise.resolve({ data: [] as { user_id: string; first_name: string | null; last_name: string | null; email: string }[] }),
-				lessonTypeIds.length
-					? supabase.from('lesson_types').select('id, name').in('id', lessonTypeIds)
-					: Promise.resolve({ data: [] as { id: string; name: string }[] }),
-			]);
-			const profMap = new Map(profs?.map((p) => [p.user_id, p]) ?? []);
-			const ltMap = new Map(lts?.map((l) => [l.id, l.name]) ?? []);
+			const profsRes = teacherIds.length
+				? await supabase
+						.from('profiles')
+						.select('user_id, first_name, last_name, email')
+						.in('user_id', teacherIds)
+				: { data: [] };
+			const ltsRes = lessonTypeIds.length
+				? await supabase.from('lesson_types').select('id, name').in('id', lessonTypeIds)
+				: { data: [] };
+			const profMap = new Map((profsRes.data ?? []).map((p) => [p.user_id, p] as const));
+			const ltMap = new Map((ltsRes.data ?? []).map((l) => [l.id, l.name] as const));
 			setTrials(
 				list.map((t) => {
 					const tp = profMap.get(t.teacher_user_id);
