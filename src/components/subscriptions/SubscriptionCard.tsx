@@ -212,7 +212,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 				{subscription && status && (
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
-					<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
+							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
 								{SUBSCRIPTION_STATUS_LABELS[status]}
 							</Badge>
 							{subscription.default_payment_method_brand && (

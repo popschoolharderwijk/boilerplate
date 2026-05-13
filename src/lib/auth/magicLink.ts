@@ -59,11 +59,7 @@ export async function consumeMagicLinkFromUrl(): Promise<MagicLinkResult> {
 }
 
 /** Leest een fout-veld uit een edge-function respons of Response-object. */
-export async function getFunctionErrorMessage(
-	data: unknown,
-	error: unknown,
-	fallback: string,
-): Promise<string> {
+export async function getFunctionErrorMessage(data: unknown, error: unknown, fallback: string): Promise<string> {
 	const dataError = typeof data === 'object' && data !== null && 'error' in data ? data.error : null;
 	if (typeof dataError === 'string') return dataError;
 
