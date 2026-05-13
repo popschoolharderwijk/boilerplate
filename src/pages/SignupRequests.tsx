@@ -15,6 +15,7 @@ type Row = Tables<'lesson_signup_requests'> & {
 	lesson_type_name: string | null;
 	lesson_group_name: string | null;
 	is_group_lesson: boolean;
+	option_label: string | null;
 };
 
 export default function SignupRequests() {
