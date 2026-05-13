@@ -301,17 +301,38 @@ export default function PublicSignup() {
 									</button>
 								</div>
 							) : (
-								<p className="text-sm text-muted-foreground">
-									Je meldt je aan voor individuele {selectedType.name}-les. Onze administratie neemt
-									contact op om docent en tijdstip af te stemmen.
-								</p>
+								<div className="space-y-4">
+									<p className="text-sm text-muted-foreground">
+										Je meldt je aan voor individuele {selectedType.name}-les. Kies hieronder hoe
+										vaak en hoe lang je per les wilt komen. De prijs per les wordt direct getoond.
+									</p>
+									{lessonTypeOptions.length === 0 ? (
+										<p className="text-sm text-muted-foreground">
+											Er zijn nog geen opties ingesteld voor deze les. Vul je gegevens in op de
+											volgende stap; we nemen contact op om de details af te stemmen.
+										</p>
+									) : (
+										<div className="space-y-2">
+											<Label>Duur, frequentie en prijs</Label>
+											<LessonTypeOptionSelect
+												options={lessonTypeOptions}
+												value={selectedOption}
+												onChange={setSelectedOption}
+											/>
+										</div>
+									)}
+								</div>
 							)}
 							<div className="flex justify-between pt-4">
 								<Button variant="outline" onClick={() => setStep(1)}>
 									Vorige
 								</Button>
 								<Button
-									disabled={selectedType.is_group_lesson && !selectedGroupId}
+									disabled={
+										selectedType.is_group_lesson
+											? !selectedGroupId
+											: lessonTypeOptions.length > 0 && !selectedOption
+									}
 									onClick={() => setStep(3)}
 								>
 									Volgende
