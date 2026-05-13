@@ -17,6 +17,9 @@ type Row = Tables<'lesson_signup_requests'> & {
 	lesson_group_name: string | null;
 	is_group_lesson: boolean;
 	option_label: string | null;
+	trial_scheduled_date: string | null;
+	trial_scheduled_time: string | null;
+	trial_teacher_name: string | null;
 };
 
 export default function SignupRequests() {
