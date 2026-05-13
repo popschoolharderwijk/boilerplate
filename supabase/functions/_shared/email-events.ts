@@ -15,6 +15,18 @@ export const EMAIL_EVENTS: Record<string, EmailEventDefinition> = {
 		description: 'Verstuurd direct na het indienen van een aanmeldformulier.',
 		variables: ['leerling_naam', 'les_type', 'frequentie', 'prijs_per_les'],
 	},
+	trial_scheduled: {
+		key: 'trial_scheduled',
+		label: 'Proefles ingepland (leerling)',
+		description: 'Verstuurd naar de leerling wanneer een proefles is ingepland.',
+		variables: ['leerling_naam', 'les_type', 'datum', 'tijd', 'duur'],
+	},
+	trial_scheduled_teacher: {
+		key: 'trial_scheduled_teacher',
+		label: 'Proefles ingepland (docent)',
+		description: 'Verstuurd naar de docent wanneer er een proefles is ingepland.',
+		variables: ['docent_naam', 'leerling_naam', 'les_type', 'datum', 'tijd', 'duur'],
+	},
 };
 
 export function getEmailEvent(key: string): EmailEventDefinition | null {

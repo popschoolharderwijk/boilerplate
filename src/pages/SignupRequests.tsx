@@ -17,6 +17,9 @@ type Row = Tables<'lesson_signup_requests'> & {
 	lesson_group_name: string | null;
 	is_group_lesson: boolean;
 	option_label: string | null;
+	trial_scheduled_date: string | null;
+	trial_scheduled_time: string | null;
+	trial_teacher_name: string | null;
 };
 
 export default function SignupRequests() {
@@ -34,7 +37,7 @@ export default function SignupRequests() {
 			.from('lesson_signup_requests')
 			.select('*, lesson_types(id, name, is_group_lesson), lesson_groups(id, name)')
 			.order('created_at', { ascending: false });
-		if (statusFilter === 'pending') q = q.eq('status', 'pending');
+		if (statusFilter === 'pending') q = q.in('status', ['pending', 'trial_scheduled']);
 		const { data, error } = await q;
 		if (error) {
 			setLoading(false);
@@ -66,12 +69,51 @@ export default function SignupRequests() {
 			}
 		}
 
+		// Ingeplande proeflessen ophalen voor zichtbare aanmeldingen
+		const requestIds = baseRows.map((r) => r.id);
+		const trialMap = new Map<string, { date: string; time: string; teacher_user_id: string }>();
+		const teacherNames = new Map<string, string>();
+		if (requestIds.length > 0) {
+			const { data: trials } = await supabase
+				.from('trial_lessons')
+				.select('signup_request_id, scheduled_date, scheduled_start_time, teacher_user_id, status')
+				.in('signup_request_id', requestIds)
+				.eq('status', 'scheduled');
+			for (const t of trials ?? []) {
+				if (!t.signup_request_id) continue;
+				trialMap.set(t.signup_request_id, {
+					date: t.scheduled_date,
+					time: t.scheduled_start_time,
+					teacher_user_id: t.teacher_user_id,
+				});
+			}
+			const teacherIds = Array.from(new Set(Array.from(trialMap.values()).map((v) => v.teacher_user_id)));
+			if (teacherIds.length > 0) {
+				const { data: profs } = await supabase
+					.from('profiles')
+					.select('user_id, first_name, last_name')
+					.in('user_id', teacherIds);
+				for (const p of profs ?? []) {
+					teacherNames.set(
+						p.user_id,
+						`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent',
+					);
+				}
+			}
+		}
+
 		setLoading(false);
 		setRows(
-			baseRows.map((r) => ({
-				...r,
-				option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
-			})),
+			baseRows.map((r) => {
+				const trial = trialMap.get(r.id);
+				return {
+					...r,
+					option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
+					trial_scheduled_date: trial?.date ?? null,
+					trial_scheduled_time: trial?.time ?? null,
+					trial_teacher_name: trial ? (teacherNames.get(trial.teacher_user_id) ?? null) : null,
+				};
+			}),
 		);
 	}, [statusFilter]);
 
@@ -171,30 +213,49 @@ export default function SignupRequests() {
 				key: 'status',
 				label: 'Status',
 				render: (r) => (
-					<Badge
-						variant={r.status === 'pending' ? 'default' : r.status === 'approved' ? 'secondary' : 'outline'}
-					>
-						{r.status}
-					</Badge>
+					<div className="space-y-1">
+						<Badge
+							variant={
+								r.status === 'pending'
+									? 'default'
+									: r.status === 'approved'
+										? 'secondary'
+										: r.status === 'trial_scheduled'
+											? 'secondary'
+											: 'outline'
+							}
+						>
+							{r.status === 'trial_scheduled' ? 'proefles ingepland' : r.status}
+						</Badge>
+						{r.status === 'trial_scheduled' && r.trial_scheduled_date && (
+							<div className="text-xs text-muted-foreground">
+								{formatDbDateLong(r.trial_scheduled_date)}
+								{r.trial_scheduled_time ? ` · ${r.trial_scheduled_time.slice(0, 5)}` : ''}
+								{r.trial_teacher_name ? ` · ${r.trial_teacher_name}` : ''}
+							</div>
+						)}
+					</div>
 				),
 			},
 			{
 				key: 'actions',
 				label: '',
 				render: (r) =>
-					r.status === 'pending' ? (
+					r.status === 'pending' || r.status === 'trial_scheduled' ? (
 						<div className="flex gap-2 justify-end">
 							<Button size="sm" variant="outline" onClick={() => reject(r)} disabled={busyId === r.id}>
 								<LuX className="h-4 w-4" />
 							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={() => setTrialFor(r)}
-								disabled={busyId === r.id}
-							>
-								<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
-							</Button>
+							{r.status === 'pending' && (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => setTrialFor(r)}
+									disabled={busyId === r.id}
+								>
+									<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
+								</Button>
+							)}
 							<Button size="sm" onClick={() => process(r)} disabled={busyId === r.id}>
 								<LuCheck className="h-4 w-4 mr-1" /> Verwerken
 							</Button>
