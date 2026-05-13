@@ -37,7 +37,7 @@ export default function SignupRequests() {
 			.from('lesson_signup_requests')
 			.select('*, lesson_types(id, name, is_group_lesson), lesson_groups(id, name)')
 			.order('created_at', { ascending: false });
-		if (statusFilter === 'pending') q = q.eq('status', 'pending');
+		if (statusFilter === 'pending') q = q.in('status', ['pending', 'trial_scheduled']);
 		const { data, error } = await q;
 		if (error) {
 			setLoading(false);
@@ -69,12 +69,51 @@ export default function SignupRequests() {
 			}
 		}
 
+		// Ingeplande proeflessen ophalen voor zichtbare aanmeldingen
+		const requestIds = baseRows.map((r) => r.id);
+		const trialMap = new Map<string, { date: string; time: string; teacher_user_id: string }>();
+		const teacherNames = new Map<string, string>();
+		if (requestIds.length > 0) {
+			const { data: trials } = await supabase
+				.from('trial_lessons')
+				.select('signup_request_id, scheduled_date, scheduled_start_time, teacher_user_id, status')
+				.in('signup_request_id', requestIds)
+				.eq('status', 'scheduled');
+			for (const t of trials ?? []) {
+				if (!t.signup_request_id) continue;
+				trialMap.set(t.signup_request_id, {
+					date: t.scheduled_date,
+					time: t.scheduled_start_time,
+					teacher_user_id: t.teacher_user_id,
+				});
+			}
+			const teacherIds = Array.from(new Set(Array.from(trialMap.values()).map((v) => v.teacher_user_id)));
+			if (teacherIds.length > 0) {
+				const { data: profs } = await supabase
+					.from('profiles')
+					.select('user_id, first_name, last_name')
+					.in('user_id', teacherIds);
+				for (const p of profs ?? []) {
+					teacherNames.set(
+						p.user_id,
+						`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent',
+					);
+				}
+			}
+		}
+
 		setLoading(false);
 		setRows(
-			baseRows.map((r) => ({
-				...r,
-				option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
-			})),
+			baseRows.map((r) => {
+				const trial = trialMap.get(r.id);
+				return {
+					...r,
+					option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
+					trial_scheduled_date: trial?.date ?? null,
+					trial_scheduled_time: trial?.time ?? null,
+					trial_teacher_name: trial ? (teacherNames.get(trial.teacher_user_id) ?? null) : null,
+				};
+			}),
 		);
 	}, [statusFilter]);
 
