@@ -105,12 +105,20 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 							<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
 								{/* Student-only: My Profile (top) */}
 								{isStudent && (
-									<NavItem
-										href="/students/my-profile"
-										label={NAV_LABELS.myProfile}
-										icon={NAV_ICONS.myProfile}
-										collapsed={collapsed}
-									/>
+									<>
+										<NavItem
+											href="/students/my-profile"
+											label={NAV_LABELS.myProfile}
+											icon={NAV_ICONS.myProfile}
+											collapsed={collapsed}
+										/>
+										<NavItem
+											href="/my-trial"
+											label={NAV_LABELS.myTrial}
+											icon={NAV_ICONS.myTrial}
+											collapsed={collapsed}
+										/>
+									</>
 								)}
 
 								{/* Main navigation - flat list */}
