@@ -123,8 +123,9 @@ export default function SignupRequests() {
 				return;
 			}
 			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
+			const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
 			navigate(
-				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`,
+				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}${optionParam}`,
 			);
 		},
 		[load, navigate],
