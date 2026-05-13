@@ -126,9 +126,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 					.lte('start_date', date),
 			]);
 			setAvailability(avail.data ?? []);
-			setExistingAgreements(
-				(agreements.data ?? []).filter((a) => a.end_date === null || a.end_date >= date),
-			);
+			setExistingAgreements((agreements.data ?? []).filter((a) => a.end_date === null || a.end_date >= date));
 			setSelectedSlot(null);
 			setLoadingSlots(false);
 		})();
@@ -140,10 +138,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 		return getSlotStatuses(d, d, availability, existingAgreements, duration, 'weekly');
 	}, [date, availability, existingAgreements, duration]);
 
-	const selectedTeacher = useMemo(
-		() => teachers.find((t) => t.userId === teacherUserId),
-		[teachers, teacherUserId],
-	);
+	const selectedTeacher = useMemo(() => teachers.find((t) => t.userId === teacherUserId), [teachers, teacherUserId]);
 
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
