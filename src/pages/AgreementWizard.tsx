@@ -326,6 +326,7 @@ export default function AgreementWizard() {
 	const fromRequestId = searchParams.get('fromRequest');
 	const prefillStudentUserId = searchParams.get('studentUserId');
 	const prefillLessonTypeId = searchParams.get('lessonTypeId');
+	const prefillOptionId = searchParams.get('optionId');
 	const navigate = useNavigate();
 	const { setBreadcrumbSuffix } = useBreadcrumb();
 
