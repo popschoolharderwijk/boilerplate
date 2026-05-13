@@ -40,7 +40,7 @@ export const NAV_LABELS = {
 	lessonGroups: 'Groepslessen',
 	signupRequests: 'Aanmeldingen',
 	reports: 'Rapportage',
-	subscriptions: 'Abonnementen',
+	subscriptions: 'Facturatie',
 	noLessonPeriods: 'Lesvrije periodes',
 	emailTemplates: 'E-mailtemplates',
 	manual: 'Handleiding',
