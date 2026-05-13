@@ -41,6 +41,8 @@ export default function PublicSignup() {
 	const [selectedType, setSelectedType] = useState<LessonType | null>(null);
 	const [groups, setGroups] = useState<GroupOption[]>([]);
 	const [selectedGroupId, setSelectedGroupId] = useState<string | 'waitlist' | null>(null);
+	const [lessonTypeOptions, setLessonTypeOptions] = useState<LessonTypeOptionRow[]>([]);
+	const [selectedOption, setSelectedOption] = useState<OptionSnapshot | null>(null);
 
 	const [form, setForm] = useState({
 		first_name: '',
