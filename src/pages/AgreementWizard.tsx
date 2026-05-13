@@ -324,6 +324,7 @@ export default function AgreementWizard() {
 	const { id } = useParams<{ id: string }>();
 	const [searchParams] = useSearchParams();
 	const fromRequestId = searchParams.get('fromRequest');
+	const fromTrialId = searchParams.get('fromTrial');
 	const prefillStudentUserId = searchParams.get('studentUserId');
 	const prefillLessonTypeId = searchParams.get('lessonTypeId');
 	const prefillOptionId = searchParams.get('optionId');
@@ -640,6 +641,18 @@ export default function AgreementWizard() {
 				.eq('id', fromRequestId);
 		}
 
+		// If coming from a trial lesson, mark it as converted and link agreement
+		if (fromTrialId && !agreement && insertResult.data?.id) {
+			await supabase
+				.from('trial_lessons')
+				.update({
+					status: 'converted',
+					admin_processed_at: new Date().toISOString(),
+					created_agreement_id: insertResult.data.id,
+				})
+				.eq('id', fromTrialId);
+		}
+
 		// Bij een nieuwe overeenkomst: stuur direct een betaaluitnodiging (Magic Link → Stripe)
 		if (!agreement && insertResult.data?.id) {
 			const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
@@ -653,7 +666,7 @@ export default function AgreementWizard() {
 		} else {
 			toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
 		}
-		navigate(fromRequestId ? '/aanmeldingen' : '/agreements');
+		navigate(fromRequestId ? '/aanmeldingen' : fromTrialId ? '/trial-lessons' : '/agreements');
 	};
 
 	if (loadingAgreement) {

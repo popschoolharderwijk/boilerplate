@@ -1182,6 +1182,118 @@ export type Database = {
         }
         Relationships: []
       }
+      trial_lessons: {
+        Row: {
+          admin_processed_at: string | null
+          admin_processed_by: string | null
+          agenda_event_id: string | null
+          created_agreement_id: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          id: string
+          lesson_type_id: string
+          lesson_type_option_id: string | null
+          notes: string | null
+          scheduled_date: string
+          scheduled_start_time: string
+          signup_request_id: string | null
+          status: Database["public"]["Enums"]["trial_lesson_status"]
+          student_decision_at: string | null
+          student_user_id: string
+          teacher_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          admin_processed_at?: string | null
+          admin_processed_by?: string | null
+          agenda_event_id?: string | null
+          created_agreement_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes: number
+          id?: string
+          lesson_type_id: string
+          lesson_type_option_id?: string | null
+          notes?: string | null
+          scheduled_date: string
+          scheduled_start_time: string
+          signup_request_id?: string | null
+          status?: Database["public"]["Enums"]["trial_lesson_status"]
+          student_decision_at?: string | null
+          student_user_id: string
+          teacher_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          admin_processed_at?: string | null
+          admin_processed_by?: string | null
+          agenda_event_id?: string | null
+          created_agreement_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          lesson_type_id?: string
+          lesson_type_option_id?: string | null
+          notes?: string | null
+          scheduled_date?: string
+          scheduled_start_time?: string
+          signup_request_id?: string | null
+          status?: Database["public"]["Enums"]["trial_lesson_status"]
+          student_decision_at?: string | null
+          student_user_id?: string
+          teacher_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_lessons_agenda_event_id_fkey"
+            columns: ["agenda_event_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_lessons_created_agreement_id_fkey"
+            columns: ["created_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_lessons_lesson_type_id_fkey"
+            columns: ["lesson_type_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_lessons_lesson_type_option_id_fkey"
+            columns: ["lesson_type_option_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_type_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_lessons_signup_request_id_fkey"
+            columns: ["signup_request_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_signup_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_lessons_teacher_user_id_fkey"
+            columns: ["teacher_user_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1377,6 +1489,37 @@ export type Database = {
         Args: { p_deviation_id: string }
         Returns: string
       }
+      submit_trial_decision: {
+        Args: { p_decision: string; p_trial_id: string }
+        Returns: {
+          admin_processed_at: string | null
+          admin_processed_by: string | null
+          agenda_event_id: string | null
+          created_agreement_id: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          id: string
+          lesson_type_id: string
+          lesson_type_option_id: string | null
+          notes: string | null
+          scheduled_date: string
+          scheduled_start_time: string
+          signup_request_id: string | null
+          status: Database["public"]["Enums"]["trial_lesson_status"]
+          student_decision_at: string | null
+          student_user_id: string
+          teacher_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trial_lessons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sync_lesson_group_event_participants: {
         Args: { _event_id: string }
         Returns: undefined
@@ -1397,6 +1540,13 @@ export type Database = {
         | "approved"
         | "rejected"
         | "trial_scheduled"
+      trial_lesson_status:
+        | "scheduled"
+        | "completed"
+        | "cancelled"
+        | "student_confirmed"
+        | "student_declined"
+        | "converted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1539,6 +1689,14 @@ export const Constants = {
         "approved",
         "rejected",
         "trial_scheduled",
+      ],
+      trial_lesson_status: [
+        "scheduled",
+        "completed",
+        "cancelled",
+        "student_confirmed",
+        "student_declined",
+        "converted",
       ],
     },
   },

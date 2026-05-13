@@ -20,6 +20,7 @@ const adminNavItems = [
 	{ href: '/agreements', label: NAV_LABELS.agreements, icon: NAV_ICONS.agreements },
 	{ href: '/lesson-groups', label: NAV_LABELS.lessonGroups, icon: NAV_ICONS.lessonGroups },
 	{ href: '/aanmeldingen', label: NAV_LABELS.signupRequests, icon: NAV_ICONS.signupRequests },
+	{ href: '/trial-lessons', label: NAV_LABELS.trialLessons, icon: NAV_ICONS.trialLessons },
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
@@ -104,12 +105,20 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 							<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
 								{/* Student-only: My Profile (top) */}
 								{isStudent && (
-									<NavItem
-										href="/students/my-profile"
-										label={NAV_LABELS.myProfile}
-										icon={NAV_ICONS.myProfile}
-										collapsed={collapsed}
-									/>
+									<>
+										<NavItem
+											href="/students/my-profile"
+											label={NAV_LABELS.myProfile}
+											icon={NAV_ICONS.myProfile}
+											collapsed={collapsed}
+										/>
+										<NavItem
+											href="/my-trial"
+											label={NAV_LABELS.myTrial}
+											icon={NAV_ICONS.myTrial}
+											collapsed={collapsed}
+										/>
+									</>
 								)}
 
 								{/* Main navigation - flat list */}

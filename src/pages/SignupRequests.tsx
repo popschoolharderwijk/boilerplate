@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuCheck, LuInbox, LuX } from 'react-icons/lu';
+import { LuCalendarPlus, LuCheck, LuInbox, LuX } from 'react-icons/lu';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ScheduleTrialLessonDialog } from '@/components/trial-lessons/ScheduleTrialLessonDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -25,6 +26,7 @@ export default function SignupRequests() {
 	const [loading, setLoading] = useState(true);
 	const [statusFilter, setStatusFilter] = useState<'pending' | 'all'>('pending');
 	const [busyId, setBusyId] = useState<string | null>(null);
+	const [trialFor, setTrialFor] = useState<Row | null>(null);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -185,6 +187,14 @@ export default function SignupRequests() {
 							<Button size="sm" variant="outline" onClick={() => reject(r)} disabled={busyId === r.id}>
 								<LuX className="h-4 w-4" />
 							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => setTrialFor(r)}
+								disabled={busyId === r.id}
+							>
+								<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
+							</Button>
 							<Button size="sm" onClick={() => process(r)} disabled={busyId === r.id}>
 								<LuCheck className="h-4 w-4 mr-1" /> Verwerken
 							</Button>
@@ -222,6 +232,26 @@ export default function SignupRequests() {
 				</Button>
 			</div>
 			<DataTable title="Aanmeldingen" columns={columns} data={rows} loading={loading} getRowKey={(r) => r.id} />
+			<ScheduleTrialLessonDialog
+				open={trialFor !== null}
+				onOpenChange={(o) => !o && setTrialFor(null)}
+				signupRequest={
+					trialFor
+						? {
+								id: trialFor.id,
+								first_name: trialFor.first_name,
+								last_name: trialFor.last_name,
+								email: trialFor.email,
+								lesson_type_id: trialFor.lesson_type_id,
+								lesson_type_option_id: trialFor.lesson_type_option_id,
+							}
+						: null
+				}
+				onScheduled={() => {
+					setTrialFor(null);
+					load();
+				}}
+			/>
 		</>
 	);
 }
