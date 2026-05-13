@@ -458,6 +458,7 @@ export type Database = {
           last_name: string
           lesson_group_id: string | null
           lesson_type_id: string
+          lesson_type_option_id: string | null
           notes: string | null
           parent_email: string | null
           parent_name: string | null
@@ -480,6 +481,7 @@ export type Database = {
           last_name: string
           lesson_group_id?: string | null
           lesson_type_id: string
+          lesson_type_option_id?: string | null
           notes?: string | null
           parent_email?: string | null
           parent_name?: string | null
@@ -502,6 +504,7 @@ export type Database = {
           last_name?: string
           lesson_group_id?: string | null
           lesson_type_id?: string
+          lesson_type_option_id?: string | null
           notes?: string | null
           parent_email?: string | null
           parent_name?: string | null
