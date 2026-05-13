@@ -75,6 +75,13 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 				/>
 			)}
 			<span className="flex items-start gap-1 text-xs leading-tight overflow-hidden pr-4 min-h-0">
+				{isTrialEvent && (
+					<LuGraduationCap
+						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
+						title="Proefles"
+						aria-hidden
+					/>
+				)}
 				{isProjectEvent && (
 					<LuFolderOpen
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
