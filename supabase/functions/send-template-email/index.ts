@@ -20,6 +20,40 @@ interface SendBody {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FALLBACK_SITE_URL = 'https://mcp.mplifi.nl';
+const ALLOWED_SITE_HOSTS = new Set([
+	'mcp.mplifi.nl',
+	'instant-setup-kit.lovable.app',
+	'id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app',
+	'098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com',
+]);
+
+function getPortalBaseUrl(req: Request): string {
+	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), FALLBACK_SITE_URL];
+	for (const candidate of candidates) {
+		if (!candidate) continue;
+		try {
+			const url = new URL(candidate);
+			if (url.protocol === 'https:' && ALLOWED_SITE_HOSTS.has(url.hostname)) return url.origin;
+		} catch {
+			// negeer ongeldige waarden
+		}
+	}
+	return FALLBACK_SITE_URL;
+}
+
+function appendPortalFooter(html: string, baseUrl: string): string {
+	const loginUrl = `${baseUrl}/login`;
+	const footer = `
+<div style="margin-top:32px;padding:16px 20px;border-top:1px solid #e5e5e5;font-family:Arial,sans-serif;font-size:13px;color:#555;text-align:center;">
+  <p style="margin:0 0 8px;">Log in op het portaal voor meer informatie:</p>
+  <p style="margin:0;"><a href="${loginUrl}" style="color:#ea580c;text-decoration:none;font-weight:600;">${loginUrl}</a></p>
+</div>`;
+	if (/<\/body>/i.test(html)) {
+		return html.replace(/<\/body>/i, `${footer}</body>`);
+	}
+	return `${html}${footer}`;
+}
 
 function json(status: number, payload: unknown) {
 	return new Response(JSON.stringify(payload), {
@@ -111,7 +145,8 @@ Deno.serve(async (req) => {
 
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
-	const html = renderTemplate(template.body_html, vars);
+	const renderedHtml = renderTemplate(template.body_html, vars);
+	const html = appendPortalFooter(renderedHtml, getPortalBaseUrl(req));
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
 		method: 'POST',
