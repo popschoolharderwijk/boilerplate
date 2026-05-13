@@ -109,6 +109,57 @@ Deno.serve(async (req) => {
 		return bad('Kon aanmelding niet opslaan', 500);
 	}
 
+	// Verstuur bevestigingsmail (best-effort: faal niet de signup als mail mislukt).
+	try {
+		const { data: ltName } = await supabase
+			.from('lesson_types')
+			.select('name')
+			.eq('id', body.lesson_type_id)
+			.maybeSingle();
+		let frequentie = '';
+		let prijs = '';
+		if (optionId) {
+			const { data: opt } = await supabase
+				.from('lesson_type_options')
+				.select('frequency, price_per_lesson')
+				.eq('id', optionId)
+				.maybeSingle();
+			if (opt) {
+				frequentie = String(opt.frequency ?? '');
+				prijs =
+					opt.price_per_lesson != null
+						? `€ ${Number(opt.price_per_lesson).toFixed(2).replace('.', ',')}`
+						: '';
+			}
+		}
+		const fullName = `${body.first_name.trim()} ${body.last_name.trim()}`.trim();
+		const recipientEmail = (body.parent_email?.trim() || body.email).toLowerCase();
+		const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+		const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+		const mailResp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${serviceKey}`,
+			},
+			body: JSON.stringify({
+				event_key: 'signup_received',
+				to: recipientEmail,
+				vars: {
+					leerling_naam: fullName,
+					les_type: ltName?.name ?? '',
+					frequentie,
+					prijs_per_les: prijs,
+				},
+			}),
+		});
+		if (!mailResp.ok) {
+			console.error('signup_received mail failed', mailResp.status, await mailResp.text());
+		}
+	} catch (mailErr) {
+		console.error('signup_received mail exception', mailErr);
+	}
+
 	return new Response(JSON.stringify({ id: data.id }), {
 		status: 200,
 		headers: { ...corsHeaders, 'Content-Type': 'application/json' },

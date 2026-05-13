@@ -201,6 +201,39 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by: string | null
+          event_key: string
+          is_enabled: boolean
+          subject: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by?: string | null
+          event_key: string
+          is_enabled?: boolean
+          subject: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by?: string | null
+          event_key?: string
+          is_enabled?: boolean
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       incasso_invitations: {
         Row: {
           created_at: string

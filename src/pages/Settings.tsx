@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 import { NoLessonPeriodsManager } from '@/components/settings/NoLessonPeriodsManager';
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
@@ -327,6 +328,7 @@ export default function Settings() {
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
 					{(isAdmin || isSiteAdmin) && <TabsTrigger value="no-lesson-periods">Lesvrije periodes</TabsTrigger>}
+					{(isAdmin || isSiteAdmin) && <TabsTrigger value="email-templates">E-mailtemplates</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
@@ -481,6 +483,12 @@ export default function Settings() {
 				{(isAdmin || isSiteAdmin) && (
 					<TabsContent value="no-lesson-periods" className="space-y-6 mt-6">
 						<NoLessonPeriodsManager />
+					</TabsContent>
+				)}
+
+				{(isAdmin || isSiteAdmin) && (
+					<TabsContent value="email-templates" className="space-y-6 mt-6">
+						<EmailTemplatesManager />
 					</TabsContent>
 				)}
 
