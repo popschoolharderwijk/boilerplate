@@ -24,6 +24,7 @@ export type StudentInsert = Insert<'students'>;
 export type TeacherInsert = Insert<'teachers'>;
 export type TeacherAvailabilityInsert = Insert<'teacher_availability'>;
 export type TeacherLessonTypeInsert = Insert<'teacher_lesson_types'>;
+export type TrialLessonInsert = Insert<'trial_lessons'>;
 export type UserRoleInsert = Insert<'user_roles'>;
 
 // RPC function types (no helper available)
