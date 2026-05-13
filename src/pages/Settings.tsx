@@ -486,6 +486,12 @@ export default function Settings() {
 					</TabsContent>
 				)}
 
+				{(isAdmin || isSiteAdmin) && (
+					<TabsContent value="email-templates" className="space-y-6 mt-6">
+						<EmailTemplatesManager />
+					</TabsContent>
+				)}
+
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}
 					<Card className="border-destructive/50">
