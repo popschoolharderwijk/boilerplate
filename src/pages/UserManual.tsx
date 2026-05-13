@@ -81,17 +81,45 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.signupRequests,
+		title: NAV_LABELS.signupRequests,
+		description:
+			'Aanmeldingen die binnenkomen via het publieke aanmeldformulier en door staff worden verwerkt tot een lesovereenkomst.',
+		details: [
+			'Publiek formulier: leerlingen kiezen op de aanmeldpagina hun lessoort en daarna één van de aangeboden opties (frequentie, duur, prijs).',
+			'Staff verwerkt: open een aanmelding en klik "Verwerken" — de overeenkomsten-wizard opent met leerling, lessoort en gekozen optie al ingevuld (prefilled snapshot).',
+			'Status: aanmeldingen tonen of ze nog open staan, in behandeling zijn of zijn omgezet naar een overeenkomst.',
+			'Doorklikken: vanaf het leerlingdetail kun je rechtstreeks naar een aanmelding springen.',
+		],
+	},
+	{
 		icon: NAV_ICONS.agreements,
 		title: NAV_LABELS.agreements,
 		description: 'Lesovereenkomsten vastleggen en beheren via de overeenkomsten-wizard.',
 		details: [
-			'Nieuwe overeenkomst: doorloop de wizard met vier stappen — leerling kiezen, lessoort en docent selecteren, dag/tijd/frequentie instellen en bevestigen.',
+			'Nieuwe overeenkomst: doorloop de wizard met vier stappen — leerling kiezen, lessoort en optie selecteren, dag/tijd/frequentie instellen en bevestigen.',
 			'Stap 1 – Leerling: kies een bestaande gebruiker of voeg direct een nieuwe toe.',
-			'Stap 2 – Docent & lessoort: selecteer de lessoort en kies uit docenten die deze lessoort geven en op de gekozen dag beschikbaar zijn.',
-			'Stap 3 – Planning: kies de dag van de week, starttijd, frequentie (wekelijks, tweewekelijks, maandelijks), duur en startdatum.',
+			'Stap 2 – Lessoort & optie: kies een lessoort en daarna een optie (duur, frequentie, prijs). Bij verwerking van een aanmelding is dit voorgevuld.',
+			'Stap 3 – Docent & planning: selecteer een docent die de lessoort geeft en op de gekozen dag beschikbaar is, kies dag, starttijd en startdatum.',
 			'Stap 4 – Bevestiging: controleer alle gegevens en bevestig de overeenkomst.',
+			'Doorklikken: in de wizard-kop, in de bevestigingspagina én in de overeenkomstenlijst zijn leerling- en docentnamen klikbaar naar het bijbehorende profiel.',
 			'Bewerken: open een bestaande overeenkomst om wijzigingen door te voeren.',
 			'Beëindigen: stel een einddatum in om een overeenkomst te stoppen.',
+		],
+	},
+	{
+		icon: NAV_ICONS.subscriptions,
+		title: 'Incasso & abonnementen',
+		description:
+			'Maandelijkse SEPA-incasso per lesovereenkomst, gekoppeld aan Stripe. Eerste betaling via iDEAL voor mandaat, daarna automatisch.',
+		details: [
+			'Uitnodiging sturen: open een overeenkomst en klik "Stuur betaaluitnodiging" in de Incasso-kaart. De leerling/ouder krijgt een mail met een magic link naar de betaalpagina.',
+			'Klantbeleving: na klik op de link → automatisch ingelogd → Stripe Checkout → iDEAL-betaling van €0,01 om het SEPA-mandaat af te geven → bevestiging.',
+			'Statuslabels: scheduled (mandaat actief, eerste incasso nog niet uitgevoerd), active (lopend), past_due (betaling mislukt), canceled (gestopt).',
+			'Bestaand mandaat hergebruiken: bij een tweede overeenkomst kan de admin "Activeer op bestaand mandaat" kiezen — geen nieuwe iDEAL-stap nodig.',
+			'Pas nieuwe tarieven toe: na een prijswijziging klikt de admin deze knop; alleen toekomstige maanden worden herberekend (lopende factuur blijft staan).',
+			'Beheer betaling: klant en admin kunnen via "Beheer betaling" de Stripe Customer Portal openen voor betaalmethode, factuurhistorie en annulering.',
+			'Facturen: de incasso-kaart toont de laatste facturen met bedrag, status en een link naar de hosted Stripe-factuur.',
 		],
 	},
 	{
