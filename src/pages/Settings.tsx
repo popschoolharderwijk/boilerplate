@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 import { NoLessonPeriodsManager } from '@/components/settings/NoLessonPeriodsManager';
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
