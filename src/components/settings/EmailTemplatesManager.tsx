@@ -193,7 +193,7 @@ export function EmailTemplatesManager() {
 		})();
 	}, []);
 
-	if (!rows) return <SectionSkeleton />;
+	if (!rows) return <Skeleton className="h-64 w-full" />;
 
 	return (
 		<div className="space-y-6">
