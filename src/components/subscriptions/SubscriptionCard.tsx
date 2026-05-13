@@ -84,7 +84,8 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 			if (!win) {
 				// Popup blocked: fall back to top-level navigation.
 				try {
-					window.top!.location.href = url;
+					if (window.top) window.top.location.href = url;
+					else window.location.href = url;
 				} catch {
 					window.location.href = url;
 				}
