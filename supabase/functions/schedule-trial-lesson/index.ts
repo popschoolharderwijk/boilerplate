@@ -260,29 +260,47 @@ Deno.serve(async (req) => {
 			await admin.from('lesson_signup_requests').update({ status: 'trial_scheduled' }).eq('id', signupReq.id);
 		}
 
-		// Send mail to student (best-effort)
-		try {
-			const recipient = (parentEmail || studentEmail).toLowerCase();
-			await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${serviceKey}`,
-				},
-				body: JSON.stringify({
-					event_key: 'trial_scheduled',
-					to: recipient,
-					vars: {
-						leerling_naam: `${studentFirstName} ${studentLastName}`.trim(),
-						les_type: lt?.name ?? '',
-						datum: body.scheduled_date,
-						tijd: body.scheduled_start_time.slice(0, 5),
-						duur: String(body.duration_minutes),
+		// Lookup teacher profile for mail
+		const { data: teacherProfile } = await admin
+			.from('profiles')
+			.select('email, first_name, last_name')
+			.eq('user_id', body.teacher_user_id)
+			.maybeSingle();
+
+		const sharedVars = {
+			leerling_naam: `${studentFirstName} ${studentLastName}`.trim(),
+			les_type: lt?.name ?? '',
+			datum: body.scheduled_date,
+			tijd: body.scheduled_start_time.slice(0, 5),
+			duur: String(body.duration_minutes),
+		};
+
+		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
+			try {
+				await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${serviceKey}`,
 					},
-				}),
+					body: JSON.stringify({ event_key, to, vars }),
+				});
+			} catch (mailErr) {
+				console.error(`${event_key} mail`, mailErr);
+			}
+		};
+
+		// Mail naar leerling (of ouder)
+		await sendMail('trial_scheduled', (parentEmail || studentEmail).toLowerCase(), sharedVars);
+
+		// Mail naar docent
+		if (teacherProfile?.email) {
+			const docentNaam =
+				`${teacherProfile.first_name ?? ''} ${teacherProfile.last_name ?? ''}`.trim() || 'docent';
+			await sendMail('trial_scheduled_teacher', teacherProfile.email.toLowerCase(), {
+				...sharedVars,
+				docent_naam: docentNaam,
 			});
-		} catch (mailErr) {
-			console.error('trial_scheduled mail', mailErr);
 		}
 
 		return json(200, {
