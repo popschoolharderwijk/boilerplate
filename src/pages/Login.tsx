@@ -31,6 +31,7 @@ export default function Login() {
 	};
 
 	// Automatisch versturen wanneer de portal-link in een mail wordt gevolgd.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: sendMagicLink is stable in deze scope
 	useEffect(() => {
 		if (autoSentRef.current) return;
 		if (isLoading || user) return;
