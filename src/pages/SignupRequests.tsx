@@ -15,6 +15,7 @@ type Row = Tables<'lesson_signup_requests'> & {
 	lesson_type_name: string | null;
 	lesson_group_name: string | null;
 	is_group_lesson: boolean;
+	option_label: string | null;
 };
 
 export default function SignupRequests() {
@@ -33,22 +34,42 @@ export default function SignupRequests() {
 			.order('created_at', { ascending: false });
 		if (statusFilter === 'pending') q = q.eq('status', 'pending');
 		const { data, error } = await q;
-		setLoading(false);
 		if (error) {
+			setLoading(false);
 			toast.error('Fout bij laden aanmeldingen');
 			return;
 		}
+		const baseRows = (data ?? []).map((r) => {
+			const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
+			const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
+			return {
+				...(r as Tables<'lesson_signup_requests'>),
+				lesson_type_name: lt?.name ?? null,
+				lesson_group_name: lg?.name ?? null,
+				is_group_lesson: lt?.is_group_lesson ?? false,
+			};
+		});
+
+		const optionIds = Array.from(
+			new Set(baseRows.map((r) => r.lesson_type_option_id).filter((v): v is string => Boolean(v))),
+		);
+		const optionMap = new Map<string, string>();
+		if (optionIds.length > 0) {
+			const { data: opts } = await supabase
+				.from('lesson_type_options')
+				.select('id, duration_minutes, frequency, price_per_lesson')
+				.in('id', optionIds);
+			for (const o of opts ?? []) {
+				optionMap.set(o.id, `${o.duration_minutes} min · ${o.frequency} · €${o.price_per_lesson}`);
+			}
+		}
+
+		setLoading(false);
 		setRows(
-			(data ?? []).map((r) => {
-				const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
-				const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
-				return {
-					...(r as Tables<'lesson_signup_requests'>),
-					lesson_type_name: lt?.name ?? null,
-					lesson_group_name: lg?.name ?? null,
-					is_group_lesson: lt?.is_group_lesson ?? false,
-				};
-			}),
+			baseRows.map((r) => ({
+				...r,
+				option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
+			})),
 		);
 	}, [statusFilter]);
 
@@ -102,8 +123,9 @@ export default function SignupRequests() {
 				return;
 			}
 			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
+			const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
 			navigate(
-				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}`,
+				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}${optionParam}`,
 			);
 		},
 		[load, navigate],
@@ -139,6 +161,7 @@ export default function SignupRequests() {
 						) : r.is_group_lesson ? (
 							<Badge variant="outline">Wachtlijst</Badge>
 						) : null}
+						{r.option_label && <div className="text-xs text-muted-foreground">{r.option_label}</div>}
 					</div>
 				),
 			},

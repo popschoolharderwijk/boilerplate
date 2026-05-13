@@ -1,0 +1,1 @@
+ALTER TABLE public.lesson_signup_requests ADD COLUMN IF NOT EXISTS lesson_type_option_id uuid NULL;

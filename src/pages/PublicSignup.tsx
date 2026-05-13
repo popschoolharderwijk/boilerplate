@@ -1,5 +1,10 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { LuCheck, LuMusic } from 'react-icons/lu';
+import {
+	type LessonTypeOptionRow,
+	LessonTypeOptionSelect,
+	type OptionSnapshot,
+} from '@/components/lesson-type-options/LessonTypeOptionSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +41,8 @@ export default function PublicSignup() {
 	const [selectedType, setSelectedType] = useState<LessonType | null>(null);
 	const [groups, setGroups] = useState<GroupOption[]>([]);
 	const [selectedGroupId, setSelectedGroupId] = useState<string | 'waitlist' | null>(null);
+	const [lessonTypeOptions, setLessonTypeOptions] = useState<LessonTypeOptionRow[]>([]);
+	const [selectedOption, setSelectedOption] = useState<OptionSnapshot | null>(null);
 
 	const [form, setForm] = useState({
 		first_name: '',
@@ -111,16 +118,40 @@ export default function PublicSignup() {
 		})();
 	}, [selectedType]);
 
+	useEffect(() => {
+		if (!selectedType || selectedType.is_group_lesson) {
+			setLessonTypeOptions([]);
+			return;
+		}
+		supabase
+			.from('lesson_type_options')
+			.select('id, duration_minutes, frequency, price_per_lesson')
+			.eq('lesson_type_id', selectedType.id)
+			.order('duration_minutes')
+			.order('frequency')
+			.then(({ data }) => setLessonTypeOptions((data ?? []) as LessonTypeOptionRow[]));
+	}, [selectedType]);
+
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!selectedType) return;
 		setSubmitting(true);
 		setError(null);
 		const groupId = selectedType.is_group_lesson && selectedGroupId !== 'waitlist' ? selectedGroupId : null;
+		const optionId =
+			!selectedType.is_group_lesson && selectedOption
+				? (lessonTypeOptions.find(
+						(o) =>
+							o.duration_minutes === selectedOption.duration_minutes &&
+							o.frequency === selectedOption.frequency &&
+							o.price_per_lesson === selectedOption.price_per_lesson,
+					)?.id ?? null)
+				: null;
 		const { data, error } = await supabase.functions.invoke('submit-signup-request', {
 			body: {
 				lesson_type_id: selectedType.id,
 				lesson_group_id: groupId,
+				lesson_type_option_id: optionId,
 				...form,
 			},
 		});
@@ -178,6 +209,9 @@ export default function PublicSignup() {
 					</div>
 					<h1 className="text-3xl font-bold">Aanmelden voor lessen</h1>
 					<p className="text-muted-foreground mt-2">Stap {step} van 3</p>
+					<p className="sr-only">
+						{selectedType?.is_group_lesson ? 'Groepsles aanmelding' : 'Individuele les aanmelding'}
+					</p>
 				</header>
 
 				<div className="rounded-lg border bg-card p-6">
@@ -192,6 +226,7 @@ export default function PublicSignup() {
 										onClick={() => {
 											setSelectedType(lt);
 											setSelectedGroupId(null);
+											setSelectedOption(null);
 										}}
 										className={`p-4 rounded-lg border-2 text-left transition ${
 											selectedType?.id === lt.id
@@ -217,7 +252,7 @@ export default function PublicSignup() {
 					{step === 2 && selectedType && (
 						<div className="space-y-4">
 							<h2 className="text-lg font-semibold">
-								{selectedType.is_group_lesson ? 'Kies een groep' : 'Bevestig je keuze'}
+								{selectedType.is_group_lesson ? 'Kies een groep' : 'Kies hoe vaak en hoe lang'}
 							</h2>
 							{selectedType.is_group_lesson ? (
 								<div className="space-y-2">
@@ -266,17 +301,38 @@ export default function PublicSignup() {
 									</button>
 								</div>
 							) : (
-								<p className="text-sm text-muted-foreground">
-									Je meldt je aan voor individuele {selectedType.name}-les. Onze administratie neemt
-									contact op om docent en tijdstip af te stemmen.
-								</p>
+								<div className="space-y-4">
+									<p className="text-sm text-muted-foreground">
+										Je meldt je aan voor individuele {selectedType.name}-les. Kies hieronder hoe
+										vaak en hoe lang je per les wilt komen. De prijs per les wordt direct getoond.
+									</p>
+									{lessonTypeOptions.length === 0 ? (
+										<p className="text-sm text-muted-foreground">
+											Er zijn nog geen opties ingesteld voor deze les. Vul je gegevens in op de
+											volgende stap; we nemen contact op om de details af te stemmen.
+										</p>
+									) : (
+										<div className="space-y-2">
+											<Label>Duur, frequentie en prijs</Label>
+											<LessonTypeOptionSelect
+												options={lessonTypeOptions}
+												value={selectedOption}
+												onChange={setSelectedOption}
+											/>
+										</div>
+									)}
+								</div>
 							)}
 							<div className="flex justify-between pt-4">
 								<Button variant="outline" onClick={() => setStep(1)}>
 									Vorige
 								</Button>
 								<Button
-									disabled={selectedType.is_group_lesson && !selectedGroupId}
+									disabled={
+										selectedType.is_group_lesson
+											? !selectedGroupId
+											: lessonTypeOptions.length > 0 && !selectedOption
+									}
 									onClick={() => setStep(3)}
 								>
 									Volgende
