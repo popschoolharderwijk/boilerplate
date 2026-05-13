@@ -209,6 +209,9 @@ export default function PublicSignup() {
 					</div>
 					<h1 className="text-3xl font-bold">Aanmelden voor lessen</h1>
 					<p className="text-muted-foreground mt-2">Stap {step} van 3</p>
+					<p className="sr-only">
+						{selectedType?.is_group_lesson ? 'Groepsles aanmelding' : 'Individuele les aanmelding'}
+					</p>
 				</header>
 
 				<div className="rounded-lg border bg-card p-6">
