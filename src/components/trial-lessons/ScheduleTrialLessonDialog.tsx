@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepContent';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -11,8 +12,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
+import type { WizardTeacherInfo } from '@/types/lesson-agreements';
 
 interface SignupRequestPrefill {
 	id: string;
@@ -30,54 +32,31 @@ interface Props {
 	onScheduled?: () => void;
 }
 
-interface TeacherOption {
-	user_id: string;
-	display_name: string;
-}
-
-interface AvailabilitySlot {
-	day_of_week: number;
-	start_time: string; // HH:MM:SS
-	end_time: string;
-}
-
-function toMinutes(t: string): number {
-	const [h, m] = t.split(':').map(Number);
-	return h * 60 + m;
-}
-
-function fmt(min: number): string {
-	const h = Math.floor(min / 60);
-	const m = min % 60;
-	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-/** Generate 15-minute interval slot starts that fit `duration` within an availability window. */
-function generateSlots(slots: AvailabilitySlot[], dayOfWeek: number, duration: number): string[] {
-	const result: string[] = [];
-	for (const s of slots) {
-		if (s.day_of_week !== dayOfWeek) continue;
-		const start = toMinutes(s.start_time);
-		const end = toMinutes(s.end_time);
-		for (let t = start; t + duration <= end; t += 15) {
-			result.push(fmt(t));
-		}
-	}
-	return Array.from(new Set(result)).sort();
-}
-
 export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, onScheduled }: Props) {
-	const [teachers, setTeachers] = useState<TeacherOption[]>([]);
-	const [teacherUserId, setTeacherUserId] = useState<string>('');
+	const [teachers, setTeachers] = useState<WizardTeacherInfo[]>([]);
+	const [teacherUserId, setTeacherUserId] = useState<string | null>(null);
 	const [date, setDate] = useState('');
-	const [time, setTime] = useState('');
 	const [duration, setDuration] = useState(30);
+	const [selectedSlot, setSelectedSlot] = useState<SlotWithStatus | null>(null);
 	const [notes, setNotes] = useState('');
 	const [studentEmail, setStudentEmail] = useState('');
 	const [studentFirstName, setStudentFirstName] = useState('');
 	const [studentLastName, setStudentLastName] = useState('');
 	const [submitting, setSubmitting] = useState(false);
-	const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+	const [availability, setAvailability] = useState<
+		Array<{ day_of_week: number; start_time: string; end_time: string }>
+	>([]);
+	const [existingAgreements, setExistingAgreements] = useState<
+		Array<{
+			day_of_week: number;
+			start_time: string;
+			start_date: string;
+			end_date: string | null;
+			frequency: 'weekly' | 'biweekly' | 'monthly' | 'daily';
+			duration_minutes: number;
+		}>
+	>([]);
+	const [loadingSlots, setLoadingSlots] = useState(false);
 
 	useEffect(() => {
 		if (!open) return;
@@ -85,11 +64,12 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 		setStudentFirstName(signupRequest?.first_name ?? '');
 		setStudentLastName(signupRequest?.last_name ?? '');
 		setDate('');
-		setTime('');
 		setDuration(30);
 		setNotes('');
-		setTeacherUserId('');
+		setTeacherUserId(null);
+		setSelectedSlot(null);
 		setAvailability([]);
+		setExistingAgreements([]);
 		(async () => {
 			const lessonTypeId = signupRequest?.lesson_type_id;
 			let ids: string[] = [];
@@ -109,45 +89,60 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 			}
 			const { data: profs } = await supabase
 				.from('profiles')
-				.select('user_id, first_name, last_name')
+				.select('user_id, first_name, last_name, email, avatar_url')
 				.in('user_id', ids);
 			setTeachers(
 				(profs ?? []).map((p) => ({
-					user_id: p.user_id,
-					display_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.user_id.slice(0, 8),
+					id: p.user_id,
+					userId: p.user_id,
+					firstName: p.first_name ?? null,
+					lastName: p.last_name ?? null,
+					email: p.email ?? null,
+					avatarUrl: p.avatar_url ?? null,
 				})),
 			);
 		})();
 	}, [open, signupRequest]);
 
-	// Load availability when teacher changes
+	// Load availability + existing agreements when teacher and date selected
 	useEffect(() => {
-		if (!teacherUserId) {
+		if (!teacherUserId || !date) {
 			setAvailability([]);
+			setExistingAgreements([]);
+			setSelectedSlot(null);
 			return;
 		}
 		(async () => {
-			const { data } = await supabase
-				.from('teacher_availability')
-				.select('day_of_week, start_time, end_time')
-				.eq('teacher_user_id', teacherUserId);
-			setAvailability((data ?? []) as AvailabilitySlot[]);
-			setTime('');
+			setLoadingSlots(true);
+			const [avail, agreements] = await Promise.all([
+				supabase
+					.from('teacher_availability')
+					.select('day_of_week, start_time, end_time')
+					.eq('teacher_user_id', teacherUserId),
+				supabase
+					.from('lesson_agreements')
+					.select('day_of_week, start_time, start_date, end_date, duration_minutes, frequency')
+					.eq('teacher_user_id', teacherUserId)
+					.lte('start_date', date),
+			]);
+			setAvailability(avail.data ?? []);
+			setExistingAgreements((agreements.data ?? []).filter((a) => a.end_date === null || a.end_date >= date));
+			setSelectedSlot(null);
+			setLoadingSlots(false);
 		})();
-	}, [teacherUserId]);
+	}, [teacherUserId, date]);
 
-	const slots = useMemo(() => {
-		if (!date) return [];
-		const d = new Date(`${date}T00:00:00`);
-		// teacher_availability.day_of_week: 1=Mon..7=Sun (Postgres ISO). JS getDay: 0=Sun..6=Sat.
-		const jsDay = d.getDay();
-		const isoDay = jsDay === 0 ? 7 : jsDay;
-		return generateSlots(availability, isoDay, duration);
-	}, [availability, date, duration]);
+	const slotsWithStatus = useMemo<SlotWithStatus[]>(() => {
+		if (!date || availability.length === 0) return [];
+		const d = new Date(`${date}T12:00:00`);
+		return getSlotStatuses(d, d, availability, existingAgreements, duration, 'weekly');
+	}, [date, availability, existingAgreements, duration]);
+
+	const selectedTeacher = useMemo(() => teachers.find((t) => t.userId === teacherUserId), [teachers, teacherUserId]);
 
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
-		if (!teacherUserId || !date || !time || !duration) {
+		if (!teacherUserId || !date || !selectedSlot || !duration) {
 			toast.error('Vul alle velden in');
 			return;
 		}
@@ -159,7 +154,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 				lesson_type_id: signupRequest?.lesson_type_id ?? null,
 				lesson_type_option_id: signupRequest?.lesson_type_option_id ?? null,
 				scheduled_date: date,
-				scheduled_start_time: time,
+				scheduled_start_time: selectedSlot.start_time,
 				duration_minutes: duration,
 				notes: notes || null,
 				student_email: signupRequest ? undefined : studentEmail,
@@ -179,7 +174,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
+			<DialogContent className="max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Proefles inplannen</DialogTitle>
 					<DialogDescription>
@@ -220,21 +215,6 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 							</div>
 						</>
 					)}
-					<div>
-						<Label>Docent</Label>
-						<Select value={teacherUserId} onValueChange={setTeacherUserId}>
-							<SelectTrigger>
-								<SelectValue placeholder="Kies docent" />
-							</SelectTrigger>
-							<SelectContent>
-								{teachers.map((t) => (
-									<SelectItem key={t.user_id} value={t.user_id}>
-										{t.display_name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
 					<div className="grid grid-cols-2 gap-3">
 						<div>
 							<Label>Datum</Label>
@@ -252,45 +232,16 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 							/>
 						</div>
 					</div>
-					<div>
-						<Label>Starttijd</Label>
-						{teacherUserId && date ? (
-							slots.length > 0 ? (
-								<Select value={time} onValueChange={setTime}>
-									<SelectTrigger>
-										<SelectValue placeholder="Kies een beschikbaar tijdslot" />
-									</SelectTrigger>
-									<SelectContent>
-										{slots.map((s) => (
-											<SelectItem key={s} value={s}>
-												{s}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							) : (
-								<>
-									<p className="text-xs text-muted-foreground mb-1">
-										Geen beschikbaarheid voor deze dag — kies handmatig een tijd.
-									</p>
-									<Input
-										type="time"
-										value={time}
-										onChange={(e) => setTime(e.target.value)}
-										required
-									/>
-								</>
-							)
-						) : (
-							<Input
-								type="time"
-								value={time}
-								onChange={(e) => setTime(e.target.value)}
-								disabled
-								placeholder="Kies eerst docent en datum"
-							/>
-						)}
-					</div>
+					<TeacherSlotStepContent
+						teachers={teachers}
+						selectedTeacher={selectedTeacher}
+						slotsWithStatus={slotsWithStatus}
+						selectedSlot={selectedSlot}
+						loadingStep3={loadingSlots}
+						isTeacherOwnStudent={false}
+						onTeacherChange={(userId) => setTeacherUserId(userId)}
+						onSlotClick={(slot) => setSelectedSlot(slot)}
+					/>
 					<div>
 						<Label>Notitie</Label>
 						<Input value={notes} onChange={(e) => setNotes(e.target.value)} />
