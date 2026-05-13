@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
 	const renderedHtml = renderTemplate(template.body_html, vars);
-	const html = appendPortalFooter(renderedHtml, getPortalBaseUrl(req));
+	const html = appendPortalFooter(renderedHtml, getPortalBaseUrl(req), body.to);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
 		method: 'POST',
