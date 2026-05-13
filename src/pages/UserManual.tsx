@@ -93,6 +93,20 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.trialLessons,
+		title: NAV_LABELS.trialLessons,
+		description:
+			'Plan een vrijblijvende proefles bij een aanmelding. De aanmelding blijft in "Open" staan tot er een overeenkomst is of de aanmelding wordt afgewezen.',
+		details: [
+			'Proefles plannen: open een aanmelding en klik "Proefles". Kies uit een platte lijst beschikbare slots (vandaag t/m +30 dagen, 30 min per slot, gesorteerd op tijd) met daarbij de docent.',
+			'Beschikbaarheid: het systeem houdt rekening met de beschikbaarheid van docenten die de gekozen lessoort geven én met al ingeplande lessen en bestaande proeflessen.',
+			'Status zichtbaar: na inplannen krijgt de aanmelding de status "proefles ingepland" met datum, tijd en docent in de lijst.',
+			'Mailbevestiging: zowel de leerling/aanmelder als de docent ontvangen automatisch een mail met de proeflesgegevens. Beide templates zijn aanpasbaar via Instellingen → E-mailtemplates (events trial_scheduled en trial_scheduled_teacher).',
+			'Vervolg: na de proefles kan staff de aanmelding alsnog "Verwerken" tot een lesovereenkomst, of "Afwijzen". Pas daarna verdwijnt de aanmelding uit de open lijst.',
+			'Mijn proefles: leerlingen zien hun ingeplande proefles in het leerlingenportal onder "Mijn proefles".',
+		],
+	},
+	{
 		icon: NAV_ICONS.agreements,
 		title: NAV_LABELS.agreements,
 		description: 'Lesovereenkomsten vastleggen en beheren via de overeenkomsten-wizard.',
