@@ -252,7 +252,7 @@ export default function PublicSignup() {
 					{step === 2 && selectedType && (
 						<div className="space-y-4">
 							<h2 className="text-lg font-semibold">
-								{selectedType.is_group_lesson ? 'Kies een groep' : 'Bevestig je keuze'}
+								{selectedType.is_group_lesson ? 'Kies een groep' : 'Kies hoe vaak en hoe lang'}
 							</h2>
 							{selectedType.is_group_lesson ? (
 								<div className="space-y-2">
