@@ -68,11 +68,28 @@ Deno.serve(async (req) => {
 		if (!lg?.is_active || lg.lesson_type_id !== body.lesson_type_id) return bad('Groep niet beschikbaar', 404);
 	}
 
+	let optionId: string | null = null;
+	if (body.lesson_type_option_id) {
+		if (lt.is_group_lesson) {
+			return bad('Optie niet toegestaan voor groepsles', 400);
+		}
+		const { data: opt } = await supabase
+			.from('lesson_type_options')
+			.select('id, lesson_type_id')
+			.eq('id', body.lesson_type_option_id)
+			.single();
+		if (!opt || opt.lesson_type_id !== body.lesson_type_id) {
+			return bad('Optie niet beschikbaar', 404);
+		}
+		optionId = opt.id;
+	}
+
 	const { data, error } = await supabase
 		.from('lesson_signup_requests')
 		.insert({
 			lesson_type_id: body.lesson_type_id,
 			lesson_group_id: body.lesson_group_id ?? null,
+			lesson_type_option_id: optionId,
 			first_name: body.first_name.trim(),
 			last_name: body.last_name.trim(),
 			email: body.email.trim().toLowerCase(),
