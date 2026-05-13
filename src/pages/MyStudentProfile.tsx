@@ -80,35 +80,11 @@ export default function MyStudentProfile() {
 				student: studentData,
 			});
 
-			// Get lesson agreements
+			// Get lesson agreements (multi-step fetch — explicit joins per project standards)
 			const { data: agreementsData, error: agreementsError } = await supabase
 				.from('lesson_agreements')
 				.select(
-					`
-					id,
-					day_of_week,
-					start_time,
-					start_date,
-					end_date,
-					is_active,
-					notes,
-					duration_minutes,
-					frequency,
-					price_per_lesson,
-					teachers!inner (
-						profiles!inner (
-							first_name,
-							last_name,
-							avatar_url
-						)
-					),
-					lesson_types!inner (
-						id,
-						name,
-						icon,
-						color
-					)
-				`,
+					'id, day_of_week, start_time, start_date, end_date, is_active, notes, duration_minutes, frequency, price_per_lesson, teacher_user_id, lesson_type_id',
 				)
 				.eq('student_user_id', user.id)
 				.order('day_of_week', { ascending: true })
@@ -121,31 +97,35 @@ export default function MyStudentProfile() {
 				return;
 			}
 
-			// Supabase returns FK relations as arrays
-			type AgreementRow = {
-				id: string;
-				day_of_week: number;
-				start_time: string;
-				start_date: string;
-				end_date: string | null;
-				is_active: boolean;
-				notes: string | null;
-				duration_minutes: number;
-				frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-				price_per_lesson: number;
-				teachers?: {
-					profiles?:
-						| { first_name: string | null; last_name: string | null; avatar_url: string | null }
-						| { first_name: string | null; last_name: string | null; avatar_url: string | null }[];
-				}[];
-				lesson_types?: { id: string; name: string; icon: string | null; color: string | null }[];
-			};
-			const transformedAgreements: LessonAgreement[] = (agreementsData || []).map((agreement) => {
-				const row = agreement as AgreementRow;
-				const t = row.teachers?.[0];
-				const profiles = t?.profiles;
-				const p = Array.isArray(profiles) ? profiles[0] : profiles;
-				const lt = row.lesson_types?.[0];
+			const rows = agreementsData ?? [];
+			const teacherIds = Array.from(new Set(rows.map((r) => r.teacher_user_id)));
+			const lessonTypeIds = Array.from(new Set(rows.map((r) => r.lesson_type_id)));
+
+			const [teacherProfilesRes, lessonTypesRes] = await Promise.all([
+				teacherIds.length > 0
+					? supabase
+							.from('profiles')
+							.select('user_id, first_name, last_name, avatar_url')
+							.in('user_id', teacherIds)
+					: Promise.resolve({ data: [], error: null } as const),
+				lessonTypeIds.length > 0
+					? supabase.from('lesson_types').select('id, name, icon, color').in('id', lessonTypeIds)
+					: Promise.resolve({ data: [], error: null } as const),
+			]);
+
+			if (teacherProfilesRes.error) {
+				console.error('Error loading teacher profiles:', teacherProfilesRes.error);
+			}
+			if (lessonTypesRes.error) {
+				console.error('Error loading lesson types:', lessonTypesRes.error);
+			}
+
+			const teacherById = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]));
+			const lessonTypeById = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
+
+			const transformedAgreements: LessonAgreement[] = rows.map((row) => {
+				const p = teacherById.get(row.teacher_user_id);
+				const lt = lessonTypeById.get(row.lesson_type_id);
 				return {
 					id: row.id,
 					day_of_week: row.day_of_week,
@@ -163,7 +143,7 @@ export default function MyStudentProfile() {
 						avatar_url: p?.avatar_url ?? null,
 					},
 					lesson_type: {
-						id: lt?.id ?? '',
+						id: lt?.id ?? row.lesson_type_id,
 						name: lt?.name ?? '',
 						icon: lt?.icon ?? null,
 						color: lt?.color ?? null,

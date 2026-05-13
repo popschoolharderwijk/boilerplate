@@ -25,21 +25,27 @@ export function useSubscription(lessonAgreementId: string | null | undefined): U
 			return;
 		}
 		setLoading(true);
-		const { data: subs } = await supabase
+		const { data: subs, error: subsError } = await supabase
 			.from('subscriptions')
 			.select('*')
 			.eq('lesson_agreement_id', lessonAgreementId)
 			.order('created_at', { ascending: false })
 			.limit(1);
+		if (subsError) {
+			console.error('Error loading subscription:', subsError);
+		}
 		const sub = subs?.[0] ?? null;
 		setSubscription(sub);
 
 		if (sub) {
-			const { data: invs } = await supabase
+			const { data: invs, error: invsError } = await supabase
 				.from('subscription_invoices')
 				.select('*')
 				.eq('subscription_id', sub.id)
 				.order('period_start', { ascending: false });
+			if (invsError) {
+				console.error('Error loading subscription invoices:', invsError);
+			}
 			setInvoices(invs ?? []);
 		} else {
 			setInvoices([]);
