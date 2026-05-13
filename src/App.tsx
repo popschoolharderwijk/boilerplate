@@ -21,6 +21,7 @@ import MyAvailability from './pages/MyAvailability';
 import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
+import MyTrial from './pages/MyTrial';
 import NoLessonPeriods from './pages/NoLessonPeriods';
 import NotFound from './pages/NotFound';
 import Projects from './pages/Projects';
@@ -31,6 +32,7 @@ import SignupRequests from './pages/SignupRequests';
 import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
 import Subscriptions from './pages/Subscriptions';
+import TrialLessons from './pages/TrialLessons';
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
 import Teachers from './pages/Teachers';
@@ -74,6 +76,8 @@ const App = () => (
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/aanmeldingen" element={<SignupRequests />} />
+						<Route path="/trial-lessons" element={<TrialLessons />} />
+						<Route path="/my-trial" element={<MyTrial />} />
 						<Route path="/abonnementen" element={<Subscriptions />} />
 						<Route path="/lesvrije-periodes" element={<NoLessonPeriods />} />
 						<Route path="/email-templates" element={<EmailTemplates />} />
