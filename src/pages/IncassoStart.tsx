@@ -39,7 +39,7 @@ export default function IncassoStart() {
 			}
 
 			const linkResult = await consumeMagicLinkFromUrl();
-			if (!linkResult.ok) {
+			if (linkResult.ok === false) {
 				setError(linkResult.error);
 				return;
 			}
