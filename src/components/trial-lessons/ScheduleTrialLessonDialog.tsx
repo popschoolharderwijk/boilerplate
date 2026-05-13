@@ -273,7 +273,12 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 									<p className="text-xs text-muted-foreground mb-1">
 										Geen beschikbaarheid voor deze dag — kies handmatig een tijd.
 									</p>
-									<Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+									<Input
+										type="time"
+										value={time}
+										onChange={(e) => setTime(e.target.value)}
+										required
+									/>
 								</>
 							)
 						) : (

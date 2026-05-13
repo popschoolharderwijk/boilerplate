@@ -1,12 +1,4 @@
-import {
-	LuBan,
-	LuFolderOpen,
-	LuGraduationCap,
-	LuMusic,
-	LuRepeat,
-	LuTriangleAlert,
-	LuUsers,
-} from 'react-icons/lu';
+import { LuBan, LuFolderOpen, LuGraduationCap, LuMusic, LuRepeat, LuTriangleAlert, LuUsers } from 'react-icons/lu';
 import { isLightColor } from '@/lib/color/color-utils';
 import { formatTimeFromDate } from '@/lib/time/time-format';
 import { useCalendarView } from './CalendarViewContext';
