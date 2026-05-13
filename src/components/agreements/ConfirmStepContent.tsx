@@ -53,6 +53,7 @@ export function ConfirmStepContent({
 										email: selectedUser.email,
 										avatar_url: selectedUser.avatar_url,
 									}}
+									href={`/students/${initialAgreement.student_user_id}`}
 									showEmail
 								/>
 							) : (
@@ -102,6 +103,7 @@ export function ConfirmStepContent({
 											email: initialAgreement.teacher.email,
 											avatar_url: initialAgreement.teacher.avatar_url,
 										}}
+										href={`/teachers/${initialAgreement.teacher_user_id}`}
 										showEmail
 									/>
 								) : (
@@ -133,6 +135,7 @@ export function ConfirmStepContent({
 										email: selectedUser.email,
 										avatar_url: selectedUser.avatar_url,
 									}}
+									href={`/students/${initialAgreement.student_user_id}`}
 									showEmail
 								/>
 							) : (
@@ -176,6 +179,7 @@ export function ConfirmStepContent({
 											email: selectedTeacher.email,
 											avatar_url: selectedTeacher.avatarUrl,
 										}}
+										href={`/teachers/${selectedTeacher.userId}`}
 										showEmail
 									/>
 								) : (
@@ -228,6 +232,7 @@ export function ConfirmStepContent({
 							email: selectedUser.email,
 							avatar_url: selectedUser.avatar_url,
 						}}
+						href={selectedUser.user_id ? `/students/${selectedUser.user_id}` : undefined}
 						showEmail
 					/>
 				) : (
@@ -265,6 +270,7 @@ export function ConfirmStepContent({
 							email: selectedTeacher.email,
 							avatar_url: selectedTeacher.avatarUrl,
 						}}
+						href={selectedTeacher.userId ? `/teachers/${selectedTeacher.userId}` : undefined}
 						showEmail
 					/>
 				) : (

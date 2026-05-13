@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getDisplayName } from '@/lib/display-name';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,8 @@ interface UserDisplayProps {
 	nameSuffix?: React.ReactNode;
 	/** Additional className */
 	className?: string;
+	/** Optional href to link the user's name */
+	href?: string;
 }
 
 export function getUserInitials(profile: UserOptional): string {
@@ -28,7 +31,7 @@ export function getUserInitials(profile: UserOptional): string {
  * Displays a user with avatar and name in a consistent format.
  * Use this component everywhere a user needs to be displayed.
  */
-export function UserDisplay({ profile, showEmail = false, nameSuffix, className }: UserDisplayProps) {
+export function UserDisplay({ profile, showEmail = false, nameSuffix, className, href }: UserDisplayProps) {
 	const displayName = getDisplayName(profile);
 	const initials = getUserInitials(profile);
 
@@ -39,10 +42,19 @@ export function UserDisplay({ profile, showEmail = false, nameSuffix, className 
 				<AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
 			</Avatar>
 			<div className="min-w-0 flex-1 text-left">
-				<p className="font-medium truncate text-sm">
-					{displayName}
-					{nameSuffix}
-				</p>
+				{href ? (
+					<Link to={href} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>
+						<p className="font-medium truncate text-sm">
+							{displayName}
+							{nameSuffix}
+						</p>
+					</Link>
+				) : (
+					<p className="font-medium truncate text-sm">
+						{displayName}
+						{nameSuffix}
+					</p>
+				)}
 				{showEmail && profile.email && (
 					<p className="text-xs text-muted-foreground truncate">{profile.email}</p>
 				)}

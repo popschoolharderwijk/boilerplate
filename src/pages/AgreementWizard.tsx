@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
 import { PeriodStepContent } from '@/components/agreements/PeriodStepContent';
@@ -697,7 +697,15 @@ export default function AgreementWizard() {
 							<NavPageHeaderIcon name="agreements" />
 						)
 					}
-					title={isEditMode && agreement ? studentName : 'Nieuwe overeenkomst'}
+					title={
+						isEditMode && agreement ? (
+							<Link to={`/students/${agreement.student_user_id}`} className="hover:underline">
+								{studentName}
+							</Link>
+						) : (
+							'Nieuwe overeenkomst'
+						)
+					}
 					subtitle={isEditMode && agreement ? agreement.lesson_type.name : undefined}
 				/>
 			</div>
