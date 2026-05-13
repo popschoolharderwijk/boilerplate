@@ -84,7 +84,8 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 			if (!win) {
 				// Popup blocked: fall back to top-level navigation.
 				try {
-					window.top!.location.href = url;
+					if (window.top) window.top.location.href = url;
+					else window.location.href = url;
 				} catch {
 					window.location.href = url;
 				}
@@ -212,7 +213,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 				{subscription && status && (
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
-					<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
+							<Badge variant={SUBSCRIPTION_STATUS_VARIANTS[status]}>
 								{SUBSCRIPTION_STATUS_LABELS[status]}
 							</Badge>
 							{subscription.default_payment_method_brand && (
@@ -243,7 +244,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 									Pas nieuwe tarieven toe
 								</Button>
 							)}
-							{isPrivileged && status === 'scheduled' && (
+							{import.meta.env.DEV && isPrivileged && status === 'scheduled' && (
 								<Button
 									variant="destructive"
 									size="sm"
