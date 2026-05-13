@@ -94,10 +94,14 @@ function TemplateEditor({ event, row, onSaved }: { event: EmailEventDefinition; 
 						<CardDescription>{event.description}</CardDescription>
 					</div>
 					<div className="flex items-center gap-2">
-						<Label htmlFor={`enabled-${event.key}`} className="text-sm">
-							Actief
-						</Label>
-						<Switch id={`enabled-${event.key}`} checked={isEnabled} onCheckedChange={setIsEnabled} />
+						<Button
+							type="button"
+							variant={isEnabled ? 'default' : 'outline'}
+							size="sm"
+							onClick={() => setIsEnabled((v) => !v)}
+						>
+							{isEnabled ? 'Actief' : 'Uitgeschakeld'}
+						</Button>
 					</div>
 				</div>
 			</CardHeader>
