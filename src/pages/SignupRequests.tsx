@@ -140,21 +140,7 @@ export default function SignupRequests() {
 	const process = useCallback(
 		async (row: Row) => {
 			setBusyId(row.id);
-			// For group requests we approve via edge function (creates user/student/membership)
-			if (row.is_group_lesson && row.lesson_group_id) {
-				const { data, error } = await supabase.functions.invoke('approve-signup-request', {
-					body: { request_id: row.id },
-				});
-				setBusyId(null);
-				if (error || (data as { error?: string })?.error) {
-					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
-					return;
-				}
-				toast.success('Aanmelding verwerkt');
-				load();
-				return;
-			}
-			// For individual / waitlist: create user via edge function then open AgreementWizard
+			// Approve via edge function: maakt user/student aan (en bij groep direct membership)
 			const { data, error } = await supabase.functions.invoke('approve-signup-request', {
 				body: { request_id: row.id },
 			});
@@ -163,6 +149,13 @@ export default function SignupRequests() {
 				toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
 				return;
 			}
+			// Groepsaanmelding is volledig afgehandeld door edge function
+			if (row.is_group_lesson && row.lesson_group_id) {
+				toast.success('Aanmelding verwerkt');
+				load();
+				return;
+			}
+			// Individueel / wachtlijst: open AgreementWizard met prefill
 			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
 			const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
 			navigate(
