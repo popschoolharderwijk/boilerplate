@@ -8,6 +8,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 interface SignupRequest {
 	lesson_type_id: string;
 	lesson_group_id?: string | null;
+	lesson_type_option_id?: string | null;
 	first_name: string;
 	last_name: string;
 	email: string;
