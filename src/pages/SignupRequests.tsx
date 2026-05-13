@@ -94,10 +94,7 @@ export default function SignupRequests() {
 					.select('user_id, first_name, last_name')
 					.in('user_id', teacherIds);
 				for (const p of profs ?? []) {
-					teacherNames.set(
-						p.user_id,
-						`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent',
-					);
+					teacherNames.set(p.user_id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent');
 				}
 			}
 		}
