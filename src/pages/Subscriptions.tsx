@@ -74,7 +74,7 @@ export default function Subscriptions() {
 
 		if (error) {
 			setLoading(false);
-			toast.error('Kon abonnementen niet laden');
+			toast.error('Kon facturatiegegevens niet laden');
 			return;
 		}
 
@@ -299,16 +299,16 @@ export default function Subscriptions() {
 		<div className="space-y-6">
 			<PageHeader
 				icon={<LuCreditCard className="h-6 w-6" />}
-				title="Abonnementen"
-				subtitle="Stripe incasso's per lesovereenkomst"
+				title="Facturatie"
+				subtitle="Incasso's en lesgeld per lesovereenkomst"
 			/>
 			<DataTable<Row>
-				title="Abonnementen"
+				title="Facturatie"
 				data={rows}
 				columns={columns}
 				loading={loading}
 				getRowKey={(r) => r.id}
-				emptyMessage="Nog geen abonnementen."
+				emptyMessage="Nog geen facturatieregels."
 			/>
 		</div>
 	);
