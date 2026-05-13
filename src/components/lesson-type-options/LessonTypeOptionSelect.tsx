@@ -1,19 +1,25 @@
 import { frequencyLabels } from '@/lib/frequencies';
-import type { LessonTypeOptionSnapshot } from '@/types/lesson-agreements';
+import type { LessonFrequency } from '@/types/lesson-agreements';
 
-export interface LessonTypeOptionRow extends LessonTypeOptionSnapshot {
+export interface OptionSnapshot {
+	duration_minutes: number;
+	frequency: LessonFrequency;
+	price_per_lesson: number;
+}
+
+export interface LessonTypeOptionRow extends OptionSnapshot {
 	id: string;
 }
 
 interface Props {
 	options: LessonTypeOptionRow[];
-	value: LessonTypeOptionSnapshot | null;
-	onChange: (snap: LessonTypeOptionSnapshot | null) => void;
+	value: OptionSnapshot | null;
+	onChange: (snap: OptionSnapshot | null) => void;
 	placeholder?: string;
 	id?: string;
 }
 
-export function findOptionId(options: LessonTypeOptionRow[], snap: LessonTypeOptionSnapshot | null): string {
+export function findOptionId(options: LessonTypeOptionRow[], snap: OptionSnapshot | null): string {
 	if (!snap) return '';
 	return (
 		options.find(
