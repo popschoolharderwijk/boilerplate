@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
 import { Alert } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,10 +9,35 @@ type LoginState = 'idle' | 'sending' | 'sent' | 'verifying';
 
 export default function Login() {
 	const { user, isLoading } = useAuth();
-	const [email, setEmail] = useState('');
+	const [searchParams] = useSearchParams();
+	const prefilledEmail = searchParams.get('email') ?? '';
+	const [email, setEmail] = useState(prefilledEmail);
 	const [otp, setOtp] = useState('');
 	const [state, setState] = useState<LoginState>('idle');
 	const [error, setError] = useState<string | null>(null);
+	const autoSentRef = useRef(false);
+
+	const sendMagicLink = async (target: string) => {
+		setError(null);
+		setState('sending');
+		await supabase.auth.signInWithOtp({
+			email: target,
+			options: {
+				shouldCreateUser: false,
+				emailRedirectTo: `${window.location.origin}/auth/callback`,
+			},
+		});
+		setState('sent');
+	};
+
+	// Automatisch versturen wanneer de portal-link in een mail wordt gevolgd.
+	useEffect(() => {
+		if (autoSentRef.current) return;
+		if (isLoading || user) return;
+		if (!prefilledEmail) return;
+		autoSentRef.current = true;
+		void sendMagicLink(prefilledEmail);
+	}, [isLoading, user, prefilledEmail]);
 
 	// Redirect if already logged in
 	if (!isLoading && user) {
@@ -21,18 +46,7 @@ export default function Login() {
 
 	const handleSendMagicLink = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setError(null);
-		setState('sending');
-
-		await supabase.auth.signInWithOtp({
-			email,
-			options: {
-				shouldCreateUser: false,
-				emailRedirectTo: `${window.location.origin}/auth/callback`,
-			},
-		});
-
-		setState('sent');
+		await sendMagicLink(email);
 	};
 
 	const handleVerifyOtp = async (e: React.FormEvent) => {
