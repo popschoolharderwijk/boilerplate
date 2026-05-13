@@ -243,7 +243,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 									Pas nieuwe tarieven toe
 								</Button>
 							)}
-							{isPrivileged && status === 'scheduled' && (
+							{import.meta.env.DEV && isPrivileged && status === 'scheduled' && (
 								<Button
 									variant="destructive"
 									size="sm"
