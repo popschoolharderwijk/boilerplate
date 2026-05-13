@@ -697,16 +697,16 @@ export default function AgreementWizard() {
 							<NavPageHeaderIcon name="agreements" />
 						)
 					}
-				title={
-					isEditMode && agreement ? (
-						<Link to={`/students/${agreement.student_user_id}`} className="hover:underline">
-							{studentName}
-						</Link>
-					) : (
-						'Nieuwe overeenkomst'
-					)
-				}
-				subtitle={isEditMode && agreement ? agreement.lesson_type.name : undefined}
+					title={
+						isEditMode && agreement ? (
+							<Link to={`/students/${agreement.student_user_id}`} className="hover:underline">
+								{studentName}
+							</Link>
+						) : (
+							'Nieuwe overeenkomst'
+						)
+					}
+					subtitle={isEditMode && agreement ? agreement.lesson_type.name : undefined}
 				/>
 			</div>
 
