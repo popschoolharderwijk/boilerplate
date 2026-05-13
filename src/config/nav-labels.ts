@@ -2,6 +2,7 @@ import type { IconType } from 'react-icons';
 import {
 	LuBookOpen,
 	LuCalendar,
+	LuCalendarOff,
 	LuChartBar,
 	LuClipboardList,
 	LuCreditCard,
@@ -9,6 +10,7 @@ import {
 	LuGraduationCap,
 	LuInbox,
 	LuLayoutDashboard,
+	LuMail,
 	LuMusic2,
 	LuSettings,
 	LuUser,
@@ -39,6 +41,8 @@ export const NAV_LABELS = {
 	signupRequests: 'Aanmeldingen',
 	reports: 'Rapportage',
 	subscriptions: 'Abonnementen',
+	noLessonPeriods: 'Lesvrije periodes',
+	emailTemplates: 'E-mailtemplates',
 	manual: 'Handleiding',
 } as const;
 
@@ -66,5 +70,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	signupRequests: LuInbox,
 	reports: LuChartBar,
 	subscriptions: LuCreditCard,
+	noLessonPeriods: LuCalendarOff,
+	emailTemplates: LuMail,
 	manual: LuBookOpen,
 };

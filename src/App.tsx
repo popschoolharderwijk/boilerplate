@@ -10,6 +10,7 @@ import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
 import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
+import EmailTemplates from './pages/EmailTemplates';
 import IncassoStart from './pages/IncassoStart';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
@@ -20,6 +21,7 @@ import MyAvailability from './pages/MyAvailability';
 import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
+import NoLessonPeriods from './pages/NoLessonPeriods';
 import NotFound from './pages/NotFound';
 import Projects from './pages/Projects';
 import PublicSignup from './pages/PublicSignup';
@@ -73,6 +75,8 @@ const App = () => (
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/aanmeldingen" element={<SignupRequests />} />
 						<Route path="/abonnementen" element={<Subscriptions />} />
+						<Route path="/lesvrije-periodes" element={<NoLessonPeriods />} />
+						<Route path="/email-templates" element={<EmailTemplates />} />
 						<Route path="/settings" element={<Settings />} />
 						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />

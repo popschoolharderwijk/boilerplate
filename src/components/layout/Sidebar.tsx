@@ -21,6 +21,8 @@ const adminNavItems = [
 	{ href: '/lesson-groups', label: NAV_LABELS.lessonGroups, icon: NAV_ICONS.lessonGroups },
 	{ href: '/aanmeldingen', label: NAV_LABELS.signupRequests, icon: NAV_ICONS.signupRequests },
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
+	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
+	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
 	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
 ];
 
