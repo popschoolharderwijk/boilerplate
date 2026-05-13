@@ -43,11 +43,7 @@ export function UserDisplay({ profile, showEmail = false, nameSuffix, className,
 			</Avatar>
 			<div className="min-w-0 flex-1 text-left">
 				{href ? (
-					<Link
-						to={href}
-						className="hover:underline text-primary"
-						onClick={(e) => e.stopPropagation()}
-					>
+					<Link to={href} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>
 						<p className="font-medium truncate text-sm">
 							{displayName}
 							{nameSuffix}
