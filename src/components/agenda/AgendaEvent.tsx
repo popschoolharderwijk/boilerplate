@@ -34,6 +34,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 	const isLessonGroupEvent = sourceType === 'lesson_group';
 	const isLessonEvent = isLesson || sourceType === 'lesson_agreement';
 	const isProjectEvent = sourceType === 'project';
+	const isTrialEvent = sourceType === 'trial_lesson';
 	const isTeacherCancelled = isCancelled && cancellationType === 'teacher';
 
 	const displayTitle = view === 'month' && event.start ? `${formatTimeFromDate(event.start)} ${title}` : title;
