@@ -47,9 +47,7 @@ export default function TrialLessons() {
 			return;
 		}
 		const trials = data ?? [];
-		const userIds = Array.from(
-			new Set(trials.flatMap((t) => [t.student_user_id, t.teacher_user_id])),
-		);
+		const userIds = Array.from(new Set(trials.flatMap((t) => [t.student_user_id, t.teacher_user_id])));
 		const lessonTypeIds = Array.from(new Set(trials.map((t) => t.lesson_type_id)));
 		const profsRes = userIds.length
 			? await supabase.from('profiles').select('user_id, first_name, last_name, email').in('user_id', userIds)
@@ -65,13 +63,9 @@ export default function TrialLessons() {
 				const tp = profMap.get(t.teacher_user_id);
 				return {
 					...t,
-					student_name: sp
-						? [sp.first_name, sp.last_name].filter(Boolean).join(' ') || sp.email
-						: '—',
+					student_name: sp ? [sp.first_name, sp.last_name].filter(Boolean).join(' ') || sp.email : '—',
 					student_email: sp?.email ?? '',
-					teacher_name: tp
-						? [tp.first_name, tp.last_name].filter(Boolean).join(' ') || tp.email
-						: '—',
+					teacher_name: tp ? [tp.first_name, tp.last_name].filter(Boolean).join(' ') || tp.email : '—',
 					lesson_type_name: ltMap.get(t.lesson_type_id) ?? null,
 				};
 			}),
@@ -215,11 +209,7 @@ export default function TrialLessons() {
 					emptyMessage="Nog geen proeflessen ingepland."
 				/>
 			</div>
-			<ScheduleTrialLessonDialog
-				open={openSchedule}
-				onOpenChange={setOpenSchedule}
-				onScheduled={load}
-			/>
+			<ScheduleTrialLessonDialog open={openSchedule} onOpenChange={setOpenSchedule} onScheduled={load} />
 		</>
 	);
 }

@@ -58,9 +58,7 @@ export default function MyTrial() {
 					const tp = profMap.get(t.teacher_user_id);
 					return {
 						...t,
-						teacher_name: tp
-							? [tp.first_name, tp.last_name].filter(Boolean).join(' ') || tp.email
-							: '—',
+						teacher_name: tp ? [tp.first_name, tp.last_name].filter(Boolean).join(' ') || tp.email : '—',
 						lesson_type_name: ltMap.get(t.lesson_type_id) ?? null,
 					};
 				}),
@@ -124,8 +122,8 @@ export default function MyTrial() {
 								<strong>Datum:</strong> {formatDbDateLong(latest.scheduled_date)}
 							</div>
 							<div>
-								<strong>Tijd:</strong> {latest.scheduled_start_time.slice(0, 5)} ({latest.duration_minutes}{' '}
-								min)
+								<strong>Tijd:</strong> {latest.scheduled_start_time.slice(0, 5)} (
+								{latest.duration_minutes} min)
 							</div>
 						</div>
 
@@ -133,7 +131,10 @@ export default function MyTrial() {
 							<div className="space-y-2 pt-2 border-t">
 								<p className="text-sm font-medium">Wil je doorgaan met lessen?</p>
 								<div className="flex gap-2">
-									<Button onClick={() => decide(latest.id, 'confirm')} disabled={busyId === latest.id}>
+									<Button
+										onClick={() => decide(latest.id, 'confirm')}
+										disabled={busyId === latest.id}
+									>
 										<LuCheck className="h-4 w-4 mr-1" /> Ja, ik wil doorgaan
 									</Button>
 									<Button

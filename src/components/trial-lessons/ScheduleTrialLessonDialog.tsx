@@ -11,13 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SignupRequestPrefill {
@@ -82,15 +76,11 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 				setTeachers(
 					(profs ?? []).map((p) => ({
 						user_id: p.user_id,
-						display_name:
-							[p.first_name, p.last_name].filter(Boolean).join(' ') || p.user_id.slice(0, 8),
+						display_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.user_id.slice(0, 8),
 					})),
 				);
 			} else {
-				const { data: ts } = await supabase
-					.from('teachers')
-					.select('user_id')
-					.eq('is_active', true);
+				const { data: ts } = await supabase.from('teachers').select('user_id').eq('is_active', true);
 				const ids = (ts ?? []).map((t) => t.user_id);
 				if (!ids.length) {
 					setTeachers([]);
@@ -103,8 +93,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 				setTeachers(
 					(profs ?? []).map((p) => ({
 						user_id: p.user_id,
-						display_name:
-							[p.first_name, p.last_name].filter(Boolean).join(' ') || p.user_id.slice(0, 8),
+						display_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.user_id.slice(0, 8),
 					})),
 				);
 			}

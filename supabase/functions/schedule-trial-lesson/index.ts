@@ -53,8 +53,7 @@ Deno.serve(async (req) => {
 		return json(400, { error: 'Invalid JSON' });
 	}
 
-	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id))
-		return json(400, { error: 'Ongeldige docent' });
+	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id)) return json(400, { error: 'Ongeldige docent' });
 	if (!body.scheduled_date || !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduled_date))
 		return json(400, { error: 'Ongeldige datum' });
 	if (!body.scheduled_start_time || !/^\d{2}:\d{2}(:\d{2})?$/.test(body.scheduled_start_time))
@@ -63,8 +62,7 @@ Deno.serve(async (req) => {
 		return json(400, { error: 'Ongeldige duur' });
 	if (body.signup_request_id && !UUID_RE.test(body.signup_request_id))
 		return json(400, { error: 'Ongeldig request id' });
-	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id))
-		return json(400, { error: 'Ongeldige lessoort' });
+	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id)) return json(400, { error: 'Ongeldige lessoort' });
 	if (body.lesson_type_option_id && !UUID_RE.test(body.lesson_type_option_id))
 		return json(400, { error: 'Ongeldige optie' });
 
@@ -88,8 +86,7 @@ Deno.serve(async (req) => {
 	if (userErr || !user) return json(401, { error: 'Invalid token' });
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff')
-		return json(403, { error: 'Geen rechten' });
+	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff') return json(403, { error: 'Geen rechten' });
 
 	// Resolve student data either from signup request or from request body
 	let studentEmail: string | null = null;
@@ -250,22 +247,17 @@ Deno.serve(async (req) => {
 		}
 
 		// Participants: teacher + student
-		await admin
-			.from('agenda_participants')
-			.insert([
-				{ event_id: ev.id, user_id: body.teacher_user_id },
-				{ event_id: ev.id, user_id: studentUserId },
-			]);
+		await admin.from('agenda_participants').insert([
+			{ event_id: ev.id, user_id: body.teacher_user_id },
+			{ event_id: ev.id, user_id: studentUserId },
+		]);
 
 		// Backlink agenda_event_id on trial
 		await admin.from('trial_lessons').update({ agenda_event_id: ev.id }).eq('id', trial.id);
 
 		// Update signup status
 		if (signupReq) {
-			await admin
-				.from('lesson_signup_requests')
-				.update({ status: 'trial_scheduled' })
-				.eq('id', signupReq.id);
+			await admin.from('lesson_signup_requests').update({ status: 'trial_scheduled' }).eq('id', signupReq.id);
 		}
 
 		// Send mail to student (best-effort)
