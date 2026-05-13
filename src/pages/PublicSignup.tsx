@@ -138,10 +138,20 @@ export default function PublicSignup() {
 		setSubmitting(true);
 		setError(null);
 		const groupId = selectedType.is_group_lesson && selectedGroupId !== 'waitlist' ? selectedGroupId : null;
+		const optionId =
+			!selectedType.is_group_lesson && selectedOption
+				? (lessonTypeOptions.find(
+						(o) =>
+							o.duration_minutes === selectedOption.duration_minutes &&
+							o.frequency === selectedOption.frequency &&
+							o.price_per_lesson === selectedOption.price_per_lesson,
+					)?.id ?? null)
+				: null;
 		const { data, error } = await supabase.functions.invoke('submit-signup-request', {
 			body: {
 				lesson_type_id: selectedType.id,
 				lesson_group_id: groupId,
+				lesson_type_option_id: optionId,
 				...form,
 			},
 		});
