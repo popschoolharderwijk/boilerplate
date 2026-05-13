@@ -161,6 +161,7 @@ export default function SignupRequests() {
 						) : r.is_group_lesson ? (
 							<Badge variant="outline">Wachtlijst</Badge>
 						) : null}
+						{r.option_label && <div className="text-xs text-muted-foreground">{r.option_label}</div>}
 					</div>
 				),
 			},
