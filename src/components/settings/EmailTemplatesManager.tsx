@@ -25,7 +25,15 @@ function renderPreview(template: string, vars: Record<string, string>): string {
 	});
 }
 
-function TemplateEditor({ event, row, onSaved }: { event: EmailEventDefinition; row: TemplateRow; onSaved: (r: TemplateRow) => void }) {
+function TemplateEditor({
+	event,
+	row,
+	onSaved,
+}: {
+	event: EmailEventDefinition;
+	row: TemplateRow;
+	onSaved: (r: TemplateRow) => void;
+}) {
 	const { user } = useAuth();
 	const [subject, setSubject] = useState(row.subject);
 	const [bodyHtml, setBodyHtml] = useState(row.body_html);
@@ -142,7 +150,10 @@ function TemplateEditor({ event, row, onSaved }: { event: EmailEventDefinition; 
 					</div>
 					<div className="text-sm font-semibold mb-2">{previewSubject}</div>
 					{/** biome-ignore lint/security/noDangerouslySetInnerHtml: admin-only HTML preview */}
-					<div className="prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: previewBody }} />
+					<div
+						className="prose prose-sm max-w-none text-sm"
+						dangerouslySetInnerHTML={{ __html: previewBody }}
+					/>
 				</div>
 
 				<div className="flex flex-wrap items-end gap-3 pt-2">
@@ -205,7 +216,8 @@ export function EmailTemplatesManager() {
 							<CardHeader>
 								<CardTitle>{event.label}</CardTitle>
 								<CardDescription>
-									Geen template-rij in de database voor <code>{event.key}</code>. Voeg deze toe via een migratie.
+									Geen template-rij in de database voor <code>{event.key}</code>. Voeg deze toe via
+									een migratie.
 								</CardDescription>
 							</CardHeader>
 						</Card>
