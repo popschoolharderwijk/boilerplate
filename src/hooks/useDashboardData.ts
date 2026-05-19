@@ -87,15 +87,15 @@ export function useDashboardData() {
 			});
 
 			// Parse recent students
-			const studentsData = recentStudentsRes.data as unknown as PaginatedResponse | null;
+			const studentsData = recentStudentsRes.data as unknown as PaginatedStudentsResponseRaw | null;
 			if (studentsData?.data) {
 				setRecentStudents(
-					studentsData.data.map((s) => ({
-						user_id: String(s.user_id ?? ''),
-						display_name: String(s.display_name ?? s.email ?? ''),
-						email: String(s.email ?? ''),
-						avatar_url: s.avatar_url ? String(s.avatar_url) : null,
-						status: String(s.status ?? ''),
+					studentsData.data.map(flattenStudentWithAgreements).map((s) => ({
+						user_id: s.user_id,
+						display_name: getDisplayName(s),
+						email: s.email ?? '',
+						avatar_url: s.avatar_url ?? null,
+						status: s.active_agreements_count > 0 ? 'active' : 'inactive',
 						created_at: String(s.created_at ?? ''),
 					})),
 				);
