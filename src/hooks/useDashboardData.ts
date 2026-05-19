@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { flattenStudentWithAgreements, type PaginatedStudentsResponseRaw } from '@/types/students';
+import { formatUserName } from '@/lib/display-name';
 
 export interface DashboardStats {
 	totalStudents: number;
