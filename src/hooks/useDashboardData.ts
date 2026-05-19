@@ -30,10 +30,6 @@ export interface DashboardTeacher {
 	availableSlotCount: number;
 }
 
-interface PaginatedResponse {
-	data: Record<string, unknown>[];
-	total: number;
-}
 
 export function useDashboardData() {
 	const { isLoading: authLoading, isPrivileged } = useAuth();
