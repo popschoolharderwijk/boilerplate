@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
 		.eq('id', body.request_id)
 		.single();
 	if (reqErr || !reqRow) return json(404, { error: 'Aanmelding niet gevonden' });
-	if (reqRow.status !== 'pending') return json(409, { error: 'Aanmelding is al verwerkt' });
+	if (reqRow.status !== 'pending' && reqRow.status !== 'trial_scheduled')
+		return json(409, { error: 'Aanmelding is al verwerkt' });
 
 	// Find or create user by email
 	let studentUserId: string | null = null;
