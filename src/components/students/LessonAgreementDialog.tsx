@@ -7,6 +7,7 @@ import { getUserInitials } from '@/components/ui/user-display';
 import { useAgreementBillingPreview } from '@/hooks/useAgreementBillingPreview';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
+import { frequencyLabels } from '@/lib/frequencies';
 import { formatTime } from '@/lib/time/time-format';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
