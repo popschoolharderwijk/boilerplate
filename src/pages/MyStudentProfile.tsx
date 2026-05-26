@@ -290,7 +290,7 @@ export default function MyStudentProfile() {
 							)}
 							{profile.student.parent_email && (
 								<div>
-									<p className="text-sm font-medium text-muted-foreground">Email</p>
+									<p className="text-sm font-medium text-muted-foreground">E-mail</p>
 									<p className="text-sm">{profile.student.parent_email}</p>
 								</div>
 							)}
