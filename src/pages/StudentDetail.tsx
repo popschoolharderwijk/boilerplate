@@ -152,10 +152,11 @@ export default function StudentDetail() {
 	}, [userId]);
 
 	useEffect(() => {
-		if (!authLoading && isPrivileged) load();
-	}, [authLoading, isPrivileged, load]);
+		if (!authLoading && canView) load();
+	}, [authLoading, canView, load]);
 
-	if (!authLoading && !isPrivileged) return <Navigate to="/" replace />;
+	if (!authLoading && !canView) return <Navigate to="/" replace />;
+
 	if (loading || authLoading) return <PageSkeleton variant="header-and-cards" />;
 	if (!profile) return <Navigate to="/students" replace />;
 
