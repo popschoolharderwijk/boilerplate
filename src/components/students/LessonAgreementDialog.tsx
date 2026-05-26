@@ -7,6 +7,7 @@ import { getUserInitials } from '@/components/ui/user-display';
 import { useAgreementBillingPreview } from '@/hooks/useAgreementBillingPreview';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
+import { frequencyLabels } from '@/lib/frequencies';
 import { formatTime } from '@/lib/time/time-format';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
@@ -110,6 +111,14 @@ export function LessonAgreementDialog({
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Tijd</p>
 							<p className="font-medium">{formatTime(agreement.start_time)}</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Frequentie</p>
+							<p className="font-medium">{frequencyLabels[agreement.frequency]}</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Lesduur</p>
+							<p className="font-medium">{agreement.duration_minutes} min</p>
 						</div>
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Startdatum</p>
