@@ -162,7 +162,7 @@ export default function MyProfile() {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="space-y-2">
-							<Label htmlFor="bio">Bio</Label>
+							<Label htmlFor="bio">Over mij</Label>
 							<Textarea
 								id="bio"
 								value={form.bio}
