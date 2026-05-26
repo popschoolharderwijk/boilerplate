@@ -50,53 +50,58 @@ export default function StudentDetail() {
 			}
 			setProfile(profileData);
 
-			// Load agreements
-			const { data: agreementsData } = await supabase
+			// Load agreements (multi-step om RLS-joins te vermijden)
+			const { data: agreementsData, error: agreementsError } = await supabase
 				.from('lesson_agreements')
 				.select(
-					`id, day_of_week, start_time, start_date, end_date, is_active, notes, duration_minutes, frequency, price_per_lesson,
-					teachers!inner (profiles!inner (first_name, last_name, avatar_url)),
-					lesson_types!inner (id, name, icon, color)`,
+					'id, day_of_week, start_time, start_date, end_date, is_active, notes, duration_minutes, frequency, price_per_lesson, teacher_user_id, lesson_type_id',
 				)
 				.eq('student_user_id', userId)
 				.order('is_active', { ascending: false })
 				.order('start_date', { ascending: false });
+			if (agreementsError) console.error('agreements error', agreementsError);
 
-			type AgreementRow = {
-				id: string;
-				day_of_week: number;
-				start_time: string;
-				start_date: string;
-				end_date: string | null;
-				is_active: boolean;
-				notes: string | null;
-				duration_minutes: number;
-				frequency: LessonAgreementWithTeacher['frequency'];
-				price_per_lesson: number;
-				teachers?: {
-					profiles?:
-						| { first_name: string | null; last_name: string | null; avatar_url: string | null }
-						| { first_name: string | null; last_name: string | null; avatar_url: string | null }[];
-				}[];
-				lesson_types?: { id: string; name: string; icon: string | null; color: string | null }[];
-			};
-			const transformed: LessonAgreementWithTeacher[] = (agreementsData || []).map((a) => {
-				const row = a as AgreementRow;
-				const t = row.teachers?.[0];
-				const profiles = t?.profiles;
-				const p = Array.isArray(profiles) ? profiles[0] : profiles;
-				const lt = row.lesson_types?.[0];
+			const teacherIds = Array.from(
+				new Set((agreementsData ?? []).map((a) => a.teacher_user_id).filter(Boolean)),
+			);
+			const lessonTypeIds = Array.from(
+				new Set((agreementsData ?? []).map((a) => a.lesson_type_id).filter(Boolean)),
+			);
+
+			const [teacherProfilesRes, lessonTypesRes] = await Promise.all([
+				teacherIds.length > 0
+					? supabase
+							.from('profiles')
+							.select('user_id, first_name, last_name, avatar_url')
+							.in('user_id', teacherIds)
+					: Promise.resolve({ data: [], error: null }),
+				lessonTypeIds.length > 0
+					? supabase
+							.from('lesson_types')
+							.select('id, name, icon, color')
+							.in('id', lessonTypeIds)
+					: Promise.resolve({ data: [], error: null }),
+			]);
+
+			const teacherProfileMap = new Map(
+				(teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]),
+			);
+			const lessonTypeMap = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
+
+			const transformed: LessonAgreementWithTeacher[] = (agreementsData ?? []).map((a) => {
+				const p = teacherProfileMap.get(a.teacher_user_id);
+				const lt = lessonTypeMap.get(a.lesson_type_id);
 				return {
-					id: row.id,
-					day_of_week: row.day_of_week,
-					start_time: row.start_time,
-					start_date: row.start_date,
-					end_date: row.end_date,
-					is_active: row.is_active,
-					notes: row.notes,
-					duration_minutes: row.duration_minutes,
-					frequency: row.frequency,
-					price_per_lesson: row.price_per_lesson,
+					id: a.id,
+					day_of_week: a.day_of_week,
+					start_time: a.start_time,
+					start_date: a.start_date,
+					end_date: a.end_date,
+					is_active: a.is_active,
+					notes: a.notes,
+					duration_minutes: a.duration_minutes,
+					frequency: a.frequency as LessonAgreementWithTeacher['frequency'],
+					price_per_lesson: a.price_per_lesson,
 					teacher: {
 						first_name: p?.first_name ?? null,
 						last_name: p?.last_name ?? null,
