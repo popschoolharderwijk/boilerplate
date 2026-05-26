@@ -16,10 +16,10 @@ interface BreadcrumbProps {
 export function Breadcrumb({ items, className }: BreadcrumbProps) {
 	return (
 		<nav
-			aria-label="Breadcrumb"
+			aria-label="Kruimelpad"
 			className={cn('flex items-center space-x-2 text-sm text-muted-foreground', className)}
 		>
-			<Link to="/" className="flex items-center hover:text-foreground transition-colors" aria-label="Home">
+			<Link to="/" className="flex items-center hover:text-foreground transition-colors" aria-label="Start">
 				<LuLayoutDashboard className="h-4 w-4" />
 			</Link>
 			{items.map((item, index) => {

@@ -158,11 +158,11 @@ export default function MyProfile() {
 				<Card>
 					<CardHeader>
 						<CardTitle>Persoonlijke gegevens</CardTitle>
-						<CardDescription>Bio en contactgegevens</CardDescription>
+						<CardDescription>Over mij en contactgegevens</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="space-y-2">
-							<Label htmlFor="bio">Bio</Label>
+							<Label htmlFor="bio">Over mij</Label>
 							<Textarea
 								id="bio"
 								value={form.bio}

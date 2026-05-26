@@ -458,7 +458,7 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 								/>
 							</div>
 							<div className="space-y-1.5">
-								<Label htmlFor="parent-email">Email</Label>
+								<Label htmlFor="parent-email">E-mail</Label>
 								<Input
 									id="parent-email"
 									type="email"
