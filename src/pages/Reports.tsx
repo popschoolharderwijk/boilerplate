@@ -195,7 +195,7 @@ function ReportsDataTable({
 			},
 			{
 				key: 'lesson_count',
-				label: 'Aantal',
+				label: 'Aantal lessen',
 				sortable: true,
 				sortValue: (r) => r.lesson_count,
 				className: 'text-right tabular-nums',
