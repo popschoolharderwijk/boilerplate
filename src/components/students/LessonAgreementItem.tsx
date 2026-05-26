@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DAY_NAMES_DISPLAY, getDayNameFromDbIndex } from '@/lib/date/day-index';
+import { getDayNameFromDbIndex } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
 import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
