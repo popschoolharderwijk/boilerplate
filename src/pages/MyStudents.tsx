@@ -157,7 +157,12 @@ export default function MyStudents() {
 							</AvatarFallback>
 						</Avatar>
 						<div className="min-w-0 flex-1">
-							<p className="font-medium break-words">{getDisplayName(s)}</p>
+							<Link
+								to={`/students/${s.user_id}`}
+								className="font-medium break-words hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
+							>
+								{getDisplayName(s)}
+							</Link>
 							<p className="text-xs text-muted-foreground break-words">{s.email}</p>
 						</div>
 					</div>
