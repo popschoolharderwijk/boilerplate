@@ -27,7 +27,8 @@ interface ProfileData {
 export default function StudentDetail() {
 	const { userId } = useParams<{ userId: string }>();
 	const navigate = useNavigate();
-	const { isPrivileged, isLoading: authLoading } = useAuth();
+	const { isPrivileged, isTeacher, isLoading: authLoading } = useAuth();
+	const canView = isPrivileged || isTeacher;
 	const [loading, setLoading] = useState(true);
 	const [profile, setProfile] = useState<ProfileData | null>(null);
 	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
@@ -151,10 +152,11 @@ export default function StudentDetail() {
 	}, [userId]);
 
 	useEffect(() => {
-		if (!authLoading && isPrivileged) load();
-	}, [authLoading, isPrivileged, load]);
+		if (!authLoading && canView) load();
+	}, [authLoading, canView, load]);
 
-	if (!authLoading && !isPrivileged) return <Navigate to="/" replace />;
+	if (!authLoading && !canView) return <Navigate to="/" replace />;
+
 	if (loading || authLoading) return <PageSkeleton variant="header-and-cards" />;
 	if (!profile) return <Navigate to="/students" replace />;
 
