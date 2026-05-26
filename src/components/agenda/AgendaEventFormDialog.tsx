@@ -408,7 +408,17 @@ export function AgendaEventFormDialog({
 										const isLessonParticipant = isReadonly && !isOwner;
 										return (
 											<Badge key={id} variant="secondary" className="gap-1">
-												{label}
+												{id === user?.id ? (
+													label
+												) : (
+													<Link
+														to={`/students/${id}`}
+														className="text-primary hover:underline"
+														onClick={() => onOpenChange(false)}
+													>
+														{label}
+													</Link>
+												)}
 												{isOwner && (
 													<span className="text-xs text-muted-foreground">(eigenaar)</span>
 												)}
