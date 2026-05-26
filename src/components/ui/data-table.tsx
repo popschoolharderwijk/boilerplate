@@ -629,7 +629,7 @@ export function DataTable<T>({
 													<td
 														key={column.key}
 														className={cn(
-															'pr-4 first:pl-2 last:pr-2',
+															'overflow-hidden pr-4 first:pl-2 last:pr-2',
 															compactRows ? 'py-1.5' : 'py-4',
 															column.className,
 														)}

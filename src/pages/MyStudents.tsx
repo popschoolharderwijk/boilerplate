@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -147,7 +148,7 @@ export default function MyStudents() {
 				key: 'student',
 				label: 'Leerling',
 				sortable: false, // Server-side sorting
-				className: 'w-48',
+				className: 'w-56',
 				render: (s) => (
 					<div className="flex items-center gap-3">
 						<Avatar className="h-9 w-9 flex-shrink-0">
@@ -156,15 +157,25 @@ export default function MyStudents() {
 								{getUserInitials(s)}
 							</AvatarFallback>
 						</Avatar>
-						<div className="min-w-0 flex-1">
-							<Link
-								to={`/students/${s.user_id}`}
-								className="font-medium break-words hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
-							>
-								{getDisplayName(s)}
-							</Link>
-							<p className="text-xs text-muted-foreground break-words">{s.email}</p>
-						</div>
+						<TooltipProvider delayDuration={200}>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<div className="min-w-0 flex-1 overflow-hidden">
+										<Link
+											to={`/students/${s.user_id}`}
+											className="block font-medium truncate hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
+										>
+											{getDisplayName(s)}
+										</Link>
+										<p className="text-xs text-muted-foreground truncate">{s.email}</p>
+									</div>
+								</TooltipTrigger>
+								<TooltipContent side="top" align="start">
+									<p className="font-medium">{getDisplayName(s)}</p>
+									<p className="text-xs text-muted-foreground">{s.email}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
 					</div>
 				),
 			},
