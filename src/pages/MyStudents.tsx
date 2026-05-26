@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
