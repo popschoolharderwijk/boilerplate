@@ -345,7 +345,7 @@ export default function Settings() {
 									</AvatarFallback>
 								</Avatar>
 								<div className="space-y-2">
-									<Label htmlFor="avatar-upload">Avatar</Label>
+									<Label htmlFor="avatar-upload">Profielfoto</Label>
 									<div className="flex items-center gap-2">
 										<Input
 											id="avatar-upload"
