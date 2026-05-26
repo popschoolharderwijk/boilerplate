@@ -137,7 +137,7 @@ export function TopNav() {
 					onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
 				>
 					{resolvedTheme === 'dark' ? <LuMoon className="h-5 w-5" /> : <LuSun className="h-5 w-5" />}
-					<span className="sr-only">Toggle theme</span>
+					<span className="sr-only">Thema wisselen</span>
 				</Button>
 
 				{/* User Menu */}
