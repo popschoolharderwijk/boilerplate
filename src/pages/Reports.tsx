@@ -506,23 +506,23 @@ export default function Reports() {
 				<Card>
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-							<LuClock className="h-4 w-4" />
-							Totaal uren
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">{formatDurationMinutes(summary.totalMinutes)}</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
 							<NAV_ICONS.reports className="h-4 w-4" />
 							Totaal lessen
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{summary.totalLessons}</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+							<LuClock className="h-4 w-4" />
+							Totaal uren
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{formatDurationMinutes(summary.totalMinutes)}</div>
 					</CardContent>
 				</Card>
 				<Card>
