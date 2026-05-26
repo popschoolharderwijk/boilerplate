@@ -27,7 +27,8 @@ interface ProfileData {
 export default function StudentDetail() {
 	const { userId } = useParams<{ userId: string }>();
 	const navigate = useNavigate();
-	const { isPrivileged, isLoading: authLoading } = useAuth();
+	const { n, isTeacher, isLoading: authLoading } = useAuth();
+	const canView = n || isTeacher;
 	const [loading, setLoading] = useState(true);
 	const [profile, setProfile] = useState<ProfileData | null>(null);
 	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
