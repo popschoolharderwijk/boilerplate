@@ -626,14 +626,14 @@ export function DataTable<T>({
 													</td>
 												)}
 												{columns.map((column) => (
-																	<td
-																		key={column.key}
-																		className={cn(
-																			'overflow-hidden pr-4 first:pl-2 last:pr-2',
-																			compactRows ? 'py-1.5' : 'py-4',
-																			column.className,
-																		)}
-																	>
+													<td
+														key={column.key}
+														className={cn(
+															'overflow-hidden pr-4 first:pl-2 last:pr-2',
+															compactRows ? 'py-1.5' : 'py-4',
+															column.className,
+														)}
+													>
 														{column.render
 															? column.render(item)
 															: String(item[column.key as keyof T] ?? '')}
