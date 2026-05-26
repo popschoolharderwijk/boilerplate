@@ -113,6 +113,14 @@ export function LessonAgreementDialog({
 							<p className="font-medium">{formatTime(agreement.start_time)}</p>
 						</div>
 						<div>
+							<p className="text-sm font-medium text-muted-foreground">Frequentie</p>
+							<p className="font-medium">{frequencyLabels[agreement.frequency]}</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-muted-foreground">Lesduur</p>
+							<p className="font-medium">{agreement.duration_minutes} min</p>
+						</div>
+						<div>
 							<p className="text-sm font-medium text-muted-foreground">Startdatum</p>
 							<p className="font-medium">{formatDate(agreement.start_date)}</p>
 						</div>
