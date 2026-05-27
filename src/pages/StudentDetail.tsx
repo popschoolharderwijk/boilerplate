@@ -76,16 +76,11 @@ export default function StudentDetail() {
 							.in('user_id', teacherIds)
 					: Promise.resolve({ data: [], error: null }),
 				lessonTypeIds.length > 0
-					? supabase
-							.from('lesson_types')
-							.select('id, name, icon, color')
-							.in('id', lessonTypeIds)
+					? supabase.from('lesson_types').select('id, name, icon, color').in('id', lessonTypeIds)
 					: Promise.resolve({ data: [], error: null }),
 			]);
 
-			const teacherProfileMap = new Map(
-				(teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]),
-			);
+			const teacherProfileMap = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]));
 			const lessonTypeMap = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
 
 			const transformed: LessonAgreementWithTeacher[] = (agreementsData ?? []).map((a) => {
