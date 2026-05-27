@@ -211,7 +211,7 @@ export default function StudentDetail() {
 										studentUserId={userId}
 										lessonTypeId={a.lesson_type.id}
 									/>
-									<SubscriptionCard lessonAgreementId={a.id} />
+									{isPrivileged && <SubscriptionCard lessonAgreementId={a.id} />}
 								</div>
 							))}
 						</div>
