@@ -1,5 +1,6 @@
 import type { CalendarEvent } from '@/components/agenda/types';
 import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
+import { isNonBillingMonthString } from '@/lib/billing/schoolYear';
 import { pushToMapArray } from '@/lib/collections';
 import { addMinutes, formatDateToDb, getDateForDayOfWeek } from '@/lib/date/date-format';
 import { getDisplayName } from '@/lib/display-name';
@@ -10,6 +11,7 @@ import {
 	getOccurrenceIndex,
 } from '@/lib/lessonHelpers';
 import { applyTimeToDate, hasTimeChange } from '@/lib/time/time-format';
+
 import type { AgendaEventDeviationRow, AgendaEventRow, CancellationType } from '@/types/agenda-events';
 import type {
 	LessonAgreementWithStudent,
