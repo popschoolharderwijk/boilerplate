@@ -326,6 +326,7 @@ export default function Settings() {
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
+					{canSeeAccounting && <TabsTrigger value="accounting">Boekhouding</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
