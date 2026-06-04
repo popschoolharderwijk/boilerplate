@@ -8,10 +8,7 @@ export function useAccountingSettings() {
 
 	const load = useCallback(async () => {
 		setLoading(true);
-		const { data, error } = await supabase
-			.from('accounting_settings')
-			.select('*')
-			.maybeSingle();
+		const { data, error } = await supabase.from('accounting_settings').select('*').maybeSingle();
 		if (error) {
 			console.error('Error loading accounting_settings:', error);
 		}

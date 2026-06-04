@@ -120,7 +120,10 @@ export function AccountingSettingsManager() {
 							disabled={!canEdit}
 							value={form.school_year_start_month}
 							onChange={(e) =>
-								update('school_year_start_month', Math.min(12, Math.max(1, Number(e.target.value) || 1)))
+								update(
+									'school_year_start_month',
+									Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+								)
 							}
 						/>
 					</div>

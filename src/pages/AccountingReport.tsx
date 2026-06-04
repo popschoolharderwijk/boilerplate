@@ -23,15 +23,10 @@ import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
 import { useAccountingReport, useAccountingSettings } from '@/hooks/useAccounting';
 import { useAuth } from '@/hooks/useAuth';
-import { formatDateToDb } from '@/lib/date/date-format';
-import {
-	downloadFile,
-	generateCsv,
-	generateExactXml,
-	generateJournalLines,
-} from '@/lib/accounting/exporters';
+import { downloadFile, generateCsv, generateExactXml, generateJournalLines } from '@/lib/accounting/exporters';
 import type { AccountingInvoice } from '@/lib/accounting/types';
 import { formatCentsEUR } from '@/lib/accounting/types';
+import { formatDateToDb } from '@/lib/date/date-format';
 
 type PeriodPreset =
 	| 'this_month'
@@ -203,18 +198,14 @@ export default function AccountingReportPage() {
 				sortable: true,
 				sortValue: (r) => r.amount_due_cents,
 				className: 'text-right tabular-nums',
-				render: (r) => (
-					<span className="font-medium tabular-nums">{formatCentsEUR(r.amount_due_cents)}</span>
-				),
+				render: (r) => <span className="font-medium tabular-nums">{formatCentsEUR(r.amount_due_cents)}</span>,
 			},
 			{
 				key: 'status',
 				label: 'Status',
 				sortable: true,
 				sortValue: (r) => r.status,
-				render: (r) => (
-					<Badge variant={r.status === 'paid' ? 'secondary' : 'outline'}>{r.status}</Badge>
-				),
+				render: (r) => <Badge variant={r.status === 'paid' ? 'secondary' : 'outline'}>{r.status}</Badge>,
 			},
 		],
 		[],
@@ -362,7 +353,9 @@ export default function AccountingReportPage() {
 											<td className="py-2 text-right tabular-nums">
 												{formatCentsEUR(c.omzet_21_plus_excl_cents)}
 											</td>
-											<td className="py-2 text-right tabular-nums">{formatCentsEUR(c.btw_cents)}</td>
+											<td className="py-2 text-right tabular-nums">
+												{formatCentsEUR(c.btw_cents)}
+											</td>
 											<td className="py-2 text-right tabular-nums font-medium">
 												{formatCentsEUR(c.total_debiteuren_cents)}
 											</td>
@@ -383,11 +376,7 @@ export default function AccountingReportPage() {
 					data={report?.invoices ?? []}
 					columns={invoiceColumns}
 					searchPlaceholder="Zoeken op leerling, kostenplaats..."
-					searchFields={[
-						(r) => r.student_name,
-						(r) => r.cost_center,
-						(r) => r.stripe_invoice_id,
-					]}
+					searchFields={[(r) => r.student_name, (r) => r.cost_center, (r) => r.stripe_invoice_id]}
 					getRowKey={(r) => r.invoice_id}
 					emptyMessage="Geen facturen gevonden voor deze periode."
 					initialSortColumn="period_start"

@@ -19,7 +19,6 @@ import {
 	LuUsers,
 } from 'react-icons/lu';
 
-
 /**
  * Central source for navigation labels (sidebar, breadcrumbs, page titles, command palette).
  * Use these constants everywhere to stay DRY and avoid typos like "Lestypen" vs "Lessoorten".

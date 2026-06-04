@@ -27,10 +27,7 @@ function isoDate(value: string): string {
 	return value.slice(0, 10);
 }
 
-export function generateJournalLines(
-	report: AccountingReport,
-	settings: AccountingSettings,
-): JournalLine[] {
+export function generateJournalLines(report: AccountingReport, settings: AccountingSettings): JournalLine[] {
 	const lines: JournalLine[] = [];
 
 	for (const inv of report.invoices) {
@@ -215,9 +212,7 @@ export function generateExactXml(lines: JournalLine[], settings: AccountingSetti
 			.map((l, idx) => {
 				const amount = l.debit > 0 ? l.debit : -l.credit;
 				const vatAttr = l.btwCode ? ` vatcode="${xmlEscape(l.btwCode)}"` : '';
-				const costCenterEl = l.costCenter
-					? `\n        <CostCenter code="${xmlEscape(l.costCenter)}" />`
-					: '';
+				const costCenterEl = l.costCenter ? `\n        <CostCenter code="${xmlEscape(l.costCenter)}" />` : '';
 				return `      <GLTransactionLine linetype="0" line="${idx + 1}" status="20">
         <Date>${date}</Date>
         <FinYear number="${new Date(date).getFullYear()}" />
