@@ -297,6 +297,17 @@ function isInNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): 
 	return findNoLessonPeriod(date, periods) !== undefined;
 }
 
+function noLessonPeriodLengthDays(p: NoLessonPeriod): number {
+	const start = Date.parse(`${p.start_date}T12:00:00`);
+	const end = Date.parse(`${p.end_date}T12:00:00`);
+	return Math.round((end - start) / 86_400_000) + 1;
+}
+
+function addDays(date: Date, days: number): void {
+	date.setDate(date.getDate() + days);
+}
+
+
 /**
  * Generate calendar events from agenda_events (manual events). Uses lessonHelpers for recurrence.
  */
