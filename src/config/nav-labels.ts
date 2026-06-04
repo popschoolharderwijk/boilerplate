@@ -44,6 +44,7 @@ export const NAV_LABELS = {
 	trialLessons: 'Proeflessen',
 	myTrial: 'Mijn proefles',
 	reports: 'Rapportage',
+	accounting: 'Boekhouding',
 	subscriptions: 'Facturatie',
 	noLessonPeriods: 'Lesvrije periodes',
 	emailTemplates: 'E-mailtemplates',
