@@ -383,13 +383,23 @@ export function generateAgendaEvents(
 			return 60 * 60 * 1000;
 		};
 
-		const current = getFirstOccurrenceInRangeHelper(dayOfWeek, rangeStart, periodStart, frequency);
-		while (current <= rangeEnd) {
-			if (current < periodStart) {
-				addIntervalHelper(current, frequency);
-				continue;
-			}
+		// Start iteration from periodStart so we can accumulate the "shift" caused by
+		// no_lesson_periods that occur before the rendered range. Each no_lesson_period a
+		// lesson lands in adds its length (in days) to a cumulative shift applied to all
+		// subsequent non-deviated lessons.
+		const current = getFirstOccurrenceInRangeHelper(dayOfWeek, periodStart, periodStart, frequency);
+		let shiftDays = 0;
+		const isLessonSource = sourceType === 'lesson_agreement' || sourceType === 'lesson_group';
+
+		while (true) {
 			if (periodEnd && current > periodEnd) break;
+			// Safety: once we are past the render window and shift can no longer grow
+			// (we keep iterating but bail), stop to avoid unbounded work.
+			if (current > rangeEnd && shiftDays === 0) break;
+			if (current > rangeEnd) {
+				// shifted dates are >= current, so they will also be outside the range.
+				break;
+			}
 
 			const dateStr = formatDateToDb(current);
 			const deviation = eventDeviations?.get(dateStr);
@@ -399,11 +409,47 @@ export function generateAgendaEvents(
 
 			const effective = deviation ?? recurringDeviation;
 
-			// Skip lessons that fall in a no-lesson period (e.g. school holidays).
-			// We only skip lesson-like sources, and only when there is no manual deviation
-			// (admins may have explicitly moved a lesson into a holiday week).
-			const isLessonSource = sourceType === 'lesson_agreement' || sourceType === 'lesson_group';
-			if (isLessonSource && !effective && isInNoLessonPeriod(current, noLessonPeriods)) {
+			// Determine the effective lesson date with cumulative shift applied.
+			// Deviations (admin-set) ignore the shift entirely.
+			let shiftedDate: Date | null = null;
+			let isShifted = false;
+			let skipThisOccurrence = false;
+
+			if (isLessonSource && !effective) {
+				shiftedDate = new Date(current);
+				if (shiftDays > 0) addDays(shiftedDate, shiftDays);
+				// While the shifted date lands in a no_lesson_period, grow the shift.
+				while (true) {
+					const period = findNoLessonPeriod(shiftedDate, noLessonPeriods);
+					if (!period) break;
+					const len = noLessonPeriodLengthDays(period);
+					shiftDays += len;
+					addDays(shiftedDate, len);
+					isShifted = true;
+				}
+				// Hard end-date: shifted past the agreement end → lesson vervalt.
+				if (periodEnd && shiftedDate > periodEnd) {
+					addIntervalHelper(current, frequency);
+					continue;
+				}
+				// Augustus blijft pure skip (geen shift-mutatie, geen les).
+				if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
+					addIntervalHelper(current, frequency);
+					continue;
+				}
+				// Outside render window: skip rendering but keep iterating to accumulate shift.
+				if (shiftedDate < rangeStart || shiftedDate > rangeEnd) {
+					skipThisOccurrence = true;
+				}
+			} else {
+				// Non-lesson sources OR deviation present: use original `current` for the
+				// in-range check; deviation branch will compute its own actual date below.
+				if (current < rangeStart) {
+					skipThisOccurrence = true;
+				}
+			}
+
+			if (skipThisOccurrence) {
 				addIntervalHelper(current, frequency);
 				continue;
 			}
@@ -439,19 +485,22 @@ export function generateAgendaEvents(
 				start = actualDate;
 				end = addMinutes(start, getDurationMs() / (60 * 1000));
 			} else {
-				start = applyTimeToDate(new Date(current), baseStartTime);
+				const base = shiftedDate ?? new Date(current);
+				start = applyTimeToDate(new Date(base), baseStartTime);
 				end =
 					durationMinutes != null
 						? addMinutes(start, durationMinutes)
 						: ev.end_time
-							? applyTimeToDate(new Date(current), ev.end_time)
+							? applyTimeToDate(new Date(base), ev.end_time)
 							: addMinutes(start, 60);
 			}
 
-			const resourceOriginalDate = effective?.spans_future_occurrences ? dateStr : effective?.original_date;
+			const resourceOriginalDate = effective?.spans_future_occurrences
+				? dateStr
+				: (effective?.original_date ?? (isShifted ? dateStr : undefined));
 			const resourceOriginalStartTime = effective?.spans_future_occurrences
 				? baseStartTime
-				: effective?.original_start_time;
+				: (effective?.original_start_time ?? (isShifted ? baseStartTime : undefined));
 			const displayTitle = effective?.title ?? ev.title;
 			const displayColor = effective?.color ?? ev.color ?? null;
 			const hasTimeOrDateChange =
@@ -474,12 +523,12 @@ export function generateAgendaEvents(
 					lessonTypeColor: displayColor,
 					lessonTypeIcon: null,
 					isDeviation: !!effective && !effective.is_cancelled,
-					hasTimeOrDateChange,
+					hasTimeOrDateChange: hasTimeOrDateChange || isShifted,
 					isCancelled,
 					isGroupLesson: false,
 					originalDate: resourceOriginalDate ?? effective?.original_date,
 					originalStartTime: resourceOriginalStartTime ?? effective?.original_start_time,
-					reason: effective?.reason ?? null,
+					reason: effective?.reason ?? (isShifted ? 'Verschoven door lesvrije periode' : null),
 					isRecurring: ev.recurring || (effective?.spans_future_occurrences ?? false),
 					sourceType,
 					color: displayColor,
@@ -497,6 +546,7 @@ export function generateAgendaEvents(
 
 			addIntervalHelper(current, frequency);
 		}
+
 	}
 
 	return events;
