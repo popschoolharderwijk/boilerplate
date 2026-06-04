@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AccountingSettingsManager } from '@/components/settings/AccountingSettingsManager';
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,7 +27,8 @@ import { cn } from '@/lib/utils';
 
 export default function Settings() {
 	const { theme, setTheme } = useTheme();
-	const { user } = useAuth();
+	const { user, isAdmin, isSiteAdmin } = useAuth();
+	const canSeeAccounting = isAdmin || isSiteAdmin;
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -325,6 +327,7 @@ export default function Settings() {
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
+					{canSeeAccounting && <TabsTrigger value="accounting">Boekhouding</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
@@ -475,6 +478,12 @@ export default function Settings() {
 						</CardContent>
 					</Card>
 				</TabsContent>
+
+				{canSeeAccounting && (
+					<TabsContent value="accounting" className="space-y-6 mt-6">
+						<AccountingSettingsManager />
+					</TabsContent>
+				)}
 
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}

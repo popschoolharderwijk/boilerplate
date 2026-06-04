@@ -1,6 +1,7 @@
 import type { IconType } from 'react-icons';
 import {
 	LuBookOpen,
+	LuCalculator,
 	LuCalendar,
 	LuCalendarOff,
 	LuChartBar,
@@ -42,6 +43,7 @@ export const NAV_LABELS = {
 	trialLessons: 'Proeflessen',
 	myTrial: 'Mijn proefles',
 	reports: 'Rapportage',
+	accounting: 'Boekhouding',
 	subscriptions: 'Facturatie',
 	noLessonPeriods: 'Lesvrije periodes',
 	emailTemplates: 'E-mailtemplates',
@@ -73,6 +75,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	trialLessons: LuGraduationCap,
 	myTrial: LuGraduationCap,
 	reports: LuChartBar,
+	accounting: LuCalculator,
 	subscriptions: LuCreditCard,
 	noLessonPeriods: LuCalendarOff,
 	emailTemplates: LuMail,
