@@ -95,6 +95,7 @@ const App = () => (
 						<Route path="/students/my-profile" element={<MyStudentProfile />} />
 						<Route path="/students/:userId" element={<StudentDetail />} />
 						<Route path="/reports" element={<Reports />} />
+						<Route path="/boekhouding" element={<AccountingReport />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
 
