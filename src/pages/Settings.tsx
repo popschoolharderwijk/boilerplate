@@ -478,6 +478,12 @@ export default function Settings() {
 					</Card>
 				</TabsContent>
 
+				{canSeeAccounting && (
+					<TabsContent value="accounting" className="space-y-6 mt-6">
+						<AccountingSettingsManager />
+					</TabsContent>
+				)}
+
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}
 					<Card className="border-destructive/50">
