@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AccountingSettingsManager } from '@/components/settings/AccountingSettingsManager';
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
