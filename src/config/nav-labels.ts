@@ -76,6 +76,7 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	trialLessons: LuGraduationCap,
 	myTrial: LuGraduationCap,
 	reports: LuChartBar,
+	accounting: LuCalculator,
 	subscriptions: LuCreditCard,
 	noLessonPeriods: LuCalendarOff,
 	emailTemplates: LuMail,
