@@ -59,7 +59,7 @@ export function LessonAgreementDialog({
 			start_date: agreement.start_date,
 			end_date: agreement.end_date,
 		};
-	}, [agreement, studentUserId, lessonTypeId]);
+	}, [agreement, studentUserId, lessonTypeId, isPrivileged]);
 	const { preview, loading: previewLoading, error: previewError } = useAgreementBillingPreview(previewInput);
 
 	if (!agreement) {
