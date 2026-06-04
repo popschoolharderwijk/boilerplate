@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -45,8 +46,9 @@ export function LessonAgreementDialog({
 	studentUserId,
 	lessonTypeId,
 }: LessonAgreementDialogProps) {
+	const { isPrivileged } = useAuth();
 	const previewInput = useMemo(() => {
-		if (!agreement || !studentUserId || !lessonTypeId) return null;
+		if (!agreement || !studentUserId || !lessonTypeId || !isPrivileged) return null;
 		return {
 			id: agreement.id,
 			student_user_id: studentUserId,
@@ -57,7 +59,7 @@ export function LessonAgreementDialog({
 			start_date: agreement.start_date,
 			end_date: agreement.end_date,
 		};
-	}, [agreement, studentUserId, lessonTypeId]);
+	}, [agreement, studentUserId, lessonTypeId, isPrivileged]);
 	const { preview, loading: previewLoading, error: previewError } = useAgreementBillingPreview(previewInput);
 
 	if (!agreement) {
