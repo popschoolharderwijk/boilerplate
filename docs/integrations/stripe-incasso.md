@@ -50,9 +50,11 @@ Per `lesson_agreements`-rij koppelen we **één Stripe `Subscription`** voor maa
 |---|---|
 | `stripe_customers` | 1:1 koppeling tussen `auth.users.id` en `stripe_customer_id`. |
 | `subscriptions` | Spiegel van Stripe Subscription. Bevat `lesson_agreement_id`, status, periode, default payment method (merk/last4), `stripe_schedule_id`. |
-| `subscription_schedule_phases` | Per maand één rij met start/end, `amount_cents`, `price_id`. Maakt audit en rebuild mogelijk. |
 | `subscription_invoices` | Spiegel van Stripe Invoices: bedrag, status, `hosted_invoice_url`, periode. |
 | `incasso_invitations` | Logt elke verzonden uitnodiging (timestamp, magic-link ID, agreement). |
+| `accounting_settings` | Per-organisatie BTW- en grootboekinstellingen (account/btw-code voor 21% en vrijgesteld). Gebruikt door de rapportage en door `pickAgeTariff` voor BTW-toewijzing. |
+
+> ℹ️ Schedule-fases worden **niet** gespiegeld in een aparte DB-tabel — ze worden bij elke push uit `_shared/billing.ts` opgebouwd op basis van de actuele `calculateYearlyAmount`-output (incl. verschuif-logica voor `no_lesson_periods` en augustus-pauze).
 
 Alle tabellen hebben **PERMISSIVE, geconsolideerde** RLS. Schrijven is alleen toegestaan voor de service-role (webhook of edge function); lezen mag voor:
 - `is_privileged()` (admin/staff)
@@ -71,9 +73,10 @@ Alle tabellen hebben **PERMISSIVE, geconsolideerde** RLS. Schrijven is alleen to
 | `stripe-webhook` | publiek (signature-validatie) | Ontvangt en verwerkt Stripe-events. |
 
 Gedeelde logica staat in `supabase/functions/_shared/`:
-- `billing.ts` — schoolyear, occurrences, `calculateYearly`, `pickAgeTariff`, schedule-fase-bouwers.
+- `billing.ts` — schoolyear, occurrences, `calculateYearly` (incl. **verschuif-logica** voor `no_lesson_periods`), `pickAgeTariff`, schedule-fase-bouwers. Augustus blijft een pure pauze; overige periodes verschuiven het ritme door met exact de periodelengte.
 - `stripe.ts` — Stripe-client constructor (npm:stripe).
-- `subscription-storage.ts` — DB upserts voor `subscriptions` en `subscription_schedule_phases`.
+- `subscription-storage.ts` — DB upserts voor `subscriptions`.
+- `email-events.ts` — register van app-mail events (gebruikt door `send-template-email`).
 - `errors.ts` — `getSafeErrorMessage` (geen interne stack-traces lekken).
 
 ## 5. Magic link & email
@@ -113,7 +116,9 @@ Signing: gebruik **`STRIPE_WEBHOOK_SECRET`** voor signature-validatie. Falende v
 - **Prijswijziging** — admin klikt "Pas nieuwe tarieven toe" → `rebuild-subscription-schedule` herberekent alleen toekomstige fases (huidige fase blijft staan om de lopende factuur niet te raken).
 - **Mislukte betaling** — `invoice.payment_failed` zet de subscription op `past_due`. UI toont status-badge; klant lost op via Customer Portal.
 - **Mandaat ingetrokken** — Stripe stuurt `payment_method.detached` / subscription wordt `unpaid`. Admin kan een nieuwe uitnodiging sturen.
-- **Leerling wordt 21 mid-jaar** — `pickAgeTariff` (zie `_shared/billing.ts`) bepaalt per `lessonDate` welk tarief geldt; de schedule-fases verdisconteren dit per maand.
+- **Leerling wordt 21 mid-jaar** — `pickAgeTariff` (zie `_shared/billing.ts`) bepaalt per `lessonDate` welk tarief geldt; de schedule-fases verdisconteren dit per maand. De keuze van BTW-code volgt dezelfde leeftijdslogica via `accounting_settings`.
+- **Lesvrije periode in schooljaar** — `calculateYearlyAmount` past **verschuif-logica** toe: lessen die in een periode vallen schuiven door met exact de lengte van de periode. Lessen die hierdoor voorbij `periodEnd` (31 juli) komen, vervallen. Zie `src/lib/billing/calculateYearlyAmount.ts` en `tests/code/billing/shiftNoLessonPeriod.test.ts`.
+- **Augustus** — blijft een pure skip (zomerpauze, geen shift-mutatie).
 
 ## 8. Stripe dashboard checklist
 
@@ -136,17 +141,27 @@ Allemaal alleen beschikbaar in edge functions via `Deno.env.get(...)` — **nooi
 ## 10. Lokaal testen
 
 ```bash
-# Webhook forwarden naar lokale dev
-stripe listen --forward-to https://<project-ref>.supabase.co/functions/v1/stripe-webhook
+# Webhook forwarden naar je lokale Supabase functions runtime
+stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook
+# (of naar een remote preview branch)
+stripe listen --forward-to https://<preview-ref>.supabase.co/functions/v1/stripe-webhook
 
-# Unit tests voor billing-logica
+# Unit tests voor billing-logica (Deno)
 cd supabase/functions/_shared && deno test billing_test.ts
+
+# Verschuif-logica tests (Bun, app-side)
+bun test tests/code/billing/shiftNoLessonPeriod.test.ts
 ```
 
 Stripe testkaarten / iDEAL-simulator: zie [Stripe testing docs](https://stripe.com/docs/testing).
 
-## 11. Bekende beperkingen / TODO
+## 11. Gerelateerde features
 
-- **Per-situatie mailtemplates** (nieuwe overeenkomst, herinnering, mislukte betaling, mandaat ingetrokken) — wachten op Resend keys; flow is voorbereid in `send-incasso-invite`.
+- **Rapportage** — `AccountingReport.tsx` + `get_hours_report()` (zie `src/pages/AccountingReport.tsx` en migratie `20260604113315`) leveren een per-docent / per-leerling uitsplitsing met BTW per lesdatum. Bron-data: agenda + `accounting_settings`.
+- **App-mailtemplates** — alle incasso-gerelateerde mails lopen via `send-template-email` met events uit `_shared/email-events.ts`. Templates worden beheerd in **Settings → E-mailtemplates** (zie [email-templates.md](../email-templates.md)).
+- **Annuleringen** — `cancellation_type` (`'student' | 'teacher'`) bepaalt of een geannuleerde les meetelt voor de berekening. Zie geheugen `mem://logic/lesson-cancellation-requirements`.
+
+## 12. Bekende beperkingen / TODO
+
 - **Prijswijzigingen Stripe → DB** worden niet teruggeschreven naar `lesson_agreements.price_per_lesson`; admin past tarief in de app aan en klikt "Pas nieuwe tarieven toe".
 - **`force-start-subscription`** is alleen voor dev/test (UI-knop achter `import.meta.env.DEV`).
