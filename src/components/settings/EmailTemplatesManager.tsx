@@ -46,7 +46,7 @@ function TemplateEditorBody({
 		setSubject(row.subject);
 		setBodyHtml(row.body_html);
 		setIsEnabled(row.is_enabled);
-	}, [row.event_key, row.subject, row.body_html, row.is_enabled]);
+	}, [row.subject, row.body_html, row.is_enabled]);
 
 	const previewSubject = renderPreview(subject, event.previewData);
 	const previewBody = renderPreview(bodyHtml, event.previewData);
