@@ -408,7 +408,7 @@ export function generateAgendaEvents(
 			// Deviations (admin-set) ignore the shift entirely.
 			let shiftedDate: Date | null = null;
 			let isShifted = false;
-			let skipThisOccurrence = false;
+			let outsideRenderWindow = false;
 
 			if (isLessonSource && !effective) {
 				shiftedDate = new Date(current);
@@ -427,24 +427,24 @@ export function generateAgendaEvents(
 					addIntervalHelper(current, frequency);
 					continue;
 				}
-				// Augustus blijft pure skip (geen shift-mutatie, geen les).
+				// Augustus wordt overgeslagen (zomerpauze, geen shift-mutatie).
 				if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
 					addIntervalHelper(current, frequency);
 					continue;
 				}
 				// Outside render window: skip rendering but keep iterating to accumulate shift.
 				if (shiftedDate < rangeStart || shiftedDate > rangeEnd) {
-					skipThisOccurrence = true;
+					outsideRenderWindow = true;
 				}
 			} else {
 				// Non-lesson sources OR deviation present: use original `current` for the
 				// in-range check; deviation branch will compute its own actual date below.
 				if (current < rangeStart) {
-					skipThisOccurrence = true;
+					outsideRenderWindow = true;
 				}
 			}
 
-			if (skipThisOccurrence) {
+			if (outsideRenderWindow) {
 				addIntervalHelper(current, frequency);
 				continue;
 			}

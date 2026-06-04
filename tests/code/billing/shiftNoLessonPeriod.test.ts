@@ -5,7 +5,7 @@
  * - Een lesvrije periode verschuift alle volgende lessen met exact de lengte van
  *   de periode (in dagen).
  * - Lessen die door verschuiving voorbij de harde einddatum vallen, vervallen.
- * - Augustus blijft puur skip (geen shift-mutatie).
+ * - Augustus wordt overgeslagen zonder de shift te muteren (zomerpauze).
  * - Meerdere periodes cumuleren.
  */
 import { describe, expect, it } from 'bun:test';
@@ -50,7 +50,7 @@ describe('calculateYearlyAmount – verschuif-logica', () => {
 		expect(result.lessonsCount).toBeGreaterThan(0);
 	});
 
-	it('augustus blijft skip zonder shift te muteren', () => {
+	it('augustus wordt overgeslagen zonder de shift te muteren', () => {
 		const result = calculateYearlyAmount({
 			periodStart: '2026-07-06',
 			periodEnd: '2026-09-30',

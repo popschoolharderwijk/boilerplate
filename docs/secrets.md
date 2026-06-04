@@ -2,111 +2,86 @@
 
 ## GitHub Secrets
 
-Nodig voor CI workflows. Voeg ze toe via:
-
-**[GitHub Actions Secrets → popschoolharderwijk/mcp](https://github.com/popschoolharderwijk/mcp/settings/secrets/actions)**
-
-Voor de PR-test (code + Supabase) moeten deze **6 secrets** zijn ingevuld:
+Nodig voor CI workflows. Beheer via **[GitHub Actions Secrets → popschoolharderwijk/mcp](https://github.com/popschoolharderwijk/mcp/settings/secrets/actions)**.
 
 | Secret | Waarde | Gebruik |
 |--------|--------|---------|
-| `SUPABASE_ACCESS_TOKEN` | Access token van Supabase (Account → Access Tokens) | `supabase link` en `supabase db reset --linked` in CI |
-| `SUPABASE_PROJECT_REF` | Project ref van **mcp-test** (bijv. `jserlqacarlgtdzrblic`) | CI linkt hiernaar; `supabase db reset --linked` gebruikt dit project |
-| `SUPABASE_URL` | API URL van **mcp-test** (bijv. `https://jserlqacarlgtdzrblic.supabase.co`) | Omgeving voor `bun test` in CI |
-| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Anon key van **mcp-test** | Omgeving voor `bun test` in CI |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key van **mcp-test** | Omgeving voor `bun test` in CI |
-| `RESEND_API_KEY` | API key van Resend.com | SMTP/e-mail (o.a. OTP) in het gekoppelde Supabase-project; ook lokaal nodig voor `supabase config push --linked`. |
+| `SUPABASE_ACCESS_TOKEN` | Access token uit Supabase (Account → Access Tokens) | `supabase link` + `db reset --linked` in CI |
+| `SUPABASE_PROJECT_REF` | Project ref van **mcp-test** (`jserlqacarlgtdzrblic`) | CI linkt hiernaar |
+| `SUPABASE_URL` | API URL van mcp-test | Test runtime |
+| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Anon key van mcp-test | Test runtime |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key van mcp-test | Test runtime |
+| `RESEND_API_KEY` | API key van Resend.com | SMTP voor Supabase Auth + `send-template-email` |
 
-Verkrijgen Resend: https://resend.com/api-keys
+Zie [cicd-workflows.md](./cicd-workflows.md) voor de PR-workflow (**pull-request-test-code-and-supabase**) die deze secrets gebruikt.
 
-### Waar haal je de waarden vandaan?
-
-- **SUPABASE_ACCESS_TOKEN**: [Supabase Dashboard](https://supabase.com/dashboard) → avatar → Account settings → Access Tokens → Generate new token
-- **SUPABASE_PROJECT_REF**, **SUPABASE_URL**, **SUPABASE_PUBLISHABLE_DEFAULT_KEY**, **SUPABASE_SERVICE_ROLE_KEY**: Supabase Dashboard → test project → Settings → API (project ref = deel vóór `.supabase.co` in de URL)
-- **RESEND_API_KEY**: https://resend.com/api-keys
-
-De PR-workflow (**pull-request-test-code-and-supabase**) gebruikt **mcp-test**: de workflow linkt via `SUPABASE_PROJECT_REF` naar mcp-test, voert `supabase db reset --linked --yes` uit (schone database + seed), en draait daar alle tests. Zie [cicd-workflows.md](./cicd-workflows.md) en `.github/workflows/pull-request-test-code-and-supabase.yml`.
-
-⚠️ **Commit nooit production of test keys!** Credentials horen in GitHub Secrets of Supabase Dashboard.
+⚠️ **Commit nooit production of test keys!**
 
 ---
 
 ## Supabase Edge Function Secrets
 
-Voor Edge Functions. Toe te voegen via:
-**Supabase Dashboard** → Project Settings → Edge Functions → Secrets
+Beheer via **Supabase Dashboard → Project Settings → Edge Functions → Secrets** (per omgeving).
 
-### Automatisch Beschikbare Environment Variables
+### Automatisch beschikbaar
 
-Supabase stelt automatisch de volgende environment variables beschikbaar in Edge Functions (geen handmatige configuratie nodig):
+| Variabele | Bron |
+|-----------|------|
+| `SUPABASE_URL` | Auto-injected |
+| `SUPABASE_ANON_KEY` | Auto-injected |
+| `SUPABASE_SERVICE_ROLE_KEY` | Auto-injected |
+| `SUPABASE_DB_URL` | Auto-injected |
 
-| Variabele | Beschrijving | Bron |
-|-----------|--------------|------|
-| `SUPABASE_URL` | Project API URL | Automatisch geïnjecteerd |
-| `SUPABASE_ANON_KEY` | Anon/public key | Automatisch geïnjecteerd |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | Automatisch geïnjecteerd |
-| `SUPABASE_DB_URL` | Database connection string | Automatisch geïnjecteerd |
+> 💡 Lees deze via `Deno.env.get(...)`. **Nooit** met `VITE_` prefix gebruiken.
 
-> 💡 **Tip**: Deze variabelen zijn altijd beschikbaar via `Deno.env.get()`. Je hoeft ze niet handmatig toe te voegen als secrets.
+### Project-specifieke secrets
 
-### Optionele Secrets
+| Secret | Verplicht voor | Beschrijving |
+|--------|----------------|--------------|
+| `RESEND_API_KEY` | `send-template-email`, `send-incasso-invite`, `approve-signup-request`, `schedule-trial-lesson`, `submit-signup-request` | API key Resend.com voor transactionele e-mail. |
+| `STRIPE_SECRET_KEY` | Alle Stripe edge functions | Server-side Stripe key (`sk_live_...` of `sk_test_...`). |
+| `STRIPE_WEBHOOK_SECRET` | `stripe-webhook` | Signing secret van het webhook endpoint (Dashboard → Developers → Webhooks). |
 
-Voor custom configuratie kun je extra secrets toevoegen:
-
-| Secret | Beschrijving | Voorbeeld |
-|--------|--------------|-----------|
-| `CUSTOM_API_KEY` | Externe API key | Voor integraties met derde partijen |
-| `ALLOWED_ORIGINS` | Comma-separated origins voor CORS | `"http://localhost:5173,https://app.example.com"` |
-
-> ⚠️ **Belangrijk**: De automatisch beschikbare variabelen hebben **geen** `VITE_` prefix. Gebruik altijd de exacte namen zoals hierboven.
+Zie [integrations/stripe-incasso.md §9](./integrations/stripe-incasso.md) voor de Stripe Dashboard checklist en [deployment.md](./deployment.md) voor de volledige edge-function tabel.
 
 ---
 
-## Dev Login Bypass (alleen development)
+## Dev Login Bypass (alleen development/test)
 
-Voor snelle login in development omgevingen zonder Magic Link/OTP. Toe te voegen aan `.env.test` en/of `.env.development`:
+Voor snel inloggen zonder Magic Link in development. Toevoegen aan `.env.development` of `.env.test`.
 
-### Frontend variabelen (voor de Dev Login knop)
+### Frontend (Dev Login knop)
 
-| Variabele | Verplicht | Beschrijving |
-|-----------|-----------|--------------|
-| `VITE_DEV_LOGIN_PASSWORD` | Nee | Wachtwoord voor directe login (zonder = knop disabled) |
+| Variabele | Beschrijving |
+|-----------|--------------|
+| `VITE_DEV_LOGIN_PASSWORD` | Wachtwoord voor directe login (leeg → knop disabled). |
+| `VITE_DEV_LOGIN_EMAIL` | Optioneel: pre-fill van het e-mailveld. |
 
-### Script variabelen (voor `bun run create-user`)
+### Script (`bun run create-user`)
 
-| Variabele | Verplicht | Beschrijving |
-|-----------|-----------|--------------|
-| `SUPABASE_URL` | Ja | API URL van mcp-dev of mcp-test (bijv. `https://zdvscmogkfyddnnxzkdu.supabase.co`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Ja | Service role key van Supabase |
-| `DEV_LOGIN_FIRST_NAME` | Nee | Voornaam voor user metadata en profiles |
-| `DEV_LOGIN_LAST_NAME` | Nee | Achternaam voor user metadata en profiles |
+| Variabele | Beschrijving |
+|-----------|--------------|
+| `SUPABASE_URL` | API URL van mcp-dev of mcp-test. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key. |
+| `DEV_LOGIN_EMAIL`, `DEV_LOGIN_PASSWORD` | Inloggegevens van de aan te maken user. |
+| `DEV_LOGIN_FIRST_NAME`, `DEV_LOGIN_LAST_NAME` | Optioneel: profiles-velden. |
 
-**Voorbeeld `.env.test`:**
+Voorbeeld `.env.development`:
+
 ```env
-# Supabase connectie
-VITE_SUPABASE_URL=https://jserlqacarlgtdzrblic.supabase.co
-VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJ...
-
-# Dev login bypass
-VITE_DEV_LOGIN_PASSWORD=mijn-test-wachtwoord
-```
-
-**Voorbeeld `.env.development` (voor create-user script):**
-```env
-# Supabase connectie
 VITE_SUPABASE_URL=https://zdvscmogkfyddnnxzkdu.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
-
-# Voor create-user script
 SUPABASE_URL=https://zdvscmogkfyddnnxzkdu.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
+RESEND_API_KEY=re_...
 
+VITE_DEV_LOGIN_PASSWORD=mijn-dev-wachtwoord
 DEV_LOGIN_EMAIL=dev@example.com
 DEV_LOGIN_PASSWORD=mijn-dev-wachtwoord
 DEV_LOGIN_FIRST_NAME=Dev
 DEV_LOGIN_LAST_NAME=User
 ```
 
-Maak de user aan met: `bun run create-user`
+Maak de user aan met `bun run create-user`.
 
-> ⚠️ De `VITE_*` variabelen worden **nooit** gebruikt in production. De Dev Login knop wordt volledig uit production builds verwijderd via Vite's dead-code elimination.
+> ⚠️ `VITE_DEV_LOGIN_*` worden **nooit** gebruikt in production: de knop wordt door Vite's dead-code elimination verwijderd.
