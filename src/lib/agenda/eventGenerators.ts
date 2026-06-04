@@ -303,8 +303,6 @@ function addDays(date: Date, days: number): void {
 	date.setDate(date.getDate() + days);
 }
 
-
-
 /**
  * Generate calendar events from agenda_events (manual events). Uses lessonHelpers for recurrence.
  */
@@ -543,7 +541,6 @@ export function generateAgendaEvents(
 
 			addIntervalHelper(current, frequency);
 		}
-
 	}
 
 	return events;

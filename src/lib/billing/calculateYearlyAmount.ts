@@ -46,10 +46,7 @@ export interface CalculateYearlyAmountResult {
 	lessonDates: string[];
 }
 
-function findNoLessonPeriod(
-	dateStr: string,
-	periods: ReadonlyArray<NoLessonPeriod>,
-): NoLessonPeriod | undefined {
+function findNoLessonPeriod(dateStr: string, periods: ReadonlyArray<NoLessonPeriod>): NoLessonPeriod | undefined {
 	for (const p of periods) {
 		if (dateStr >= p.start_date && dateStr <= p.end_date) return p;
 	}
@@ -111,4 +108,3 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 
 	return { lessonsCount, yearlyCents, monthlyCents, leftoverCents, lessonDates };
 }
-
