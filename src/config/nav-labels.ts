@@ -1,6 +1,7 @@
 import type { IconType } from 'react-icons';
 import {
 	LuBookOpen,
+	LuCalculator,
 	LuCalendar,
 	LuCalendarOff,
 	LuChartBar,
@@ -17,6 +18,7 @@ import {
 	LuUserCog,
 	LuUsers,
 } from 'react-icons/lu';
+
 
 /**
  * Central source for navigation labels (sidebar, breadcrumbs, page titles, command palette).
