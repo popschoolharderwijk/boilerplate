@@ -4,6 +4,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemedToaster } from './components/ThemedToaster';
 import { ThemeProvider } from './components/ThemeProvider';
+import AccountingReport from './pages/AccountingReport';
 import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
