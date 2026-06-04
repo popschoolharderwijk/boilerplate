@@ -142,10 +142,7 @@ function TemplateEditorBody({
 				</div>
 				<div className="text-sm font-semibold mb-2">{previewSubject}</div>
 				{/** biome-ignore lint/security/noDangerouslySetInnerHtml: admin-only HTML preview */}
-				<div
-					className="prose prose-sm max-w-none text-sm"
-					dangerouslySetInnerHTML={{ __html: previewBody }}
-				/>
+				<div className="prose prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: previewBody }} />
 			</div>
 
 			<div className="flex flex-wrap items-end gap-3 pt-2">
