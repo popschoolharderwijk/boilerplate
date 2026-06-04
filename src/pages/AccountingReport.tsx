@@ -379,6 +379,7 @@ export default function AccountingReportPage() {
 				<PageSkeleton variant="header-and-cards" />
 			) : (
 				<DataTable
+					title="Facturen in periode"
 					data={report?.invoices ?? []}
 					columns={invoiceColumns}
 					searchPlaceholder="Zoeken op leerling, kostenplaats..."
