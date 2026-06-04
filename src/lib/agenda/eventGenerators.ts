@@ -293,10 +293,6 @@ export function findNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undef
 	return periods.find((p) => p.start_date <= dateStr && dateStr <= p.end_date);
 }
 
-function isInNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): boolean {
-	return findNoLessonPeriod(date, periods) !== undefined;
-}
-
 function noLessonPeriodLengthDays(p: NoLessonPeriod): number {
 	const start = Date.parse(`${p.start_date}T12:00:00`);
 	const end = Date.parse(`${p.end_date}T12:00:00`);
@@ -306,6 +302,7 @@ function noLessonPeriodLengthDays(p: NoLessonPeriod): number {
 function addDays(date: Date, days: number): void {
 	date.setDate(date.getDate() + days);
 }
+
 
 
 /**
