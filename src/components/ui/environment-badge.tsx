@@ -12,9 +12,9 @@ const ENV_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export function EnvironmentBadge({ className }: { className?: string }) {
-	// FIXME: Remove from production
-	//if (MODE === 'production') return null;
-
+	// Badge is bewust ook in production zichtbaar zodat admins de actieve omgeving
+	// kunnen herkennen (test / development / production). Verwijder de check niet
+	// zonder eerst af te stemmen.
 	const config = ENV_CONFIG[MODE] || { label: MODE.toUpperCase(), color: 'bg-gray-500/20 text-gray-600' };
 
 	return (

@@ -406,48 +406,48 @@ export function generateAgendaEvents(
 
 			// Determine the effective lesson date with cumulative shift applied.
 			// Deviations (admin-set) ignore the shift entirely.
-			let shiftedDate: Date | null = null;
-			let isShifted = false;
-			let skipThisOccurrence = false;
+		let shiftedDate: Date | null = null;
+		let isShifted = false;
+		let outsideRenderWindow = false;
 
-			if (isLessonSource && !effective) {
-				shiftedDate = new Date(current);
-				if (shiftDays > 0) addDays(shiftedDate, shiftDays);
-				// While the shifted date lands in a no_lesson_period, grow the shift.
-				while (true) {
-					const period = findNoLessonPeriod(shiftedDate, noLessonPeriods);
-					if (!period) break;
-					const len = noLessonPeriodLengthDays(period);
-					shiftDays += len;
-					addDays(shiftedDate, len);
-					isShifted = true;
-				}
-				// Hard end-date: shifted past the agreement end → lesson vervalt.
-				if (periodEnd && shiftedDate > periodEnd) {
-					addIntervalHelper(current, frequency);
-					continue;
-				}
-				// Augustus blijft pure skip (geen shift-mutatie, geen les).
-				if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
-					addIntervalHelper(current, frequency);
-					continue;
-				}
-				// Outside render window: skip rendering but keep iterating to accumulate shift.
-				if (shiftedDate < rangeStart || shiftedDate > rangeEnd) {
-					skipThisOccurrence = true;
-				}
-			} else {
-				// Non-lesson sources OR deviation present: use original `current` for the
-				// in-range check; deviation branch will compute its own actual date below.
-				if (current < rangeStart) {
-					skipThisOccurrence = true;
-				}
+		if (isLessonSource && !effective) {
+			shiftedDate = new Date(current);
+			if (shiftDays > 0) addDays(shiftedDate, shiftDays);
+			// While the shifted date lands in a no_lesson_period, grow the shift.
+			while (true) {
+				const period = findNoLessonPeriod(shiftedDate, noLessonPeriods);
+				if (!period) break;
+				const len = noLessonPeriodLengthDays(period);
+				shiftDays += len;
+				addDays(shiftedDate, len);
+				isShifted = true;
 			}
-
-			if (skipThisOccurrence) {
+			// Hard end-date: shifted past the agreement end → lesson vervalt.
+			if (periodEnd && shiftedDate > periodEnd) {
 				addIntervalHelper(current, frequency);
 				continue;
 			}
+			// Augustus wordt overgeslagen (zomerpauze, geen shift-mutatie).
+			if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
+				addIntervalHelper(current, frequency);
+				continue;
+			}
+			// Outside render window: skip rendering but keep iterating to accumulate shift.
+			if (shiftedDate < rangeStart || shiftedDate > rangeEnd) {
+				outsideRenderWindow = true;
+			}
+		} else {
+			// Non-lesson sources OR deviation present: use original `current` for the
+			// in-range check; deviation branch will compute its own actual date below.
+			if (current < rangeStart) {
+				outsideRenderWindow = true;
+			}
+		}
+
+		if (outsideRenderWindow) {
+			addIntervalHelper(current, frequency);
+			continue;
+		}
 
 			let start: Date;
 			let end: Date;
