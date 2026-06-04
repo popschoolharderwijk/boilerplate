@@ -2,11 +2,7 @@
  * Unit tests voor boekhouding journaalpost-generatie.
  */
 import { describe, expect, it } from 'bun:test';
-import {
-	generateCsv,
-	generateExactXml,
-	generateJournalLines,
-} from '../../../src/lib/accounting/exporters';
+import { generateCsv, generateExactXml, generateJournalLines } from '../../../src/lib/accounting/exporters';
 import type { AccountingReport, AccountingSettings } from '../../../src/lib/accounting/types';
 
 const SETTINGS: AccountingSettings = {

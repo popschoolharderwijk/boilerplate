@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { LuBan, LuCalendarCheck, LuTrash2, LuX } from 'react-icons/lu';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DeviationInfoBanner } from '@/components/agenda/DeviationInfoBanner';
 import { RecurrenceChoiceDialog, type RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog';

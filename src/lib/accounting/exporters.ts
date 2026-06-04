@@ -250,4 +250,3 @@ ${transactions.join('\n')}
 
 // Re-export for invoice list reference
 export type { AccountingInvoice };
-

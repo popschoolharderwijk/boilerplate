@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { getUserInitials } from '@/components/ui/user-display';
 import { useAgreementBillingPreview } from '@/hooks/useAgreementBillingPreview';
+import { useAuth } from '@/hooks/useAuth';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
 import { frequencyLabels } from '@/lib/frequencies';

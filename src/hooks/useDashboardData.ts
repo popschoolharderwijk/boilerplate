@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { flattenStudentWithAgreements, type PaginatedStudentsResponseRaw } from '@/types/students';
 import { getDisplayName } from '@/lib/display-name';
+import { flattenStudentWithAgreements, type PaginatedStudentsResponseRaw } from '@/types/students';
 
 export interface DashboardStats {
 	totalStudents: number;
@@ -29,7 +29,6 @@ export interface DashboardTeacher {
 	lessonTypeNames: string[];
 	availableSlotCount: number;
 }
-
 
 export function useDashboardData() {
 	const { isLoading: authLoading, isPrivileged } = useAuth();
