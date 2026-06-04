@@ -1,0 +1,140 @@
+import { useEffect, useState } from 'react';
+import { LuSave } from 'react-icons/lu';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAccountingSettings } from '@/hooks/useAccounting';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import type { AccountingSettings } from '@/lib/accounting/types';
+
+export function AccountingSettingsManager() {
+	const { isAdmin, isSiteAdmin } = useAuth();
+	const canEdit = isAdmin || isSiteAdmin;
+	const { settings, loading, reload } = useAccountingSettings();
+	const [form, setForm] = useState<AccountingSettings | null>(null);
+	const [saving, setSaving] = useState(false);
+
+	useEffect(() => {
+		if (settings) setForm(settings);
+	}, [settings]);
+
+	if (loading || !form) {
+		return (
+			<Card>
+				<CardContent className="py-8 text-center text-muted-foreground">Laden...</CardContent>
+			</Card>
+		);
+	}
+
+	const update = <K extends keyof AccountingSettings>(key: K, value: AccountingSettings[K]) => {
+		setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+	};
+
+	const handleSave = async () => {
+		if (!form || !canEdit) return;
+		setSaving(true);
+		const { error } = await supabase
+			.from('accounting_settings')
+			.update({
+				journal_code_memoriaal: form.journal_code_memoriaal,
+				journal_code_bank: form.journal_code_bank,
+				account_debiteuren: form.account_debiteuren,
+				account_omzet_under_21: form.account_omzet_under_21,
+				account_omzet_21_plus: form.account_omzet_21_plus,
+				account_btw_21: form.account_btw_21,
+				account_bank_stripe: form.account_bank_stripe,
+				btw_code_21: form.btw_code_21,
+				btw_code_exempt: form.btw_code_exempt,
+				currency: form.currency,
+				school_year_start_month: form.school_year_start_month,
+				description_template: form.description_template,
+			})
+			.eq('id', true);
+		setSaving(false);
+		if (error) {
+			toast.error(`Opslaan mislukt: ${error.message}`);
+			return;
+		}
+		toast.success('Boekhoud-instellingen opgeslagen');
+		reload();
+	};
+
+	const field = (label: string, key: keyof AccountingSettings, placeholder?: string) => (
+		<div className="space-y-1.5">
+			<Label htmlFor={`acc-${key}`}>{label}</Label>
+			<Input
+				id={`acc-${key}`}
+				value={String(form[key] ?? '')}
+				placeholder={placeholder}
+				disabled={!canEdit}
+				onChange={(e) => update(key, e.target.value as AccountingSettings[typeof key])}
+			/>
+		</div>
+	);
+
+	return (
+		<div className="space-y-6">
+			<Card>
+				<CardHeader>
+					<CardTitle>Dagboeken</CardTitle>
+					<CardDescription>Exact Online dagboek-codes</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('Memoriaal-dagboek', 'journal_code_memoriaal', 'bv. 90')}
+					{field('Bank-dagboek (Stripe)', 'journal_code_bank', 'bv. 20')}
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Grootboekrekeningen</CardTitle>
+					<CardDescription>Rekeningnummers zoals ingesteld in Exact</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('Debiteuren', 'account_debiteuren', 'bv. 1300')}
+					{field('Bank Stripe', 'account_bank_stripe', 'bv. 1100')}
+					{field('Omzet <21 (vrijgesteld)', 'account_omzet_under_21', 'bv. 8000')}
+					{field('Omzet 21+ (excl. BTW)', 'account_omzet_21_plus', 'bv. 8010')}
+					{field('BTW af te dragen 21%', 'account_btw_21', 'bv. 1500')}
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>BTW-codes & overig</CardTitle>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('BTW-code 21%', 'btw_code_21', 'bv. VH')}
+					{field('BTW-code vrijgesteld', 'btw_code_exempt', 'bv. 0')}
+					{field('Valuta', 'currency', 'EUR')}
+					<div className="space-y-1.5">
+						<Label htmlFor="acc-month">Boekjaar startmaand</Label>
+						<Input
+							id="acc-month"
+							type="number"
+							min={1}
+							max={12}
+							disabled={!canEdit}
+							value={form.school_year_start_month}
+							onChange={(e) =>
+								update('school_year_start_month', Math.min(12, Math.max(1, Number(e.target.value) || 1)))
+							}
+						/>
+					</div>
+				</CardContent>
+			</Card>
+
+			{canEdit && (
+				<div className="flex justify-end">
+					<Button onClick={handleSave} disabled={saving}>
+						<LuSave className="h-4 w-4 mr-2" />
+						{saving ? 'Opslaan...' : 'Opslaan'}
+					</Button>
+				</div>
+			)}
+		</div>
+	);
+}
