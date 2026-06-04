@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_settings: {
+        Row: {
+          account_bank_stripe: string
+          account_btw_21: string
+          account_debiteuren: string
+          account_omzet_21_plus: string
+          account_omzet_under_21: string
+          btw_code_21: string
+          btw_code_exempt: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          description_template: string
+          id: boolean
+          journal_code_bank: string
+          journal_code_memoriaal: string
+          school_year_start_month: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_bank_stripe?: string
+          account_btw_21?: string
+          account_debiteuren?: string
+          account_omzet_21_plus?: string
+          account_omzet_under_21?: string
+          btw_code_21?: string
+          btw_code_exempt?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description_template?: string
+          id?: boolean
+          journal_code_bank?: string
+          journal_code_memoriaal?: string
+          school_year_start_month?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_bank_stripe?: string
+          account_btw_21?: string
+          account_debiteuren?: string
+          account_omzet_21_plus?: string
+          account_omzet_under_21?: string
+          btw_code_21?: string
+          btw_code_exempt?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description_template?: string
+          id?: boolean
+          journal_code_bank?: string
+          journal_code_memoriaal?: string
+          school_year_start_month?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       agenda_event_deviations: {
         Row: {
           actual_date: string
@@ -1389,6 +1449,10 @@ export type Database = {
         Returns: string
       }
       function_exists: { Args: { p_regprocedure: string }; Returns: boolean }
+      get_accounting_report: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       get_agenda_event_owner: { Args: { ev_id: string }; Returns: string }
       get_hours_report: {
         Args: {
