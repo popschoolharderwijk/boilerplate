@@ -10,7 +10,7 @@ import {
 	subYears,
 } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { LuDownload, LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
+import { LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
