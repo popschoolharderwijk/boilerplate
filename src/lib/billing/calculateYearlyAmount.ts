@@ -46,11 +46,26 @@ export interface CalculateYearlyAmountResult {
 	lessonDates: string[];
 }
 
-function isInNoLessonPeriod(dateStr: string, periods: ReadonlyArray<NoLessonPeriod>): boolean {
+function findNoLessonPeriod(dateStr: string, periods: ReadonlyArray<NoLessonPeriod>): NoLessonPeriod | undefined {
 	for (const p of periods) {
-		if (dateStr >= p.start_date && dateStr <= p.end_date) return true;
+		if (dateStr >= p.start_date && dateStr <= p.end_date) return p;
 	}
-	return false;
+	return undefined;
+}
+
+function periodLengthDays(p: NoLessonPeriod): number {
+	const start = Date.parse(`${p.start_date}T12:00:00`);
+	const end = Date.parse(`${p.end_date}T12:00:00`);
+	return Math.round((end - start) / 86_400_000) + 1;
+}
+
+function shiftDateStr(dateStr: string, days: number): string {
+	const d = new Date(`${dateStr}T12:00:00`);
+	d.setDate(d.getDate() + days);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
 }
 
 export function calculateYearlyAmount(input: CalculateYearlyAmountInput): CalculateYearlyAmountResult {
@@ -67,8 +82,24 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 	const end = new Date(`${periodEnd}T12:00:00`);
 	const allDates = getOccurrenceDatesInRange(dayOfWeek, start, end, frequency);
 
-	// Filter augustus + lesvrije periodes weg.
-	const lessonDates = allDates.filter((d) => !isNonBillingMonthString(d) && !isInNoLessonPeriod(d, noLessonPeriods));
+	// Pas verschuif-logica toe: een lesvrije periode duwt alle volgende lessen door
+	// met exact de lengte van de periode. Lessen die voorbij `periodEnd` schuiven
+	// vervallen. Augustus blijft puur skip (geen shift, geen les).
+	const lessonDates: string[] = [];
+	let shiftDays = 0;
+	for (const original of allDates) {
+		let actual = shiftDays > 0 ? shiftDateStr(original, shiftDays) : original;
+		while (true) {
+			const period = findNoLessonPeriod(actual, noLessonPeriods);
+			if (!period) break;
+			const len = periodLengthDays(period);
+			shiftDays += len;
+			actual = shiftDateStr(actual, len);
+		}
+		if (actual > periodEnd) continue; // valt voorbij harde einddatum
+		if (isNonBillingMonthString(actual)) continue; // augustus blijft skip
+		lessonDates.push(actual);
+	}
 
 	const lessonsCount = lessonDates.length;
 	const yearlyCents = lessonsCount * pricePerLessonCents;
