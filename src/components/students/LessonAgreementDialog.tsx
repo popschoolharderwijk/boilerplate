@@ -46,8 +46,9 @@ export function LessonAgreementDialog({
 	studentUserId,
 	lessonTypeId,
 }: LessonAgreementDialogProps) {
+	const { isPrivileged } = useAuth();
 	const previewInput = useMemo(() => {
-		if (!agreement || !studentUserId || !lessonTypeId) return null;
+		if (!agreement || !studentUserId || !lessonTypeId || !isPrivileged) return null;
 		return {
 			id: agreement.id,
 			student_user_id: studentUserId,
