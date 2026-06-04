@@ -25,7 +25,7 @@ function renderPreview(template: string, vars: Record<string, string>): string {
 	});
 }
 
-function TemplateEditor({
+function TemplateEditorBody({
 	event,
 	row,
 	onSaved,
@@ -94,99 +94,91 @@ function TemplateEditor({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-start justify-between gap-4">
+		<CardContent className="space-y-4 border-t pt-4">
+			<div className="flex justify-end">
+				<Button
+					type="button"
+					variant={isEnabled ? 'default' : 'outline'}
+					size="sm"
+					onClick={() => setIsEnabled((v) => !v)}
+				>
+					{isEnabled ? 'Actief' : 'Uitgeschakeld'}
+				</Button>
+			</div>
+
+			<div>
+				<Label className="text-xs text-muted-foreground">Beschikbare variabelen</Label>
+				<div className="mt-1 flex flex-wrap gap-1.5">
+					{event.variables.map((v) => (
+						<code key={v} className="rounded bg-muted px-1.5 py-0.5 text-xs">{`{{${v}}}`}</code>
+					))}
+				</div>
+			</div>
+
+			<div>
+				<Label htmlFor={`subject-${event.key}`}>Onderwerp</Label>
+				<Input
+					id={`subject-${event.key}`}
+					value={subject}
+					onChange={(e) => setSubject(e.target.value)}
+					className="mt-1"
+				/>
+			</div>
+
+			<div>
+				<Label htmlFor={`body-${event.key}`}>Inhoud (HTML)</Label>
+				<Textarea
+					id={`body-${event.key}`}
+					value={bodyHtml}
+					onChange={(e) => setBodyHtml(e.target.value)}
+					className="mt-1 font-mono text-sm min-h-[200px]"
+				/>
+			</div>
+
+			<div className="rounded-md border bg-muted/30 p-4">
+				<div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+					<LuRefreshCw className="h-3 w-3" />
+					Preview met voorbeeldgegevens
+				</div>
+				<div className="text-sm font-semibold mb-2">{previewSubject}</div>
+				{/** biome-ignore lint/security/noDangerouslySetInnerHtml: admin-only HTML preview */}
+				<div
+					className="prose prose-sm max-w-none text-sm"
+					dangerouslySetInnerHTML={{ __html: previewBody }}
+				/>
+			</div>
+
+			<div className="flex flex-wrap items-end gap-3 pt-2">
+				<Button onClick={handleSave} disabled={saving}>
+					{saving ? 'Opslaan…' : 'Opslaan'}
+				</Button>
+				<div className="flex items-end gap-2">
 					<div>
-						<CardTitle>{event.label}</CardTitle>
-						<CardDescription>{event.description}</CardDescription>
+						<Label htmlFor={`test-${event.key}`} className="text-xs">
+							Testmail naar
+						</Label>
+						<Input
+							id={`test-${event.key}`}
+							type="email"
+							value={testEmail}
+							onChange={(e) => setTestEmail(e.target.value)}
+							className="mt-1 w-64"
+						/>
 					</div>
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							variant={isEnabled ? 'default' : 'outline'}
-							size="sm"
-							onClick={() => setIsEnabled((v) => !v)}
-						>
-							{isEnabled ? 'Actief' : 'Uitgeschakeld'}
-						</Button>
-					</div>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div>
-					<Label className="text-xs text-muted-foreground">Beschikbare variabelen</Label>
-					<div className="mt-1 flex flex-wrap gap-1.5">
-						{event.variables.map((v) => (
-							<code key={v} className="rounded bg-muted px-1.5 py-0.5 text-xs">{`{{${v}}}`}</code>
-						))}
-					</div>
-				</div>
-
-				<div>
-					<Label htmlFor={`subject-${event.key}`}>Onderwerp</Label>
-					<Input
-						id={`subject-${event.key}`}
-						value={subject}
-						onChange={(e) => setSubject(e.target.value)}
-						className="mt-1"
-					/>
-				</div>
-
-				<div>
-					<Label htmlFor={`body-${event.key}`}>Inhoud (HTML)</Label>
-					<Textarea
-						id={`body-${event.key}`}
-						value={bodyHtml}
-						onChange={(e) => setBodyHtml(e.target.value)}
-						className="mt-1 font-mono text-sm min-h-[200px]"
-					/>
-				</div>
-
-				<div className="rounded-md border bg-muted/30 p-4">
-					<div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-						<LuRefreshCw className="h-3 w-3" />
-						Preview met voorbeeldgegevens
-					</div>
-					<div className="text-sm font-semibold mb-2">{previewSubject}</div>
-					{/** biome-ignore lint/security/noDangerouslySetInnerHtml: admin-only HTML preview */}
-					<div
-						className="prose prose-sm max-w-none text-sm"
-						dangerouslySetInnerHTML={{ __html: previewBody }}
-					/>
-				</div>
-
-				<div className="flex flex-wrap items-end gap-3 pt-2">
-					<Button onClick={handleSave} disabled={saving}>
-						{saving ? 'Opslaan…' : 'Opslaan'}
+					<Button variant="outline" onClick={handleSendTest} disabled={sendingTest}>
+						<LuMail className="mr-2 h-4 w-4" />
+						{sendingTest ? 'Versturen…' : 'Verstuur testmail'}
 					</Button>
-					<div className="flex items-end gap-2">
-						<div>
-							<Label htmlFor={`test-${event.key}`} className="text-xs">
-								Testmail naar
-							</Label>
-							<Input
-								id={`test-${event.key}`}
-								type="email"
-								value={testEmail}
-								onChange={(e) => setTestEmail(e.target.value)}
-								className="mt-1 w-64"
-							/>
-						</div>
-						<Button variant="outline" onClick={handleSendTest} disabled={sendingTest}>
-							<LuMail className="mr-2 h-4 w-4" />
-							{sendingTest ? 'Versturen…' : 'Verstuur testmail'}
-						</Button>
-					</div>
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</CardContent>
 	);
 }
 
 export function EmailTemplatesManager() {
 	const events = listEmailEvents();
 	const [rows, setRows] = useState<Record<string, TemplateRow> | null>(null);
+	const [activeKey, setActiveKey] = useState<string | null>(null);
 
 	useEffect(() => {
 		(async () => {
@@ -207,9 +199,11 @@ export function EmailTemplatesManager() {
 	if (!rows) return <Skeleton className="h-64 w-full" />;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-3">
 			{events.map((event) => {
 				const row = rows[event.key];
+				const isOpen = activeKey === event.key;
+
 				if (!row) {
 					return (
 						<Card key={event.key}>
@@ -223,13 +217,48 @@ export function EmailTemplatesManager() {
 						</Card>
 					);
 				}
+
 				return (
-					<TemplateEditor
-						key={event.key}
-						event={event}
-						row={row}
-						onSaved={(r) => setRows((prev) => ({ ...(prev ?? {}), [event.key]: r }))}
-					/>
+					<Card key={event.key}>
+						<button
+							type="button"
+							onClick={() => setActiveKey(isOpen ? null : event.key)}
+							className="w-full text-left"
+							aria-expanded={isOpen}
+						>
+							<CardHeader className="hover:bg-muted/40 transition-colors rounded-t-lg">
+								<div className="flex items-start justify-between gap-4">
+									<div className="flex items-start gap-3 min-w-0">
+										{isOpen ? (
+											<LuChevronDown className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
+										) : (
+											<LuChevronRight className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />
+										)}
+										<div className="min-w-0">
+											<CardTitle>{event.label}</CardTitle>
+											<CardDescription>{event.description}</CardDescription>
+										</div>
+									</div>
+									<span
+										className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+											row.is_enabled
+												? 'bg-primary/10 text-primary'
+												: 'bg-muted text-muted-foreground'
+										}`}
+									>
+										{row.is_enabled ? 'Actief' : 'Uitgeschakeld'}
+									</span>
+								</div>
+							</CardHeader>
+						</button>
+						{isOpen && (
+							<TemplateEditorBody
+								event={event}
+								row={row}
+								onSaved={(r) => setRows((prev) => ({ ...(prev ?? {}), [event.key]: r }))}
+							/>
+						)}
+					</Card>
 				);
 			})}
 		</div>
