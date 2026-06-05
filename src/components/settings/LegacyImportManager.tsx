@@ -58,9 +58,10 @@ function errorsToCsv(errors: RowError[]): string {
 	const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
 	return (
 		header +
-		errors.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => csvEscape(String(v))).join(',')).join('\n')
+		errors
+			.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => csvEscape(String(v))).join(','))
+			.join('\n')
 	);
-
 }
 
 export function LegacyImportManager() {
