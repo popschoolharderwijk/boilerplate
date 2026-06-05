@@ -55,11 +55,12 @@ function fileToBase64(file: File): Promise<string> {
 
 function errorsToCsv(errors: RowError[]): string {
 	const header = 'tab,row,field,message\n';
-	const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+	const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
 	return (
 		header +
-		errors.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => escape(String(v))).join(',')).join('\n')
+		errors.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => csvEscape(String(v))).join(',')).join('\n')
 	);
+
 }
 
 export function LegacyImportManager() {
