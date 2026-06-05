@@ -78,18 +78,17 @@ const agreementSchema = z.object({
 	day_of_week: z.coerce.number().int().min(0).max(6),
 	start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
 	start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-	end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal('')),
+	end_date: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/)
+		.optional()
+		.nullable()
+		.or(z.literal('')),
 	notes: z.string().optional().nullable(),
 	signup_source: z.string().optional().nullable(),
 });
 
-const TABS = [
-	'lesson_types',
-	'lesson_type_options',
-	'teachers',
-	'students',
-	'lesson_agreements',
-] as const;
+const TABS = ['lesson_types', 'lesson_type_options', 'teachers', 'students', 'lesson_agreements'] as const;
 type Tab = (typeof TABS)[number];
 
 interface RowError {
@@ -129,7 +128,16 @@ function sheetRows(wb: XLSX.WorkBook, name: string): Record<string, unknown>[] {
 function buildTemplate(): Uint8Array {
 	const wb = XLSX.utils.book_new();
 	const headers: Record<Tab, string[]> = {
-		lesson_types: ['legacy_id', 'name', 'icon', 'color', 'is_group_lesson', 'cost_center', 'description', 'is_active'],
+		lesson_types: [
+			'legacy_id',
+			'name',
+			'icon',
+			'color',
+			'is_group_lesson',
+			'cost_center',
+			'description',
+			'is_active',
+		],
 		lesson_type_options: [
 			'legacy_id',
 			'lesson_type_legacy_id',
@@ -236,30 +244,33 @@ function validateWorkbook(wb: XLSX.WorkBook): { rows: Record<Tab, unknown[]>; er
 			});
 		}
 	});
-	(out.lesson_agreements as { student_legacy_id: string; teacher_legacy_id: string; lesson_type_legacy_id: string }[]).forEach(
-		(row, idx) => {
-			if (!studentIds.has(row.student_legacy_id))
-				errors.push({ tab: 'lesson_agreements', row: idx + 2, field: 'student_legacy_id', message: 'Onbekend' });
-			if (!teacherIds.has(row.teacher_legacy_id))
-				errors.push({ tab: 'lesson_agreements', row: idx + 2, field: 'teacher_legacy_id', message: 'Onbekend' });
-			if (!lessonTypeIds.has(row.lesson_type_legacy_id))
-				errors.push({ tab: 'lesson_agreements', row: idx + 2, field: 'lesson_type_legacy_id', message: 'Onbekend' });
-		},
-	);
+	(
+		out.lesson_agreements as {
+			student_legacy_id: string;
+			teacher_legacy_id: string;
+			lesson_type_legacy_id: string;
+		}[]
+	).forEach((row, idx) => {
+		if (!studentIds.has(row.student_legacy_id))
+			errors.push({ tab: 'lesson_agreements', row: idx + 2, field: 'student_legacy_id', message: 'Onbekend' });
+		if (!teacherIds.has(row.teacher_legacy_id))
+			errors.push({ tab: 'lesson_agreements', row: idx + 2, field: 'teacher_legacy_id', message: 'Onbekend' });
+		if (!lessonTypeIds.has(row.lesson_type_legacy_id))
+			errors.push({
+				tab: 'lesson_agreements',
+				row: idx + 2,
+				field: 'lesson_type_legacy_id',
+				message: 'Onbekend',
+			});
+	});
 	return { rows: out, errors };
 }
 
 // ---------- Legacy mapping helpers ----------
 
-async function getMapping(
-	admin: SupabaseClient,
-	entity: string,
-): Promise<Map<string, string>> {
+async function getMapping(admin: SupabaseClient, entity: string): Promise<Map<string, string>> {
 	const map = new Map<string, string>();
-	const { data, error } = await admin
-		.from('legacy_ids')
-		.select('legacy_id, new_id')
-		.eq('entity_type', entity);
+	const { data, error } = await admin.from('legacy_ids').select('legacy_id, new_id').eq('entity_type', entity);
 	if (error) throw error;
 	for (const r of data ?? []) map.set(r.legacy_id, r.new_id);
 	return map;
@@ -402,25 +413,21 @@ async function upsertProfile(
 	lastName: string | null,
 	phone: string | null,
 ) {
-	const { error } = await admin
-		.from('profiles')
-		.upsert(
-			{
-				user_id: userId,
-				email,
-				first_name: firstName,
-				last_name: lastName,
-				phone_number: phone,
-			},
-			{ onConflict: 'user_id' },
-		);
+	const { error } = await admin.from('profiles').upsert(
+		{
+			user_id: userId,
+			email,
+			first_name: firstName,
+			last_name: lastName,
+			phone_number: phone,
+		},
+		{ onConflict: 'user_id' },
+	);
 	if (error) throw error;
 }
 
 async function upsertRole(admin: SupabaseClient, userId: string, role: 'student' | 'teacher') {
-	const { error } = await admin
-		.from('user_roles')
-		.upsert({ user_id: userId, role }, { onConflict: 'user_id,role' });
+	const { error } = await admin.from('user_roles').upsert({ user_id: userId, role }, { onConflict: 'user_id,role' });
 	if (error) throw error;
 }
 
@@ -435,25 +442,48 @@ async function importTeachers(
 	const summary: ImportSummary = { tab: 'teachers', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const userId = teacherMap.get(row.legacy_id) ?? (await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
-			await upsertProfile(admin, userId, row.email, row.first_name ?? null, row.last_name ?? null, row.phone_number ?? null);
+			const userId =
+				teacherMap.get(row.legacy_id) ??
+				(await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
+			await upsertProfile(
+				admin,
+				userId,
+				row.email,
+				row.first_name ?? null,
+				row.last_name ?? null,
+				row.phone_number ?? null,
+			);
 			await upsertRole(admin, userId, 'teacher');
 			const { error: tErr } = await admin
 				.from('teachers')
-				.upsert({ user_id: userId, bio: row.bio ?? null, is_active: row.is_active ?? true }, { onConflict: 'user_id' });
+				.upsert(
+					{ user_id: userId, bio: row.bio ?? null, is_active: row.is_active ?? true },
+					{ onConflict: 'user_id' },
+				);
 			if (tErr) throw tErr;
 			// Lesson type links
 			if (row.lesson_type_legacy_ids) {
-				const wantedLegacyIds = row.lesson_type_legacy_ids.split('|').map((s) => s.trim()).filter(Boolean);
+				const wantedLegacyIds = row.lesson_type_legacy_ids
+					.split('|')
+					.map((s) => s.trim())
+					.filter(Boolean);
 				for (const lid of wantedLegacyIds) {
 					const ltId = typeMap.get(lid);
 					if (!ltId) {
-						errors.push({ tab: 'teachers', row: i + 2, field: 'lesson_type_legacy_ids', message: `Onbekend: ${lid}` });
+						errors.push({
+							tab: 'teachers',
+							row: i + 2,
+							field: 'lesson_type_legacy_ids',
+							message: `Onbekend: ${lid}`,
+						});
 						continue;
 					}
 					await admin
 						.from('teacher_lesson_types')
-						.upsert({ teacher_user_id: userId, lesson_type_id: ltId }, { onConflict: 'teacher_user_id,lesson_type_id' });
+						.upsert(
+							{ teacher_user_id: userId, lesson_type_id: ltId },
+							{ onConflict: 'teacher_user_id,lesson_type_id' },
+						);
 				}
 			}
 			if (!teacherMap.has(row.legacy_id)) {
@@ -481,26 +511,33 @@ async function importStudents(
 	const summary: ImportSummary = { tab: 'students', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const userId = studentMap.get(row.legacy_id) ?? (await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
-			await upsertProfile(admin, userId, row.email, row.first_name ?? null, row.last_name ?? null, row.phone_number ?? null);
+			const userId =
+				studentMap.get(row.legacy_id) ??
+				(await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
+			await upsertProfile(
+				admin,
+				userId,
+				row.email,
+				row.first_name ?? null,
+				row.last_name ?? null,
+				row.phone_number ?? null,
+			);
 			await upsertRole(admin, userId, 'student');
-			const { error: sErr } = await admin
-				.from('students')
-				.upsert(
-					{
-						user_id: userId,
-						date_of_birth: row.date_of_birth ?? null,
-						parent_name: row.parent_name ?? null,
-						parent_email: row.parent_email && row.parent_email !== '' ? row.parent_email : null,
-						parent_phone_number: row.parent_phone_number ?? null,
-						debtor_info_same_as_student: row.debtor_info_same_as_student ?? true,
-						debtor_name: row.debtor_name ?? null,
-						debtor_address: row.debtor_address ?? null,
-						debtor_postal_code: row.debtor_postal_code ?? null,
-						debtor_city: row.debtor_city ?? null,
-					},
-					{ onConflict: 'user_id' },
-				);
+			const { error: sErr } = await admin.from('students').upsert(
+				{
+					user_id: userId,
+					date_of_birth: row.date_of_birth ?? null,
+					parent_name: row.parent_name ?? null,
+					parent_email: row.parent_email && row.parent_email !== '' ? row.parent_email : null,
+					parent_phone_number: row.parent_phone_number ?? null,
+					debtor_info_same_as_student: row.debtor_info_same_as_student ?? true,
+					debtor_name: row.debtor_name ?? null,
+					debtor_address: row.debtor_address ?? null,
+					debtor_postal_code: row.debtor_postal_code ?? null,
+					debtor_city: row.debtor_city ?? null,
+				},
+				{ onConflict: 'user_id' },
+			);
 			if (sErr) throw sErr;
 			if (!studentMap.has(row.legacy_id)) {
 				await saveMapping(admin, 'student', row.legacy_id, userId, importedBy);
@@ -533,7 +570,8 @@ async function importAgreements(
 			const studentId = studentMap.get(row.student_legacy_id);
 			const teacherId = teacherMap.get(row.teacher_legacy_id);
 			const typeId = typeMap.get(row.lesson_type_legacy_id);
-			if (!studentId || !teacherId || !typeId) throw new Error('Onbekende referentie (student/teacher/lesson_type)');
+			if (!studentId || !teacherId || !typeId)
+				throw new Error('Onbekende referentie (student/teacher/lesson_type)');
 			const payload = {
 				student_user_id: studentId,
 				teacher_user_id: teacherId,
@@ -584,7 +622,10 @@ Deno.serve(async (req) => {
 			global: { headers: { Authorization: authHeader } },
 			auth: { autoRefreshToken: false, persistSession: false },
 		});
-		const { data: { user }, error: authErr } = await userClient.auth.getUser();
+		const {
+			data: { user },
+			error: authErr,
+		} = await userClient.auth.getUser();
 		if (authErr || !user) return json({ error: 'Invalid token' }, 401);
 
 		const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
@@ -618,7 +659,9 @@ Deno.serve(async (req) => {
 
 		if (errors.length > 0) return json({ error: 'Validatie faalt; fix eerst', errors }, 400);
 
-		const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+		const admin = createClient(supabaseUrl, serviceKey, {
+			auth: { autoRefreshToken: false, persistSession: false },
+		});
 
 		const typeMap = await getMapping(admin, 'lesson_type');
 		const optionMap = await getMapping(admin, 'lesson_type_option');
@@ -628,7 +671,15 @@ Deno.serve(async (req) => {
 
 		const importErrors: RowError[] = [];
 		const summaries: ImportSummary[] = [];
-		summaries.push(await importLessonTypes(admin, rows.lesson_types as z.infer<typeof lessonTypeSchema>[], typeMap, user.id, importErrors));
+		summaries.push(
+			await importLessonTypes(
+				admin,
+				rows.lesson_types as z.infer<typeof lessonTypeSchema>[],
+				typeMap,
+				user.id,
+				importErrors,
+			),
+		);
 		summaries.push(
 			await importLessonTypeOptions(
 				admin,
@@ -640,10 +691,23 @@ Deno.serve(async (req) => {
 			),
 		);
 		summaries.push(
-			await importTeachers(admin, rows.teachers as z.infer<typeof teacherSchema>[], teacherMap, typeMap, user.id, importErrors),
+			await importTeachers(
+				admin,
+				rows.teachers as z.infer<typeof teacherSchema>[],
+				teacherMap,
+				typeMap,
+				user.id,
+				importErrors,
+			),
 		);
 		summaries.push(
-			await importStudents(admin, rows.students as z.infer<typeof studentSchema>[], studentMap, user.id, importErrors),
+			await importStudents(
+				admin,
+				rows.students as z.infer<typeof studentSchema>[],
+				studentMap,
+				user.id,
+				importErrors,
+			),
 		);
 		summaries.push(
 			await importAgreements(

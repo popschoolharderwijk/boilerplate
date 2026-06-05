@@ -58,9 +58,7 @@ function errorsToCsv(errors: RowError[]): string {
 	const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
 	return (
 		header +
-		errors
-			.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => escape(String(v))).join(','))
-			.join('\n')
+		errors.map((e) => [e.tab, e.row, e.field ?? '', e.message].map((v) => escape(String(v))).join(',')).join('\n')
 	);
 }
 
@@ -155,8 +153,8 @@ export function LegacyImportManager() {
 						Data importeren uit oud systeem
 					</CardTitle>
 					<CardDescription>
-						Importeer lestypes, docenten, leerlingen en actieve overeenkomsten via een Excel-bestand. De import is
-						idempotent: je kunt hetzelfde bestand opnieuw uploaden zonder duplicaten.
+						Importeer lestypes, docenten, leerlingen en actieve overeenkomsten via een Excel-bestand. De
+						import is idempotent: je kunt hetzelfde bestand opnieuw uploaden zonder duplicaten.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
@@ -229,7 +227,9 @@ export function LegacyImportManager() {
 											</div>
 										))}
 										{validation.errors.length > 50 && (
-											<div className="pt-1 italic">… nog {validation.errors.length - 50} fout(en)</div>
+											<div className="pt-1 italic">
+												… nog {validation.errors.length - 50} fout(en)
+											</div>
 										)}
 									</div>
 								</>
@@ -280,7 +280,8 @@ export function LegacyImportManager() {
 					<DialogHeader>
 						<DialogTitle>Import bevestigen</DialogTitle>
 						<DialogDescription>
-							De import is idempotent maar wijzigt productiedata. Bestaande records worden bijgewerkt. Doorgaan?
+							De import is idempotent maar wijzigt productiedata. Bestaande records worden bijgewerkt.
+							Doorgaan?
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

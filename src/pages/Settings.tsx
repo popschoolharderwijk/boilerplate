@@ -334,7 +334,6 @@ export default function Settings() {
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
-
 				<TabsContent value="profile" className="space-y-6 mt-6">
 					{/* Profile Information */}
 					<Card>
@@ -494,8 +493,6 @@ export default function Settings() {
 						<LegacyImportManager />
 					</TabsContent>
 				)}
-
-
 
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}
