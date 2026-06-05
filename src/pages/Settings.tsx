@@ -3,6 +3,8 @@ import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'r
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AccountingSettingsManager } from '@/components/settings/AccountingSettingsManager';
+import { LegacyImportManager } from '@/components/settings/LegacyImportManager';
+
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -328,8 +330,10 @@ export default function Settings() {
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
 					{canSeeAccounting && <TabsTrigger value="accounting">Boekhouding</TabsTrigger>}
+					{canSeeAccounting && <TabsTrigger value="import">Data-import</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
+
 
 				<TabsContent value="profile" className="space-y-6 mt-6">
 					{/* Profile Information */}
@@ -484,6 +488,14 @@ export default function Settings() {
 						<AccountingSettingsManager />
 					</TabsContent>
 				)}
+
+				{canSeeAccounting && (
+					<TabsContent value="import" className="space-y-6 mt-6">
+						<LegacyImportManager />
+					</TabsContent>
+				)}
+
+
 
 				<TabsContent value="danger" className="space-y-6 mt-6">
 					{/* Danger Zone - Delete Account */}
