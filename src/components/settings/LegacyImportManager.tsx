@@ -220,12 +220,13 @@ export function LegacyImportManager() {
 										</Button>
 									</div>
 									<div className="max-h-60 overflow-auto rounded border bg-muted/30 p-2 text-xs">
-										{validation.errors.slice(0, 50).map((e, i) => (
-											<div key={i}>
+										{validation.errors.slice(0, 50).map((e) => (
+											<div key={`${e.tab}-${e.row}-${e.field ?? ''}-${e.message}`}>
 												[{e.tab}] rij {e.row}
 												{e.field ? ` · ${e.field}` : ''} — {e.message}
 											</div>
 										))}
+
 										{validation.errors.length > 50 && (
 											<div className="pt-1 italic">
 												… nog {validation.errors.length - 50} fout(en)
