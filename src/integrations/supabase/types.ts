@@ -329,6 +329,39 @@ export type Database = {
           },
         ]
       }
+      legacy_ids: {
+        Row: {
+          created_at: string
+          entity_type: string
+          id: string
+          imported_at: string
+          imported_by: string | null
+          legacy_id: string
+          new_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity_type: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          legacy_id: string
+          new_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity_type?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          legacy_id?: string
+          new_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lesson_agreements: {
         Row: {
           created_at: string
