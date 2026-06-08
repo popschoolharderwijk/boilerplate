@@ -1,3 +1,4 @@
+import { LuUsers } from 'react-icons/lu';
 import { LessonTypeOptionSelect, type OptionSnapshot } from '@/components/lesson-type-options/LessonTypeOptionSelect';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExistingOrNewUserSelect } from '@/components/ui/existing-or-new-user-select';
@@ -22,6 +23,12 @@ interface UserStepContentProps {
 	onUserChange: (user: User | null) => void;
 	onLessonTypeChange: (lessonTypeId: string | null) => void;
 	onOptionSnapshotChange: (snap: OptionSnapshot | null) => void;
+	/** True wanneer geselecteerde lessoort een duo-les is — toont partner-selector. */
+	isDuoLesson?: boolean;
+	partnerStudentUserId?: string | null;
+	partnerUser?: User | null;
+	onPartnerStudentUserIdChange?: (userId: string | null) => void;
+	onPartnerUserChange?: (user: User | null) => void;
 }
 
 export function UserStepContent({
@@ -37,6 +44,11 @@ export function UserStepContent({
 	onUserChange,
 	onLessonTypeChange,
 	onOptionSnapshotChange,
+	isDuoLesson = false,
+	partnerStudentUserId = null,
+	partnerUser = null,
+	onPartnerStudentUserIdChange,
+	onPartnerUserChange,
 }: UserStepContentProps) {
 	if (isEditMode) {
 		return (
@@ -110,6 +122,34 @@ export function UserStepContent({
 						value={selectedOptionSnapshot}
 						onChange={onOptionSnapshotChange}
 					/>
+				</div>
+			)}
+			{isDuoLesson && (
+				<div className="space-y-3 rounded-md border border-dashed border-primary/40 bg-primary/5 p-4">
+					<div className="flex items-center gap-2 text-sm font-medium text-primary">
+						<LuUsers className="h-4 w-4" />
+						Duo-les: kies een tweede leerling
+					</div>
+					<p className="text-xs text-muted-foreground">
+						Beide leerlingen krijgen een eigen overeenkomst en betaaluitnodiging, maar volgen samen één
+						les op hetzelfde tijdslot.
+					</p>
+					<ExistingOrNewUserSelect
+						value={partnerStudentUserId}
+						onChange={(user) => {
+							onPartnerStudentUserIdChange?.(user?.user_id ?? null);
+							onPartnerUserChange?.(user);
+						}}
+						filter="all"
+						excludeUserIds={selectedStudentUserId ? [selectedStudentUserId] : []}
+						placeholder="Selecteer duo-partner..."
+						label="Duo-partner"
+					/>
+					{partnerUser && selectedStudentUserId && partnerStudentUserId === selectedStudentUserId && (
+						<p className="text-xs text-destructive">
+							De duo-partner moet een andere leerling zijn dan de hoofdleerling.
+						</p>
+					)}
 				</div>
 			)}
 		</div>
