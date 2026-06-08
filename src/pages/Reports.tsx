@@ -168,30 +168,30 @@ function ReportsDataTable({
 							<LuFolderOpen className="h-3 w-3" />
 							{row.project_name}
 						</Badge>
-				) : row.lesson_type_name ? (
-					<div className="flex items-center gap-2">
-						<LessonTypeBadge
-							lessonType={{
-								name: row.lesson_type_name,
-								icon: row.lesson_type_icon ?? '',
-								color: row.lesson_type_color ?? '',
-							}}
-							size="sm"
-						/>
-						{row.duo_perspective && (
-							<span
-								className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
-								title={
-									row.duo_perspective === 'teacher_block'
-										? 'Duo: 1 lesblok per duo-paar, BTW gesplitst per leerling'
-										: 'Duo: 2 leerling-lessen per duo-paar'
-								}
-							>
-								{DUO_PERSPECTIVE_LABELS[row.duo_perspective]}
-							</span>
-						)}
-					</div>
-				) : null,
+					) : row.lesson_type_name ? (
+						<div className="flex items-center gap-2">
+							<LessonTypeBadge
+								lessonType={{
+									name: row.lesson_type_name,
+									icon: row.lesson_type_icon ?? '',
+									color: row.lesson_type_color ?? '',
+								}}
+								size="sm"
+							/>
+							{row.duo_perspective && (
+								<span
+									className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+									title={
+										row.duo_perspective === 'teacher_block'
+											? 'Duo: 1 lesblok per duo-paar, BTW gesplitst per leerling'
+											: 'Duo: 2 leerling-lessen per duo-paar'
+									}
+								>
+									{DUO_PERSPECTIVE_LABELS[row.duo_perspective]}
+								</span>
+							)}
+						</div>
+					) : null,
 			},
 			{
 				key: 'age_category',
