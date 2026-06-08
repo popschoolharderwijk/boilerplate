@@ -476,6 +476,7 @@ export default function LessonTypeInfo() {
 				color: form.color.trim(),
 				cost_center: form.cost_center.trim() || null,
 				is_group_lesson: form.is_group_lesson,
+				is_duo_lesson: form.is_duo_lesson,
 				is_active: form.is_active,
 			};
 
