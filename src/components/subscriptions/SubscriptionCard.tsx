@@ -252,6 +252,18 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
 								Beheer betaling
 							</Button>
+							{isPrivileged && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleSyncFromStripe}
+									disabled={busy}
+									title="Haal de actuele status uit Stripe en werk deze rij bij"
+								>
+									<LuRefreshCw className="mr-1.5 h-4 w-4" />
+									Sync met Stripe
+								</Button>
+							)}
 							{isPrivileged && subscription.stripe_schedule_id && (
 								<Button
 									variant="outline"
