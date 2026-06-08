@@ -338,6 +338,12 @@ export default function Subscriptions() {
 				icon={<LuCreditCard className="h-6 w-6" />}
 				title="Facturatie"
 				subtitle="Incasso's en lesgeld per lesovereenkomst"
+				actions={
+					<Button onClick={handleSyncAll} disabled={syncingAll || loading} variant="outline">
+						<LuRefreshCw className={`mr-1.5 h-4 w-4 ${syncingAll ? 'animate-spin' : ''}`} />
+						{syncingAll ? 'Bezig met syncen…' : 'Sync alles met Stripe'}
+					</Button>
+				}
 			/>
 			<DataTable<Row>
 				title="Facturatie"
