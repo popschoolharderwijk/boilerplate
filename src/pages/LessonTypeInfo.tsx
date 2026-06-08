@@ -125,6 +125,7 @@ export default function LessonTypeInfo() {
 			color: typeData.color,
 			cost_center: typeData.cost_center ?? '',
 			is_group_lesson: typeData.is_group_lesson,
+			is_duo_lesson: typeData.is_duo_lesson ?? false,
 			is_active: typeData.is_active,
 		});
 		setOptions((optionsData as LessonTypeOptionRow[]) ?? []);
