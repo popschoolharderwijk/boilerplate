@@ -491,7 +491,11 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 						lessonTypeIcon: agreement.lesson_types.icon,
 						isGroupLesson: agreement.lesson_types.is_group_lesson ?? false,
 						isDuoLesson: isDuo,
-						studentCount: isDuo ? studentUsers.length : agreement.lesson_types.is_group_lesson ? 1 : undefined,
+						studentCount: isDuo
+							? studentUsers.length
+							: agreement.lesson_types.is_group_lesson
+								? 1
+								: undefined,
 						user: user ?? undefined,
 						users: isDuo ? studentUsers : user ? [user] : undefined,
 						isLesson: true,
