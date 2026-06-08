@@ -23,8 +23,7 @@ function parseInline(text: string, keyPrefix: string): ReactNode[] {
 	let counter = 0;
 
 	// Combined regex; we process tokens left-to-right.
-	const pattern =
-		/!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`/g;
+	const pattern = /!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|\*([^*\n]+)\*|`([^`\n]+)`/g;
 
 	let match = pattern.exec(text);
 	while (match !== null) {
@@ -131,8 +130,13 @@ export function renderMarkdown(source: string): ReactNode {
 			flushParagraph();
 			flushList();
 			const level = headingMatch[1].length;
-			const Tag = (`h${Math.min(level + 2, 6)}` as keyof JSX.IntrinsicElements);
-			const sizeClass = level === 1 ? 'text-lg font-semibold' : level === 2 ? 'text-base font-semibold' : 'text-sm font-semibold';
+			const Tag = `h${Math.min(level + 2, 6)}` as keyof JSX.IntrinsicElements;
+			const sizeClass =
+				level === 1
+					? 'text-lg font-semibold'
+					: level === 2
+						? 'text-base font-semibold'
+						: 'text-sm font-semibold';
 			blocks.push(
 				<Tag key={`h-${blockIndex++}`} className={`${sizeClass} mt-2`}>
 					{parseInline(headingMatch[2], `h${blockIndex}`)}

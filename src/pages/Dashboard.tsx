@@ -55,7 +55,6 @@ export default function Dashboard() {
 			{/* Announcements visible to all roles whose audience matches */}
 			<AnnouncementsSection />
 
-
 			{/* Privileged users (admin, site_admin, staff) see full dashboard */}
 			{isPrivileged && (
 				<>

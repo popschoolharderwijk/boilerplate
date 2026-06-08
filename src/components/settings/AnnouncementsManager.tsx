@@ -135,9 +135,7 @@ export function AnnouncementsManager() {
 			title: form.title.trim(),
 			body: form.body,
 			audience,
-			published_at: form.publish
-				? (editing?.published_at ?? new Date().toISOString())
-				: null,
+			published_at: form.publish ? (editing?.published_at ?? new Date().toISOString()) : null,
 		};
 		if (editing) {
 			const { error } = await supabase.from('announcements').update(payload).eq('id', editing.id);
@@ -219,7 +217,12 @@ export function AnnouncementsManager() {
 									</p>
 								</div>
 								<div className="flex shrink-0 gap-1">
-									<Button variant="ghost" size="icon" onClick={() => openEdit(a)} aria-label="Bewerken">
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => openEdit(a)}
+										aria-label="Bewerken"
+									>
 										<LuPencil className="h-4 w-4" />
 									</Button>
 									<Button
