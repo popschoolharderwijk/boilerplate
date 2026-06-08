@@ -355,6 +355,9 @@ export default function AgreementWizard() {
 		endDate: oneYearFromToday(),
 		teacherUserId: null as string | null,
 		slot: null as SlotWithStatus | null,
+		/** Duo-partner leerling (alleen ingevuld als gekozen lestype is_duo_lesson is en in create-modus). */
+		partnerStudentUserId: null as string | null,
+		partnerUser: null as User | null,
 	});
 
 	const [highestStep, setHighestStep] = useState(0);
