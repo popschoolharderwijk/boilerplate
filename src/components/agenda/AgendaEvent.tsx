@@ -19,6 +19,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 		color,
 		lessonTypeColor,
 		isLesson,
+		isDuoLesson,
 		sourceType,
 		cancellationType,
 	} = event.resource;
