@@ -218,48 +218,44 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 										<NavItem key={item.href} {...item} collapsed={collapsed} />
 									))}
 
-								{/* Admin section (admin/site_admin only) */}
-								{showAdminNav && (
-									<>
-										{collapsed ? (
-											<>
-												<Separator />
-												{adminNavItems.map((item) => (
-													<NavItem key={item.href} {...item} collapsed={collapsed} />
-												))}
-											</>
-										) : (
-											<Collapsible open={beheerOpen} onOpenChange={setBeheerOpen}>
-												<CollapsibleTrigger asChild>
-													<button
-														type="button"
-														className={cn(
-															'mt-4 mb-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors',
-															'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-														)}
-													>
-														<LuShieldCheck className="h-3.5 w-3.5" />
-														<span>Beheer</span>
-														<LuChevronDown
-															className={cn(
-																'ml-auto h-3.5 w-3.5 transition-transform duration-200',
-																beheerOpen ? 'rotate-0' : '-rotate-90',
-															)}
-														/>
-													</button>
-												</CollapsibleTrigger>
-												<CollapsibleContent
-													className="flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-													style={{ gap: NAV_GAP } as React.CSSProperties}
+								{showAdminNav &&
+									(collapsed ? (
+										<>
+											<Separator />
+											{adminNavItems.map((item) => (
+												<NavItem key={item.href} {...item} collapsed={collapsed} />
+											))}
+										</>
+									) : (
+										<Collapsible open={beheerOpen} onOpenChange={setBeheerOpen}>
+											<CollapsibleTrigger asChild>
+												<button
+													type="button"
+													className={cn(
+														'mt-4 mb-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors',
+														'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+													)}
 												>
-													{adminNavItems.map((item) => (
-														<NavItem key={item.href} {...item} collapsed={false} />
-													))}
-												</CollapsibleContent>
-											</Collapsible>
-										)}
-									</>
-								)}
+													<LuShieldCheck className="h-3.5 w-3.5" />
+													<span>Beheer</span>
+													<LuChevronDown
+														className={cn(
+															'ml-auto h-3.5 w-3.5 transition-transform duration-200',
+															beheerOpen ? 'rotate-0' : '-rotate-90',
+														)}
+													/>
+												</button>
+											</CollapsibleTrigger>
+											<CollapsibleContent
+												className="flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+												style={{ gap: NAV_GAP } as React.CSSProperties}
+											>
+												{adminNavItems.map((item) => (
+													<NavItem key={item.href} {...item} collapsed={false} />
+												))}
+											</CollapsibleContent>
+										</Collapsible>
+									))}
 							</nav>
 						</div>
 					</ScrollArea>
