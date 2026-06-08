@@ -67,7 +67,7 @@ export default function Agreements() {
 			let query = supabase
 				.from('lesson_agreements')
 				.select(
-					'id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, lesson_types(id, name, icon, color), teachers(user_id)',
+					'id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, duo_pair_id, lesson_types(id, name, icon, color), teachers(user_id)',
 					{ count: 'exact' },
 				);
 
@@ -126,6 +126,7 @@ export default function Agreements() {
 				duration_minutes: number;
 				frequency: LessonFrequency;
 				price_per_lesson: number;
+				duo_pair_id: string | null;
 				lesson_types: {
 					id: string;
 					name: string;
@@ -167,6 +168,7 @@ export default function Agreements() {
 							duration_minutes: a.duration_minutes,
 							frequency: a.frequency,
 							price_per_lesson: a.price_per_lesson,
+							duo_pair_id: a.duo_pair_id,
 							student: emptyStudent,
 							teacher: emptyTeacher,
 							lesson_type: {
@@ -229,6 +231,7 @@ export default function Agreements() {
 					duration_minutes: a.duration_minutes,
 					frequency: a.frequency,
 					price_per_lesson: a.price_per_lesson,
+					duo_pair_id: a.duo_pair_id,
 					student: studentProfile ?? emptyStudent,
 					teacher: teacherProfile ?? emptyTeacher,
 					lesson_type: {
@@ -363,9 +366,17 @@ export default function Agreements() {
 					<div className="flex items-center gap-2">
 						<LessonTypeBadge lessonType={r.lesson_type} size="sm" showName={false} />
 						<div>
-							<div>
+							<div className="flex items-center gap-1">
 								<span>{DAY_NAMES[r.day_of_week]?.slice(0, 2)}</span>
-								<span className="text-muted-foreground"> {formatTime(r.start_time)}</span>
+								<span className="text-muted-foreground">{formatTime(r.start_time)}</span>
+								{r.duo_pair_id && (
+									<span
+										className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
+										title="Duo-overeenkomst"
+									>
+										Duo
+									</span>
+								)}
 							</div>
 							<p className="text-xs text-muted-foreground">{frequencyLabels[r.frequency]}</p>
 						</div>

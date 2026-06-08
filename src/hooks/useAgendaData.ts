@@ -60,6 +60,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [deviations, setDeviations] = useState<AgendaEventDeviationRow[]>([]);
 	const [participantCountByEventId, setParticipantCountByEventId] = useState<Map<string, number>>(new Map());
 	const [participantNamesByEventId, setParticipantNamesByEventId] = useState<Map<string, string[]>>(new Map());
+	const [participantUserIdsByEventId, setParticipantUserIdsByEventId] = useState<Map<string, string[]>>(new Map());
 	const [participantCountByDeviationId, setParticipantCountByDeviationId] = useState<Map<string, number>>(new Map());
 	const [participantNamesByDeviationId, setParticipantNamesByDeviationId] = useState<Map<string, string[]>>(
 		new Map(),
@@ -140,6 +141,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				userIdsByEvent.set(p.event_id, list);
 			}
 			setParticipantCountByEventId(countByEvent);
+			setParticipantUserIdsByEventId(userIdsByEvent);
 
 			const deviationUserIds = [...new Set(deviationsList.flatMap((d) => d.participant_ids ?? []))];
 			const lessonSourceIds = eventsList
@@ -455,8 +457,23 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return enriched;
 				const agreement = agreementsMap.get(ev.resource.agreementId);
 				if (!agreement) return enriched;
-				const user = buildParticipantInfo(agreement.profiles, agreement.student_user_id);
-				const studentName = getDisplayName(agreement.profiles);
+				const teacherUid = agreement.teacherUserId;
+				const eventId = ev.resource.eventId;
+				const allParticipantIds = eventId ? (participantUserIdsByEventId.get(eventId) ?? []) : [];
+				const studentParticipantIds = allParticipantIds.filter((uid) => uid !== teacherUid);
+				const isDuo = studentParticipantIds.length > 1;
+				const studentUsers = isDuo
+					? studentParticipantIds
+							.map((uid) => buildParticipantInfo(profileMap.get(uid) ?? null, uid))
+							.filter((u): u is NonNullable<typeof u> => !!u)
+					: [];
+				const studentName = isDuo
+					? studentParticipantIds
+							.map((uid) => getDisplayName(profileMap.get(uid) ?? null))
+							.sort()
+							.join(' & ')
+					: getDisplayName(agreement.profiles);
+				const user = isDuo ? undefined : buildParticipantInfo(agreement.profiles, agreement.student_user_id);
 				const teacherName = agreement.teacherProfile
 					? getDisplayName(agreement.teacherProfile)
 					: 'Docent onbekend';
@@ -473,9 +490,14 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 						lessonTypeColor: agreement.lesson_types.color,
 						lessonTypeIcon: agreement.lesson_types.icon,
 						isGroupLesson: agreement.lesson_types.is_group_lesson ?? false,
-						studentCount: agreement.lesson_types.is_group_lesson ? 1 : undefined,
+						isDuoLesson: isDuo,
+						studentCount: isDuo
+							? studentUsers.length
+							: agreement.lesson_types.is_group_lesson
+								? 1
+								: undefined,
 						user: user ?? undefined,
-						users: user ? [user] : undefined,
+						users: isDuo ? studentUsers : user ? [user] : undefined,
 						isLesson: true,
 					},
 				};
@@ -490,6 +512,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			lessonGroupsMap,
 			participantCountByEventId,
 			participantNamesByEventId,
+			participantUserIdsByEventId,
 			participantCountByDeviationId,
 			participantNamesByDeviationId,
 			profileMap,

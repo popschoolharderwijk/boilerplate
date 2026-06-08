@@ -39,7 +39,10 @@ type LessonAgreementBaseFields = Pick<
 
 /** Agreement fields for table display (base + created_at, notes, teacher_user_id) */
 type LessonAgreementTableFields = LessonAgreementBaseFields &
-	Pick<LessonAgreementRow, 'created_at' | 'notes'> & { teacher_user_id: string };
+	Pick<LessonAgreementRow, 'created_at' | 'notes'> & {
+		teacher_user_id: string;
+		duo_pair_id?: string | null;
+	};
 
 /** Form state for lesson type create/edit (nullable DB fields as string) */
 export type LessonTypeFormState = Pick<
