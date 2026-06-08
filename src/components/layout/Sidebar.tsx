@@ -189,6 +189,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									/>
 								)}
 
+								{/* Admin operational items - shown above Beheer */}
+								{showAdminNav &&
+									adminOperationalNavItems.map((item) => (
+										<NavItem key={item.href} {...item} collapsed={collapsed} />
+									))}
+
 								{/* Admin section (admin/site_admin only) */}
 								{showAdminNav && (
 									<>
@@ -205,6 +211,16 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 											<NavItem key={item.href} {...item} collapsed={collapsed} />
 										))}
 									</>
+								)}
+
+								{/* Settings - available to all users (own profile/preferences) */}
+								{!showAdminNav && (
+									<NavItem
+										href="/settings"
+										label={NAV_LABELS.settings}
+										icon={NAV_ICONS.settings}
+										collapsed={collapsed}
+									/>
 								)}
 							</nav>
 						</div>
