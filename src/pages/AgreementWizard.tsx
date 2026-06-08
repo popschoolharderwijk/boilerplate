@@ -548,12 +548,22 @@ export default function AgreementWizard() {
 	const isFirstStep = stepIndex === 0;
 	const isLastStep = stepIndex === STEP_ORDER.length - 1;
 
+	const isDuoLesson = useMemo(() => {
+		if (isEditMode) return false;
+		const lt = lessonTypes.find((t) => t.id === form.lessonTypeId);
+		return Boolean(lt?.is_duo_lesson);
+	}, [isEditMode, lessonTypes, form.lessonTypeId]);
+
 	const canProceed = useCallback(
 		(s: WizardStep) => {
 			switch (s) {
 				case WizardStep.User:
 					return Boolean(
-						form.studentUserId && form.lessonTypeId && (isEditMode || form.selectedOptionSnapshot),
+						form.studentUserId &&
+							form.lessonTypeId &&
+							(isEditMode || form.selectedOptionSnapshot) &&
+							(!isDuoLesson ||
+								(form.partnerStudentUserId && form.partnerStudentUserId !== form.studentUserId)),
 					);
 				case WizardStep.Period:
 					return Boolean(
@@ -567,7 +577,7 @@ export default function AgreementWizard() {
 					return false;
 			}
 		},
-		[form, isTeacherOwnStudent, isEditMode],
+		[form, isTeacherOwnStudent, isEditMode, isDuoLesson],
 	);
 
 	const nextStep = () => {
