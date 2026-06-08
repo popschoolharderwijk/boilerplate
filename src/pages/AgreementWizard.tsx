@@ -820,9 +820,20 @@ export default function AgreementWizard() {
 						onStudentUserIdChange={(v) => setForm((f) => ({ ...f, studentUserId: v }))}
 						onUserChange={(v) => setForm((f) => ({ ...f, user: v }))}
 						onLessonTypeChange={(v) =>
-							setForm((f) => ({ ...f, lessonTypeId: v, selectedOptionSnapshot: null }))
+							setForm((f) => ({
+								...f,
+								lessonTypeId: v,
+								selectedOptionSnapshot: null,
+								partnerStudentUserId: null,
+								partnerUser: null,
+							}))
 						}
 						onOptionSnapshotChange={(snap) => setForm((f) => ({ ...f, selectedOptionSnapshot: snap }))}
+						isDuoLesson={isDuoLesson}
+						partnerStudentUserId={form.partnerStudentUserId}
+						partnerUser={form.partnerUser}
+						onPartnerStudentUserIdChange={(v) => setForm((f) => ({ ...f, partnerStudentUserId: v }))}
+						onPartnerUserChange={(v) => setForm((f) => ({ ...f, partnerUser: v }))}
 					/>
 				)}
 
