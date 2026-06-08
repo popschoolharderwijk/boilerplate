@@ -1,7 +1,10 @@
-import { LuChevronLeft, LuMusic, LuShieldCheck } from 'react-icons/lu';
+import { useEffect, useState } from 'react';
+import { LuChevronDown, LuChevronLeft, LuMusic, LuShieldCheck } from 'react-icons/lu';
+import { useLocation } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
 import { NavItem } from '@/components/layout/NavItem';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -10,8 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHasOwnedProjects } from '@/hooks/useHasOwnedProjects';
 import { cn } from '@/lib/utils';
 
-// Single value for all vertical spacing between nav items (padding + gap)
 const NAV_GAP = '1rem';
+const BEHEER_OPEN_KEY = 'sidebar:beheer-open';
 
 // Admin-only items shown ABOVE the "Beheer" header (frequently used operations)
 const adminOperationalNavItems = [
@@ -27,11 +30,13 @@ const adminNavItems = [
 	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/boekhouding', label: NAV_LABELS.accounting, icon: NAV_ICONS.accounting },
+	{ href: '/data-import', label: NAV_LABELS.dataImport, icon: NAV_ICONS.dataImport },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
-	{ href: '/settings', label: NAV_LABELS.settings, icon: NAV_ICONS.settings },
 	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
 ];
+
+const adminHrefs = adminNavItems.map((i) => i.href);
 
 interface SidebarProps {
 	collapsed?: boolean;
@@ -46,9 +51,29 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 	const showTeachersNav = isAdmin || isSiteAdmin;
 	const showStudentsNav = isPrivileged;
 	const showReportsNav = isPrivileged || isTeacher;
-	// Admin/site_admin: always show. Others: only if they own at least one project (hide button when none).
 	const showProjectsNav =
 		isAdmin || isSiteAdmin || ((isTeacher || isPrivileged) && !ownedProjectsLoading && hasOwnedProjects);
+
+	const { pathname } = useLocation();
+	const isInBeheer = adminHrefs.some((h) => pathname === h || pathname.startsWith(`${h}/`));
+
+	// Persisted open/closed state for the Beheer group
+	const [beheerOpen, setBeheerOpen] = useState<boolean>(() => {
+		if (typeof window === 'undefined') return false;
+		const stored = window.localStorage.getItem(BEHEER_OPEN_KEY);
+		if (stored !== null) return stored === '1';
+		return false;
+	});
+
+	// Auto-open when navigating into a Beheer route
+	useEffect(() => {
+		if (isInBeheer) setBeheerOpen(true);
+	}, [isInBeheer]);
+
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+		window.localStorage.setItem(BEHEER_OPEN_KEY, beheerOpen ? '1' : '0');
+	}, [beheerOpen]);
 
 	return (
 		<TooltipProvider delayDuration={0}>
@@ -127,7 +152,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									</>
 								)}
 
-								{/* Main navigation - flat list */}
 								{!isStudent && (
 									<NavItem
 										href="/"
@@ -152,7 +176,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									/>
 								)}
 
-								{/* Teacher-only: My Students (when not admin) */}
 								{isTeacher && !showTeachersNav && (
 									<NavItem
 										href="/students/my-students"
@@ -198,29 +221,44 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 								{/* Admin section (admin/site_admin only) */}
 								{showAdminNav && (
 									<>
-										{!collapsed && (
-											<div className="mt-4 mb-2 px-3">
-												<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-													<LuShieldCheck className="h-3.5 w-3.5" />
-													<span>Beheer</span>
-												</div>
-											</div>
+										{collapsed ? (
+											<>
+												<Separator />
+												{adminNavItems.map((item) => (
+													<NavItem key={item.href} {...item} collapsed={collapsed} />
+												))}
+											</>
+										) : (
+											<Collapsible open={beheerOpen} onOpenChange={setBeheerOpen}>
+												<CollapsibleTrigger asChild>
+													<button
+														type="button"
+														className={cn(
+															'mt-4 mb-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors',
+															'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+														)}
+													>
+														<LuShieldCheck className="h-3.5 w-3.5" />
+														<span>Beheer</span>
+														<LuChevronDown
+															className={cn(
+																'ml-auto h-3.5 w-3.5 transition-transform duration-200',
+																beheerOpen ? 'rotate-0' : '-rotate-90',
+															)}
+														/>
+													</button>
+												</CollapsibleTrigger>
+												<CollapsibleContent
+													className="flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+													style={{ gap: NAV_GAP } as React.CSSProperties}
+												>
+													{adminNavItems.map((item) => (
+														<NavItem key={item.href} {...item} collapsed={false} />
+													))}
+												</CollapsibleContent>
+											</Collapsible>
 										)}
-										{collapsed && <Separator />}
-										{adminNavItems.map((item) => (
-											<NavItem key={item.href} {...item} collapsed={collapsed} />
-										))}
 									</>
-								)}
-
-								{/* Settings - available to all users (own profile/preferences) */}
-								{!showAdminNav && (
-									<NavItem
-										href="/settings"
-										label={NAV_LABELS.settings}
-										icon={NAV_ICONS.settings}
-										collapsed={collapsed}
-									/>
 								)}
 							</nav>
 						</div>
