@@ -23,6 +23,7 @@ export function useAnnouncements({ publishedOnly = false }: UseAnnouncementsOpti
 	const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [isSchemaMissing, setIsSchemaMissing] = useState(false);
 
 	const fetchAll = useCallback(async () => {
 		setIsLoading(true);
@@ -38,9 +39,16 @@ export function useAnnouncements({ publishedOnly = false }: UseAnnouncementsOpti
 
 		const { data, error: queryError } = await query;
 		if (queryError) {
+			const missingSchema =
+				queryError.code === 'PGRST205' ||
+				queryError.code === '42P01' ||
+				queryError.message.toLowerCase().includes('announcements');
+
+			setIsSchemaMissing(missingSchema);
 			setError(queryError.message);
 			setAnnouncements([]);
 		} else {
+			setIsSchemaMissing(false);
 			setError(null);
 			setAnnouncements((data ?? []) as Announcement[]);
 		}
@@ -51,5 +59,5 @@ export function useAnnouncements({ publishedOnly = false }: UseAnnouncementsOpti
 		fetchAll();
 	}, [fetchAll]);
 
-	return { announcements, isLoading, error, refetch: fetchAll };
+	return { announcements, isLoading, error, isSchemaMissing, refetch: fetchAll };
 }
