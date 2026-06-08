@@ -14,8 +14,7 @@ const sections: ManualSection[] = [
 	{
 		icon: NAV_ICONS.dashboard,
 		title: NAV_LABELS.dashboard,
-		description:
-			'Het dashboard is de startpagina na inloggen en toont alles wat vandaag aandacht vraagt.',
+		description: 'Het dashboard is de startpagina na inloggen en toont alles wat vandaag aandacht vraagt.',
 		details: [
 			'Statistieken: aantal actieve leerlingen, docenten en lopende overeenkomsten in één oogopslag.',
 			'Actiepunten: openstaande aanmeldingen, ontbrekende beschikbaarheid, ontbrekende incassomandaten en mislukte betalingen.',
