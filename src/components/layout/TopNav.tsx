@@ -172,6 +172,19 @@ export function TopNav() {
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
+						<DropdownMenuItem onClick={() => navigate('/account/profile')}>
+							<LuUser className="mr-2 h-4 w-4" />
+							<span>Profiel</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => navigate('/account/appearance')}>
+							<LuPalette className="mr-2 h-4 w-4" />
+							<span>Weergave</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => navigate('/account/danger')}>
+							<LuShieldAlert className="mr-2 h-4 w-4" />
+							<span>Account</span>
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={handleSignOut}>
 							<LuLogOut className="mr-2 h-4 w-4" />
 							<span>Uitloggen</span>
