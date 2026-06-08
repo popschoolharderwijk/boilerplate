@@ -74,11 +74,28 @@ export function LegacyImportManager() {
 	async function downloadTemplate() {
 		setBusy(true);
 		try {
-			const { data, error } = await supabase.functions.invoke('import-legacy-data', {
-				body: { action: 'template' },
+			// supabase.functions.invoke() parses responses by content-type and corrupts binary payloads.
+			// Use fetch directly so we get the raw .xlsx bytes back.
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+			if (!session) throw new Error('Niet ingelogd');
+
+			const SUPABASE_URL = 'https://zdvscmogkfyddnnxzkdu.supabase.co';
+			const response = await fetch(`${SUPABASE_URL}/functions/v1/import-legacy-data`, {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${session.access_token}`,
+					apikey: session.access_token,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ action: 'template' }),
 			});
-			if (error) throw error;
-			const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer]);
+			if (!response.ok) {
+				const text = await response.text();
+				throw new Error(text || `HTTP ${response.status}`);
+			}
+			const blob = await response.blob();
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
