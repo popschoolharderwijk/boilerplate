@@ -367,6 +367,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           day_of_week: number
+          duo_pair_id: string | null
           duration_minutes: number
           end_date: string | null
           frequency: Database["public"]["Enums"]["lesson_frequency"]
@@ -390,6 +391,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week: number
+          duo_pair_id?: string | null
           duration_minutes: number
           end_date?: string | null
           frequency: Database["public"]["Enums"]["lesson_frequency"]
@@ -413,6 +415,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_of_week?: number
+          duo_pair_id?: string | null
           duration_minutes?: number
           end_date?: string | null
           frequency?: Database["public"]["Enums"]["lesson_frequency"]
@@ -726,6 +729,7 @@ export type Database = {
           icon: string
           id: string
           is_active: boolean
+          is_duo_lesson: boolean
           is_group_lesson: boolean
           name: string
           updated_at: string
@@ -740,6 +744,7 @@ export type Database = {
           icon: string
           id?: string
           is_active?: boolean
+          is_duo_lesson?: boolean
           is_group_lesson?: boolean
           name: string
           updated_at?: string
@@ -754,6 +759,7 @@ export type Database = {
           icon?: string
           id?: string
           is_active?: boolean
+          is_duo_lesson?: boolean
           is_group_lesson?: boolean
           name?: string
           updated_at?: string
@@ -1487,6 +1493,13 @@ export type Database = {
         Returns: Json
       }
       get_agenda_event_owner: { Args: { ev_id: string }; Returns: string }
+      get_duo_partner_display_name: {
+        Args: { _agreement_id: string }
+        Returns: {
+          display_name: string
+          partner_user_id: string
+        }[]
+      }
       get_hours_report: {
         Args: {
           p_end_date: string

@@ -44,6 +44,7 @@ const emptyForm: LessonTypeFormState = {
 	color: '',
 	cost_center: '',
 	is_group_lesson: false,
+	is_duo_lesson: false,
 	is_active: true,
 };
 
@@ -124,6 +125,7 @@ export default function LessonTypeInfo() {
 			color: typeData.color,
 			cost_center: typeData.cost_center ?? '',
 			is_group_lesson: typeData.is_group_lesson,
+			is_duo_lesson: typeData.is_duo_lesson ?? false,
 			is_active: typeData.is_active,
 		});
 		setOptions((optionsData as LessonTypeOptionRow[]) ?? []);
@@ -474,6 +476,7 @@ export default function LessonTypeInfo() {
 				color: form.color.trim(),
 				cost_center: form.cost_center.trim() || null,
 				is_group_lesson: form.is_group_lesson,
+				is_duo_lesson: form.is_duo_lesson,
 				is_active: form.is_active,
 			};
 
@@ -636,15 +639,36 @@ export default function LessonTypeInfo() {
 								/>
 							</div>
 
-							<div className="flex items-center gap-6">
+							<div className="flex flex-wrap items-center gap-6">
 								<label className="flex cursor-pointer items-center gap-2">
 									<input
 										type="checkbox"
 										checked={form.is_group_lesson}
-										onChange={(e) => setForm({ ...form, is_group_lesson: e.target.checked })}
+										onChange={(e) =>
+											setForm({
+												...form,
+												is_group_lesson: e.target.checked,
+												is_duo_lesson: e.target.checked ? false : form.is_duo_lesson,
+											})
+										}
 										className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
 									/>
 									<span className="text-sm font-medium">Groepsles</span>
+								</label>
+								<label className="flex cursor-pointer items-center gap-2">
+									<input
+										type="checkbox"
+										checked={form.is_duo_lesson}
+										onChange={(e) =>
+											setForm({
+												...form,
+												is_duo_lesson: e.target.checked,
+												is_group_lesson: e.target.checked ? false : form.is_group_lesson,
+											})
+										}
+										className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+									/>
+									<span className="text-sm font-medium">Duo-les (2 leerlingen)</span>
 								</label>
 								<label className="flex cursor-pointer items-center gap-2">
 									<input
