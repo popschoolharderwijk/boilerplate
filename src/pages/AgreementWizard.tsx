@@ -134,15 +134,18 @@ function useAgreement(id: string | undefined, isEditMode: boolean) {
 }
 
 function useLessonTypes() {
-	const [types, setTypes] = useState<Array<{ id: string; name: string; icon: string; color: string }>>([]);
+	const [types, setTypes] = useState<
+		Array<{ id: string; name: string; icon: string; color: string; is_duo_lesson: boolean }>
+	>([]);
 
 	useEffect(() => {
 		supabase
 			.from('lesson_types')
-			.select('id, name, icon, color')
+			.select('id, name, icon, color, is_duo_lesson')
 			.eq('is_active', true)
+			.eq('is_group_lesson', false)
 			.order('name')
-			.then(({ data }) => setTypes(data ?? []));
+			.then(({ data }) => setTypes((data ?? []).map((t) => ({ ...t, is_duo_lesson: t.is_duo_lesson ?? false }))));
 	}, []);
 
 	return types;
