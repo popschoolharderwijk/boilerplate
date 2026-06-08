@@ -134,15 +134,17 @@ function useAgreement(id: string | undefined, isEditMode: boolean) {
 }
 
 function useLessonTypes() {
-	const [types, setTypes] = useState<Array<{ id: string; name: string; icon: string; color: string }>>([]);
+	const [types, setTypes] = useState<
+		Array<{ id: string; name: string; icon: string; color: string; is_duo_lesson: boolean }>
+	>([]);
 
 	useEffect(() => {
 		supabase
 			.from('lesson_types')
-			.select('id, name, icon, color')
+			.select('id, name, icon, color, is_duo_lesson')
 			.eq('is_active', true)
 			.order('name')
-			.then(({ data }) => setTypes(data ?? []));
+			.then(({ data }) => setTypes((data ?? []).map((t) => ({ ...t, is_duo_lesson: t.is_duo_lesson ?? false }))));
 	}, []);
 
 	return types;
@@ -353,6 +355,9 @@ export default function AgreementWizard() {
 		endDate: oneYearFromToday(),
 		teacherUserId: null as string | null,
 		slot: null as SlotWithStatus | null,
+		/** Duo-partner leerling (alleen ingevuld als gekozen lestype is_duo_lesson is en in create-modus). */
+		partnerStudentUserId: null as string | null,
+		partnerUser: null as User | null,
 	});
 
 	const [highestStep, setHighestStep] = useState(0);
@@ -543,12 +548,22 @@ export default function AgreementWizard() {
 	const isFirstStep = stepIndex === 0;
 	const isLastStep = stepIndex === STEP_ORDER.length - 1;
 
+	const isDuoLesson = useMemo(() => {
+		if (isEditMode) return false;
+		const lt = lessonTypes.find((t) => t.id === form.lessonTypeId);
+		return Boolean(lt?.is_duo_lesson);
+	}, [isEditMode, lessonTypes, form.lessonTypeId]);
+
 	const canProceed = useCallback(
 		(s: WizardStep) => {
 			switch (s) {
 				case WizardStep.User:
 					return Boolean(
-						form.studentUserId && form.lessonTypeId && (isEditMode || form.selectedOptionSnapshot),
+						form.studentUserId &&
+							form.lessonTypeId &&
+							(isEditMode || form.selectedOptionSnapshot) &&
+							(!isDuoLesson ||
+								(form.partnerStudentUserId && form.partnerStudentUserId !== form.studentUserId)),
 					);
 				case WizardStep.Period:
 					return Boolean(
@@ -562,7 +577,7 @@ export default function AgreementWizard() {
 					return false;
 			}
 		},
-		[form, isTeacherOwnStudent, isEditMode],
+		[form, isTeacherOwnStudent, isEditMode, isDuoLesson],
 	);
 
 	const nextStep = () => {
@@ -591,6 +606,60 @@ export default function AgreementWizard() {
 		}
 		setSaving(true);
 		const timeValue = form.slot.start_time.includes(':') ? form.slot.start_time : form.slot.start_time + ':00';
+
+		// Duo-tak: maak beide overeenkomsten via edge function in één transactie.
+		if (!agreement && isDuoLesson) {
+			if (!form.partnerStudentUserId || form.partnerStudentUserId === form.studentUserId) {
+				setSaving(false);
+				toast.error('Kies een duo-partner (verschillende leerling)');
+				return;
+			}
+			if (!form.selectedOptionSnapshot) {
+				setSaving(false);
+				toast.error('Selecteer een lesoptie');
+				return;
+			}
+			const { data: duoData, error: duoErr } = await supabase.functions.invoke<{
+				agreement_ids: string[];
+				duo_pair_id: string;
+			}>('create-duo-agreements', {
+				body: {
+					student_user_id_a: form.studentUserId,
+					student_user_id_b: form.partnerStudentUserId,
+					teacher_user_id: form.teacherUserId,
+					lesson_type_id: form.lessonTypeId,
+					day_of_week: form.slot.day_of_week,
+					start_time: timeValue,
+					duration_minutes: form.selectedOptionSnapshot.duration_minutes,
+					frequency: form.selectedOptionSnapshot.frequency,
+					price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
+					start_date: form.startDate,
+					end_date: form.endDate || null,
+					signup_source: fromRequestId ? 'public_form' : 'staff_duo',
+				},
+			});
+			setSaving(false);
+			if (duoErr || !duoData?.agreement_ids?.length) {
+				toast.error(duoErr?.message ?? 'Fout bij aanmaken duo-overeenkomsten');
+				return;
+			}
+			// Stuur per leerling een betaaluitnodiging.
+			const inviteResults = await Promise.all(
+				duoData.agreement_ids.map((aid) =>
+					supabase.functions.invoke('send-incasso-invite', { body: { lesson_agreement_id: aid } }),
+				),
+			);
+			const failedInvites = inviteResults.filter((r) => r.error).length;
+			if (failedInvites > 0) {
+				toast.warning(
+					`Duo-overeenkomsten opgeslagen, maar ${failedInvites} betaaluitnodiging(en) konden niet worden verstuurd`,
+				);
+			} else {
+				toast.success('Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd');
+			}
+			navigate('/agreements');
+			return;
+		}
 
 		const payload = {
 			teacher_user_id: form.teacherUserId,
@@ -751,9 +820,20 @@ export default function AgreementWizard() {
 						onStudentUserIdChange={(v) => setForm((f) => ({ ...f, studentUserId: v }))}
 						onUserChange={(v) => setForm((f) => ({ ...f, user: v }))}
 						onLessonTypeChange={(v) =>
-							setForm((f) => ({ ...f, lessonTypeId: v, selectedOptionSnapshot: null }))
+							setForm((f) => ({
+								...f,
+								lessonTypeId: v,
+								selectedOptionSnapshot: null,
+								partnerStudentUserId: null,
+								partnerUser: null,
+							}))
 						}
 						onOptionSnapshotChange={(snap) => setForm((f) => ({ ...f, selectedOptionSnapshot: snap }))}
+						isDuoLesson={isDuoLesson}
+						partnerStudentUserId={form.partnerStudentUserId}
+						partnerUser={form.partnerUser}
+						onPartnerStudentUserIdChange={(v) => setForm((f) => ({ ...f, partnerStudentUserId: v }))}
+						onPartnerUserChange={(v) => setForm((f) => ({ ...f, partnerUser: v }))}
 					/>
 				)}
 
