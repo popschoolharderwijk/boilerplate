@@ -33,6 +33,7 @@ const adminNavItems = [
 	{ href: '/data-import', label: NAV_LABELS.dataImport, icon: NAV_ICONS.dataImport },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
+	{ href: '/announcements', label: NAV_LABELS.announcements, icon: NAV_ICONS.announcements },
 	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
 ];
 
