@@ -10,6 +10,7 @@ import AccountingSettingsPage from './pages/AccountingSettingsPage';
 import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
+import Announcements from './pages/Announcements';
 import AuthCallback from './pages/AuthCallback';
 import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
@@ -103,6 +104,7 @@ const App = () => (
 						<Route path="/boekhouding" element={<AccountingReport />} />
 						<Route path="/boekhouding/instellingen" element={<AccountingSettingsPage />} />
 						<Route path="/data-import" element={<LegacyImport />} />
+						<Route path="/announcements" element={<Announcements />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnnouncementsSection } from '@/components/dashboard/AnnouncementsSection';
 import { RecentStudents } from '@/components/dashboard/RecentStudents';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { TeacherAvailability } from '@/components/dashboard/TeacherAvailability';
@@ -50,6 +51,9 @@ export default function Dashboard() {
 					)}
 				</p>
 			</div>
+
+			{/* Announcements visible to all roles whose audience matches */}
+			<AnnouncementsSection />
 
 			{/* Privileged users (admin, site_admin, staff) see full dashboard */}
 			{isPrivileged && (
