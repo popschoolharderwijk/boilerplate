@@ -2,8 +2,8 @@
 // Admin/site_admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
 interface Body {
 	stripe_subscription_id: string;

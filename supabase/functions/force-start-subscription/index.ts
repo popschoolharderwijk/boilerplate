@@ -7,8 +7,8 @@
 // Privileged staff/admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 import { getSafeErrorMessage, getStripe, getStripeId } from '../_shared/stripe.ts';
+import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
 interface Body {
 	lesson_agreement_id?: string;
@@ -93,8 +93,7 @@ Deno.serve(async (req) => {
 		if (!priceId) return json(400, { error: 'Kon prijs uit schedule niet lezen' });
 
 		const phaseDpm = firstPhase?.default_payment_method;
-		const defaultPaymentMethod =
-			(phaseDpm ? getStripeId(phaseDpm) : null) ?? undefined;
+		const defaultPaymentMethod = (phaseDpm ? getStripeId(phaseDpm) : null) ?? undefined;
 
 		// Cancel the schedule so it doesn't compete with the immediate subscription.
 		if (schedule.status !== 'canceled') {
@@ -118,8 +117,7 @@ Deno.serve(async (req) => {
 
 		const itemPeriodStart =
 			subscription.current_period_start ?? subscription.items.data[0]?.current_period_start ?? null;
-		const itemPeriodEnd =
-			subscription.current_period_end ?? subscription.items.data[0]?.current_period_end ?? null;
+		const itemPeriodEnd = subscription.current_period_end ?? subscription.items.data[0]?.current_period_end ?? null;
 		const pmBrand =
 			typeof subscription.default_payment_method === 'object' && subscription.default_payment_method
 				? (subscription.default_payment_method.type ?? null)
@@ -143,10 +141,7 @@ Deno.serve(async (req) => {
 					: (subscription.latest_invoice?.id ?? null),
 		});
 
-		await admin
-			.from('lesson_agreements')
-			.update({ stripe_schedule_id: null })
-			.eq('id', lessonAgreementId);
+		await admin.from('lesson_agreements').update({ stripe_schedule_id: null }).eq('id', lessonAgreementId);
 
 		return json(200, {
 			ok: true,
