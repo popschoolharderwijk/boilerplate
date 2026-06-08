@@ -22,6 +22,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { getBaseBreadcrumb } from '@/config/breadcrumbs';
+import { NAV_LABELS } from '@/config/nav-labels';
 
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
