@@ -141,6 +141,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				userIdsByEvent.set(p.event_id, list);
 			}
 			setParticipantCountByEventId(countByEvent);
+			setParticipantUserIdsByEventId(userIdsByEvent);
 
 			const deviationUserIds = [...new Set(deviationsList.flatMap((d) => d.participant_ids ?? []))];
 			const lessonSourceIds = eventsList
