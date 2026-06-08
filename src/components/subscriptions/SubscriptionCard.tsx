@@ -157,6 +157,25 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 		void refresh();
 	};
 
+	const handleSyncFromStripe = async () => {
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('sync-stripe-subscription', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		const payload = data as { synced?: boolean; status?: string; info?: string; error?: string } | null;
+		if (error || payload?.error) {
+			toast.error(payload?.error ?? error?.message ?? 'Kon niet syncen met Stripe');
+			return;
+		}
+		if (payload?.synced) {
+			toast.success(`Gesynchroniseerd met Stripe (status: ${payload.status ?? 'onbekend'})`);
+		} else {
+			toast.info(payload?.info ?? 'Geen wijzigingen — Stripe heeft nog geen actief abonnement');
+		}
+		void refresh();
+	};
+
 	const status = subscription?.status as SubscriptionStatus | undefined;
 
 	return (
