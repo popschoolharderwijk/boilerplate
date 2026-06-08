@@ -53,6 +53,7 @@ Agenda: `agenda_events` kan gekoppeld zijn aan een lesovereenkomst (`source_type
 | `subscription_invoices` | Spiegel van Stripe Invoices (bedrag, status, hosted URL, periode). |
 | `incasso_invitations` | Audit van verzonden SEPA-onboarding magic links. |
 | `accounting_settings` | Per-organisatie BTW-/grootboek instellingen (`account_btw_21`, `btw_code_21`, `btw_code_exempt`, …). |
+| `announcements` | Nieuwsberichten voor het dashboard (`title`, `body`, `audience[]`, `published_at`, `is_active`). Publiek leesbaar zodra actief én gepubliceerd; alleen staff/admin/site_admin kan beheren. Optionele afbeeldingen in storage-bucket `announcement-images` (publiek, max 5 MB, alleen privileged kan uploaden). |
 
 ### Views
 

@@ -4,7 +4,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 import {
 	attachDefaultPaymentMethod,
 	getReusablePaymentMethodIdFromSetupIntent,
@@ -12,6 +11,7 @@ import {
 	getStripe,
 	getStripeId,
 } from '../_shared/stripe.ts';
+import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
 function json(status: number, payload: unknown) {
 	return new Response(JSON.stringify(payload), {

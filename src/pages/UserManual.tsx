@@ -174,6 +174,19 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.announcements,
+		title: NAV_LABELS.announcements,
+		description:
+			'Publiceer korte nieuwsberichten die zichtbaar zijn op het dashboard van docenten en/of leerlingen.',
+		details: [
+			'Bericht aanmaken: geef een titel en bericht op, kies de doelgroep (docenten, leerlingen of beide) en stel optioneel een publicatiedatum in.',
+			'Afbeelding toevoegen: upload optioneel een afbeelding (JPG, PNG, WEBP of GIF, max. 5 MB). Alleen Staff/Admin/Site Admin kan uploaden.',
+			'Actief / inactief: zet een bericht op inactief om het te verbergen zonder het te verwijderen.',
+			'Zichtbaarheid: een bericht is pas zichtbaar als het actief is én de publicatiedatum bereikt is.',
+			'Beheer: nieuwsberichten worden beheerd via Instellingen → Nieuwsberichten.',
+		],
+	},
+	{
 		icon: LuShieldCheck,
 		title: 'Rollen & rechten',
 		description: 'Het systeem kent verschillende rollen die bepalen wat een gebruiker kan zien en doen.',

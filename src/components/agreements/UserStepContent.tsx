@@ -131,8 +131,8 @@ export function UserStepContent({
 						Duo-les: kies een tweede leerling
 					</div>
 					<p className="text-xs text-muted-foreground">
-						Beide leerlingen krijgen een eigen overeenkomst en betaaluitnodiging, maar volgen samen één
-						les op hetzelfde tijdslot.
+						Beide leerlingen krijgen een eigen overeenkomst en betaaluitnodiging, maar volgen samen één les
+						op hetzelfde tijdslot.
 					</p>
 					<ExistingOrNewUserSelect
 						value={partnerStudentUserId}

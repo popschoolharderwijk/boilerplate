@@ -80,7 +80,11 @@ function validate(body: unknown): { ok: true; value: Body } | { ok: false; error
 	if (typeof b.start_date !== 'string' || !DATE_RE.test(b.start_date)) {
 		return { ok: false, error: "'start_date' moet YYYY-MM-DD formaat hebben" };
 	}
-	if (b.end_date !== null && b.end_date !== undefined && (typeof b.end_date !== 'string' || !DATE_RE.test(b.end_date))) {
+	if (
+		b.end_date !== null &&
+		b.end_date !== undefined &&
+		(typeof b.end_date !== 'string' || !DATE_RE.test(b.end_date))
+	) {
 		return { ok: false, error: "'end_date' moet YYYY-MM-DD formaat hebben of null zijn" };
 	}
 	return {
