@@ -60,6 +60,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [deviations, setDeviations] = useState<AgendaEventDeviationRow[]>([]);
 	const [participantCountByEventId, setParticipantCountByEventId] = useState<Map<string, number>>(new Map());
 	const [participantNamesByEventId, setParticipantNamesByEventId] = useState<Map<string, string[]>>(new Map());
+	const [participantUserIdsByEventId, setParticipantUserIdsByEventId] = useState<Map<string, string[]>>(new Map());
 	const [participantCountByDeviationId, setParticipantCountByDeviationId] = useState<Map<string, number>>(new Map());
 	const [participantNamesByDeviationId, setParticipantNamesByDeviationId] = useState<Map<string, string[]>>(
 		new Map(),
