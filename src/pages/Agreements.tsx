@@ -168,6 +168,7 @@ export default function Agreements() {
 							duration_minutes: a.duration_minutes,
 							frequency: a.frequency,
 							price_per_lesson: a.price_per_lesson,
+							duo_pair_id: a.duo_pair_id,
 							student: emptyStudent,
 							teacher: emptyTeacher,
 							lesson_type: {
