@@ -261,6 +261,45 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          audience: string[]
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          published_at: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audience?: string[]
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          published_at?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audience?: string[]
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          published_at?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body_html: string
