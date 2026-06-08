@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LuLogOut, LuMoon, LuSearch, LuSettings, LuSun } from 'react-icons/lu';
+import { LuLogOut, LuMoon, LuSearch, LuSun } from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { getBaseBreadcrumb } from '@/config/breadcrumbs';
 import { NAV_LABELS } from '@/config/nav-labels';
+
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -170,11 +171,6 @@ export function TopNav() {
 								)}
 							</div>
 						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={() => navigate('/settings')}>
-							<LuSettings className="mr-2 h-4 w-4" />
-							<span>{NAV_LABELS.settings}</span>
-						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={handleSignOut}>
 							<LuLogOut className="mr-2 h-4 w-4" />

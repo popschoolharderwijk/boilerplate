@@ -13,18 +13,23 @@ import { cn } from '@/lib/utils';
 // Single value for all vertical spacing between nav items (padding + gap)
 const NAV_GAP = '1rem';
 
-// Admin-only navigation items
-const adminNavItems = [
-	{ href: '/users', label: NAV_LABELS.users, icon: NAV_ICONS.users },
-	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
+// Admin-only items shown ABOVE the "Beheer" header (frequently used operations)
+const adminOperationalNavItems = [
 	{ href: '/agreements', label: NAV_LABELS.agreements, icon: NAV_ICONS.agreements },
 	{ href: '/lesson-groups', label: NAV_LABELS.lessonGroups, icon: NAV_ICONS.lessonGroups },
 	{ href: '/aanmeldingen', label: NAV_LABELS.signupRequests, icon: NAV_ICONS.signupRequests },
 	{ href: '/trial-lessons', label: NAV_LABELS.trialLessons, icon: NAV_ICONS.trialLessons },
+];
+
+// Admin-only items shown UNDER the "Beheer" header (true administration)
+const adminNavItems = [
+	{ href: '/users', label: NAV_LABELS.users, icon: NAV_ICONS.users },
+	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/boekhouding', label: NAV_LABELS.accounting, icon: NAV_ICONS.accounting },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
+	{ href: '/settings', label: NAV_LABELS.settings, icon: NAV_ICONS.settings },
 	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
 ];
 
@@ -184,6 +189,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									/>
 								)}
 
+								{/* Admin operational items - shown above Beheer */}
+								{showAdminNav &&
+									adminOperationalNavItems.map((item) => (
+										<NavItem key={item.href} {...item} collapsed={collapsed} />
+									))}
+
 								{/* Admin section (admin/site_admin only) */}
 								{showAdminNav && (
 									<>
@@ -200,6 +211,16 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 											<NavItem key={item.href} {...item} collapsed={collapsed} />
 										))}
 									</>
+								)}
+
+								{/* Settings - available to all users (own profile/preferences) */}
+								{!showAdminNav && (
+									<NavItem
+										href="/settings"
+										label={NAV_LABELS.settings}
+										icon={NAV_ICONS.settings}
+										collapsed={collapsed}
+									/>
 								)}
 							</nav>
 						</div>
