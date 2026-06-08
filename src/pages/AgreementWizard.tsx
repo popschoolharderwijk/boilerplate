@@ -607,6 +607,60 @@ export default function AgreementWizard() {
 		setSaving(true);
 		const timeValue = form.slot.start_time.includes(':') ? form.slot.start_time : form.slot.start_time + ':00';
 
+		// Duo-tak: maak beide overeenkomsten via edge function in één transactie.
+		if (!agreement && isDuoLesson) {
+			if (!form.partnerStudentUserId || form.partnerStudentUserId === form.studentUserId) {
+				setSaving(false);
+				toast.error('Kies een duo-partner (verschillende leerling)');
+				return;
+			}
+			if (!form.selectedOptionSnapshot) {
+				setSaving(false);
+				toast.error('Selecteer een lesoptie');
+				return;
+			}
+			const { data: duoData, error: duoErr } = await supabase.functions.invoke<{
+				agreement_ids: string[];
+				duo_pair_id: string;
+			}>('create-duo-agreements', {
+				body: {
+					student_user_id_a: form.studentUserId,
+					student_user_id_b: form.partnerStudentUserId,
+					teacher_user_id: form.teacherUserId,
+					lesson_type_id: form.lessonTypeId,
+					day_of_week: form.slot.day_of_week,
+					start_time: timeValue,
+					duration_minutes: form.selectedOptionSnapshot.duration_minutes,
+					frequency: form.selectedOptionSnapshot.frequency,
+					price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
+					start_date: form.startDate,
+					end_date: form.endDate || null,
+					signup_source: fromRequestId ? 'public_form' : 'staff_duo',
+				},
+			});
+			setSaving(false);
+			if (duoErr || !duoData?.agreement_ids?.length) {
+				toast.error(duoErr?.message ?? 'Fout bij aanmaken duo-overeenkomsten');
+				return;
+			}
+			// Stuur per leerling een betaaluitnodiging.
+			const inviteResults = await Promise.all(
+				duoData.agreement_ids.map((aid) =>
+					supabase.functions.invoke('send-incasso-invite', { body: { lesson_agreement_id: aid } }),
+				),
+			);
+			const failedInvites = inviteResults.filter((r) => r.error).length;
+			if (failedInvites > 0) {
+				toast.warning(
+					`Duo-overeenkomsten opgeslagen, maar ${failedInvites} betaaluitnodiging(en) konden niet worden verstuurd`,
+				);
+			} else {
+				toast.success('Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd');
+			}
+			navigate('/agreements');
+			return;
+		}
+
 		const payload = {
 			teacher_user_id: form.teacherUserId,
 			day_of_week: form.slot.day_of_week,
