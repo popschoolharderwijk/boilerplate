@@ -180,14 +180,11 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 
 	return (
 		<Card>
-			<CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+			<CardHeader>
 				<CardTitle className="flex items-center gap-2 text-base">
 					<LuCreditCard className="h-4 w-4" />
 					Incasso & abonnement
 				</CardTitle>
-				<Button variant="ghost" size="sm" onClick={() => void refresh()} disabled={loading || busy}>
-					<LuRefreshCw className="h-4 w-4" />
-				</Button>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{!subscription && !loading && (
