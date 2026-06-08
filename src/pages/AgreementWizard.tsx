@@ -143,7 +143,6 @@ function useLessonTypes() {
 			.from('lesson_types')
 			.select('id, name, icon, color, is_duo_lesson')
 			.eq('is_active', true)
-			.eq('is_group_lesson', false)
 			.order('name')
 			.then(({ data }) => setTypes((data ?? []).map((t) => ({ ...t, is_duo_lesson: t.is_duo_lesson ?? false }))));
 	}, []);
