@@ -106,8 +106,8 @@ export function renderMarkdown(source: string): ReactNode {
 		if (listItems.length === 0) return;
 		blocks.push(
 			<ul key={`ul-${blockIndex++}`} className="list-disc space-y-1 pl-6">
-				{listItems.map((item, idx) => (
-					<li key={`li-${blockIndex}-${idx}`}>{parseInline(item, `li${blockIndex}-${idx}`)}</li>
+				{listItems.map((item) => (
+					<li key={item}>{parseInline(item, `li-${item}`)}</li>
 				))}
 			</ul>,
 		);
