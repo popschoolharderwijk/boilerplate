@@ -171,11 +171,6 @@ export function TopNav() {
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={() => navigate('/settings')}>
-							<LuSettings className="mr-2 h-4 w-4" />
-							<span>{NAV_LABELS.settings}</span>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={handleSignOut}>
 							<LuLogOut className="mr-2 h-4 w-4" />
 							<span>Uitloggen</span>
