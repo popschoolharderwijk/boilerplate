@@ -59,6 +59,7 @@ export default function Subscriptions() {
 	const [rows, setRows] = useState<Row[]>([]);
 	const [billing, setBilling] = useState<Map<string, BillingInfo>>(new Map());
 	const [loading, setLoading] = useState(true);
+	const [syncingAll, setSyncingAll] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
