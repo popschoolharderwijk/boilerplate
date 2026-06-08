@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { LuImage, LuLink, LuMegaphone, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuImage, LuLink, LuMegaphone, LuPencil, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ function audienceLabel(audience: AnnouncementAudience[]): string {
 }
 
 export function AnnouncementsManager() {
-	const { announcements, isLoading, refetch } = useAnnouncements();
+	const { announcements, isLoading, error, isSchemaMissing, refetch } = useAnnouncements();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<Announcement | null>(null);
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -99,6 +99,10 @@ export function AnnouncementsManager() {
 		const file = event.target.files?.[0];
 		event.target.value = '';
 		if (!file) return;
+		if (isSchemaMissing) {
+			toast.error('Nieuwsberichten zijn nog niet beschikbaar');
+			return;
+		}
 		if (!file.type.startsWith('image/')) {
 			toast.error('Alleen afbeeldingen zijn toegestaan');
 			return;
@@ -130,6 +134,10 @@ export function AnnouncementsManager() {
 
 	const handleSave = async () => {
 		if (!isFormValid) return;
+		if (isSchemaMissing) {
+			toast.error('Nieuwsberichten zijn nog niet beschikbaar');
+			return;
+		}
 		setSaving(true);
 		const payload = {
 			title: form.title.trim(),
@@ -183,13 +191,21 @@ export function AnnouncementsManager() {
 						Plaats berichten die getoond worden op het dashboard van docenten en/of leerlingen.
 					</CardDescription>
 				</div>
-				<Button onClick={openCreate} size="sm">
+				<Button onClick={openCreate} size="sm" disabled={isSchemaMissing}>
 					<LuPlus className="mr-2 h-4 w-4" />
 					Nieuw bericht
 				</Button>
 			</CardHeader>
 			<CardContent>
-				{isLoading ? (
+				{isSchemaMissing ? (
+					<div className="flex gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+						<LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+						<div>
+							<p className="font-medium">Nieuwsberichten zijn nog niet beschikbaar.</p>
+							{error && <p className="mt-1 text-xs opacity-80">{error}</p>}
+						</div>
+					</div>
+				) : isLoading ? (
 					<p className="text-sm text-muted-foreground">Laden...</p>
 				) : announcements.length === 0 ? (
 					<p className="text-sm text-muted-foreground">Er zijn nog geen nieuwsberichten.</p>
