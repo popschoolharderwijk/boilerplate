@@ -42,7 +42,10 @@ type LessonAgreementTableFields = LessonAgreementBaseFields &
 	Pick<LessonAgreementRow, 'created_at' | 'notes'> & { teacher_user_id: string };
 
 /** Form state for lesson type create/edit (nullable DB fields as string) */
-export type LessonTypeFormState = Pick<LessonTypeRow, 'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_active'> & {
+export type LessonTypeFormState = Pick<
+	LessonTypeRow,
+	'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_duo_lesson' | 'is_active'
+> & {
 	description: string;
 	cost_center: string;
 };
