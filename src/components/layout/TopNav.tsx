@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LuLogOut, LuMoon, LuSearch, LuSettings, LuSun } from 'react-icons/lu';
+import { LuLogOut, LuMoon, LuSearch, LuSun } from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
