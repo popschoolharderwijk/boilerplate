@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnnouncementsSection } from '@/components/dashboard/AnnouncementsSection';
 import { RecentStudents } from '@/components/dashboard/RecentStudents';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { TeacherAvailability } from '@/components/dashboard/TeacherAvailability';
