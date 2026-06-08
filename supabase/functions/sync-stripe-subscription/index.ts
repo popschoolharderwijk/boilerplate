@@ -1,4 +1,7 @@
-// Manual recovery: re-fetch a Stripe subscription by id and re-upsert state.
+// Manual recovery: re-fetch Stripe state and re-upsert.
+// Accepts either { stripe_subscription_id } or { lesson_agreement_id }.
+// For scheduled rows (no stripe_subscription_id yet) we look up the schedule
+// and use its released_subscription when available.
 // Admin/site_admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -6,7 +9,8 @@ import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
 interface Body {
-	stripe_subscription_id: string;
+	stripe_subscription_id?: string;
+	lesson_agreement_id?: string;
 }
 
 function json(status: number, payload: unknown) {
@@ -29,8 +33,8 @@ Deno.serve(async (req) => {
 	} catch {
 		return json(400, { error: 'Invalid JSON' });
 	}
-	if (!body.stripe_subscription_id || typeof body.stripe_subscription_id !== 'string') {
-		return json(400, { error: 'Ongeldig stripe_subscription_id' });
+	if (!body.stripe_subscription_id && !body.lesson_agreement_id) {
+		return json(400, { error: 'Geef stripe_subscription_id of lesson_agreement_id mee' });
 	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -57,11 +61,52 @@ Deno.serve(async (req) => {
 
 	try {
 		const stripe = getStripe();
-		const sub = await stripe.subscriptions.retrieve(body.stripe_subscription_id, {
+
+		// Resolve target subscription id.
+		let stripeSubscriptionId: string | null = body.stripe_subscription_id ?? null;
+		const lessonAgreementIdHint: string | null = body.lesson_agreement_id ?? null;
+		let scheduleIdFromDb: string | null = null;
+
+		if (!stripeSubscriptionId && lessonAgreementIdHint) {
+			const { data: row, error: rowErr } = await admin
+				.from('subscriptions')
+				.select('stripe_subscription_id, stripe_schedule_id')
+				.eq('lesson_agreement_id', lessonAgreementIdHint)
+				.order('created_at', { ascending: false })
+				.limit(1)
+				.maybeSingle();
+			if (rowErr) throw rowErr;
+			stripeSubscriptionId = row?.stripe_subscription_id ?? null;
+			scheduleIdFromDb = row?.stripe_schedule_id ?? null;
+
+			if (!stripeSubscriptionId && scheduleIdFromDb) {
+				const schedule = await stripe.subscriptionSchedules.retrieve(scheduleIdFromDb);
+				const released =
+					typeof schedule.released_subscription === 'string'
+						? schedule.released_subscription
+						: ((schedule.subscription as string | null) ?? null);
+				if (released) {
+					stripeSubscriptionId = released;
+				} else {
+					// No subscription yet — just refresh schedule status into the row.
+					return json(200, {
+						synced: false,
+						info: `Schedule status is ${schedule.status}; nog geen actief abonnement gekoppeld.`,
+						schedule_status: schedule.status,
+					});
+				}
+			}
+		}
+
+		if (!stripeSubscriptionId) {
+			return json(400, { error: 'Geen Stripe-abonnement gevonden om te syncen' });
+		}
+
+		const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
 			expand: ['default_payment_method', 'latest_invoice'],
 		});
 
-		const lessonAgreementId = sub.metadata?.lesson_agreement_id;
+		const lessonAgreementId = sub.metadata?.lesson_agreement_id ?? lessonAgreementIdHint;
 		if (!lessonAgreementId) {
 			return json(400, { error: 'Subscription mist lesson_agreement_id metadata' });
 		}
@@ -79,7 +124,8 @@ Deno.serve(async (req) => {
 			stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
 			stripe_subscription_id: sub.id,
 			stripe_price_id: priceId,
-			stripe_schedule_id: typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? null),
+			stripe_schedule_id:
+				typeof sub.schedule === 'string' ? sub.schedule : (sub.schedule?.id ?? scheduleIdFromDb ?? null),
 			status: sub.status,
 			current_period_start: currentPeriodStart ? new Date(currentPeriodStart * 1000).toISOString() : null,
 			current_period_end: currentPeriodEnd ? new Date(currentPeriodEnd * 1000).toISOString() : null,
@@ -90,7 +136,7 @@ Deno.serve(async (req) => {
 				typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
 		});
 
-		return json(200, { synced: true });
+		return json(200, { synced: true, status: sub.status });
 	} catch (err) {
 		console.error('sync error', err);
 		return json(500, { error: getSafeErrorMessage(err, 'Kon subscription niet syncen') });

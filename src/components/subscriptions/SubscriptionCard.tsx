@@ -157,6 +157,25 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 		void refresh();
 	};
 
+	const handleSyncFromStripe = async () => {
+		setBusy(true);
+		const { data, error } = await supabase.functions.invoke('sync-stripe-subscription', {
+			body: { lesson_agreement_id: lessonAgreementId },
+		});
+		setBusy(false);
+		const payload = data as { synced?: boolean; status?: string; info?: string; error?: string } | null;
+		if (error || payload?.error) {
+			toast.error(payload?.error ?? error?.message ?? 'Kon niet syncen met Stripe');
+			return;
+		}
+		if (payload?.synced) {
+			toast.success(`Gesynchroniseerd met Stripe (status: ${payload.status ?? 'onbekend'})`);
+		} else {
+			toast.info(payload?.info ?? 'Geen wijzigingen — Stripe heeft nog geen actief abonnement');
+		}
+		void refresh();
+	};
+
 	const status = subscription?.status as SubscriptionStatus | undefined;
 
 	return (
@@ -233,6 +252,18 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
 								Beheer betaling
 							</Button>
+							{isPrivileged && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleSyncFromStripe}
+									disabled={busy}
+									title="Haal de actuele status uit Stripe en werk deze rij bij"
+								>
+									<LuRefreshCw className="mr-1.5 h-4 w-4" />
+									Sync met Stripe
+								</Button>
+							)}
 							{isPrivileged && subscription.stripe_schedule_id && (
 								<Button
 									variant="outline"
