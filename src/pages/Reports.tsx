@@ -304,7 +304,7 @@ function ReportsDataTable({
 			getRowKey={(row) =>
 				row.source_type === 'project'
 					? `project-${row.teacher_user_id}-${row.project_id}`
-					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`
+					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}-${row.duo_perspective ?? 'std'}`
 			}
 			emptyMessage="Geen gegevens gevonden voor de geselecteerde periode en filters."
 			initialSortColumn="total_minutes"
