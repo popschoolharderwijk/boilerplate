@@ -19,6 +19,8 @@ export interface CalendarEventResource {
 	hasTimeOrDateChange?: boolean;
 	isCancelled: boolean;
 	isGroupLesson: boolean;
+	/** True when this lesson_agreement event is part of a duo (two students share one event) */
+	isDuoLesson?: boolean;
 	studentCount?: number;
 	originalDate?: string;
 	originalStartTime?: string;
