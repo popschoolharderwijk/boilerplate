@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuCalendar, LuCreditCard, LuExternalLink } from 'react-icons/lu';
+import { LuCalendar, LuCreditCard, LuExternalLink, LuRefreshCw } from 'react-icons/lu';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +59,7 @@ export default function Subscriptions() {
 	const [rows, setRows] = useState<Row[]>([]);
 	const [billing, setBilling] = useState<Map<string, BillingInfo>>(new Map());
 	const [loading, setLoading] = useState(true);
+	const [syncingAll, setSyncingAll] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -198,6 +199,42 @@ export default function Subscriptions() {
 		if (isPrivileged) void load();
 	}, [isPrivileged, load]);
 
+	const handleSyncAll = useCallback(async () => {
+		const targets = rows.filter((r) => r.stripe_subscription_id || r.stripe_schedule_id);
+		if (targets.length === 0) {
+			toast.info('Geen abonnementen om te syncen');
+			return;
+		}
+		setSyncingAll(true);
+		let synced = 0;
+		let unchanged = 0;
+		let failed = 0;
+		// Limit concurrency to avoid hammering Stripe.
+		const concurrency = 4;
+		let idx = 0;
+		const worker = async () => {
+			while (idx < targets.length) {
+				const i = idx++;
+				const row = targets[i];
+				const { data, error } = await supabase.functions.invoke('sync-stripe-subscription', {
+					body: { lesson_agreement_id: row.lesson_agreement_id },
+				});
+				const payload = data as { synced?: boolean; error?: string } | null;
+				if (error || payload?.error) failed++;
+				else if (payload?.synced) synced++;
+				else unchanged++;
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+		setSyncingAll(false);
+		if (failed > 0) {
+			toast.error(`${failed} fout${failed === 1 ? '' : 'en'}, ${synced} gesynced, ${unchanged} ongewijzigd`);
+		} else {
+			toast.success(`${synced} gesynchroniseerd, ${unchanged} ongewijzigd`);
+		}
+		void load();
+	}, [rows, load]);
+
 	const columns: DataTableColumn<Row>[] = useMemo(
 		() => [
 			{
@@ -301,6 +338,12 @@ export default function Subscriptions() {
 				icon={<LuCreditCard className="h-6 w-6" />}
 				title="Facturatie"
 				subtitle="Incasso's en lesgeld per lesovereenkomst"
+				actions={
+					<Button onClick={handleSyncAll} disabled={syncingAll || loading} variant="outline">
+						<LuRefreshCw className={`mr-1.5 h-4 w-4 ${syncingAll ? 'animate-spin' : ''}`} />
+						{syncingAll ? 'Bezig met syncen…' : 'Sync alles met Stripe'}
+					</Button>
+				}
 			/>
 			<DataTable<Row>
 				title="Facturatie"
