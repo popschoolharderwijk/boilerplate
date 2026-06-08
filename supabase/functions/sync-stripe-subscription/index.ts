@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
 
 		// Resolve target subscription id.
 		let stripeSubscriptionId: string | null = body.stripe_subscription_id ?? null;
-		let lessonAgreementIdHint: string | null = body.lesson_agreement_id ?? null;
+		const lessonAgreementIdHint: string | null = body.lesson_agreement_id ?? null;
 		let scheduleIdFromDb: string | null = null;
 
 		if (!stripeSubscriptionId && lessonAgreementIdHint) {
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 				const released =
 					typeof schedule.released_subscription === 'string'
 						? schedule.released_subscription
-						: (schedule.subscription as string | null) ?? null;
+						: ((schedule.subscription as string | null) ?? null);
 				if (released) {
 					stripeSubscriptionId = released;
 				} else {
