@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react';
 import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AccountingSettingsManager } from '@/components/settings/AccountingSettingsManager';
-import { LegacyImportManager } from '@/components/settings/LegacyImportManager';
-
 import { useTheme } from '@/components/ThemeProvider';
 import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,15 +19,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
-export default function Settings() {
+type AccountTab = 'profile' | 'appearance' | 'danger';
+
+interface AccountProps {
+	defaultTab?: AccountTab;
+}
+
+const TAB_TITLES: Record<AccountTab, string> = {
+	profile: 'Profiel',
+	appearance: 'Weergave',
+	danger: 'Account',
+};
+
+export default function Account({ defaultTab = 'profile' }: AccountProps) {
 	const { theme, setTheme } = useTheme();
-	const { user, isAdmin, isSiteAdmin } = useAuth();
-	const canSeeAccounting = isAdmin || isSiteAdmin;
+	const { user } = useAuth();
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -53,23 +60,19 @@ export default function Settings() {
 		phone_number?: string;
 	}>({});
 
-	// Delete account state
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
 	const [deleting, setDeleting] = useState(false);
 
-	// Load profile data
 	useEffect(() => {
 		async function loadProfile() {
 			if (!user) return;
 			setLoading(true);
-
 			const { data, error } = await supabase
 				.from('profiles')
 				.select('first_name, last_name, phone_number, avatar_url')
 				.eq('user_id', user.id)
 				.single();
-
 			if (error) {
 				console.error('Error loading profile:', error);
 			} else if (data) {
@@ -82,27 +85,21 @@ export default function Settings() {
 			}
 			setLoading(false);
 		}
-
 		loadProfile();
 	}, [user]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!user) return;
-
-		// Validate
 		const newErrors: typeof errors = {};
 		if (formData.phone_number && formData.phone_number.length !== 10) {
 			newErrors.phone_number = 'Telefoonnummer moet precies 10 cijfers zijn';
 		}
 		setErrors(newErrors);
-
 		if (Object.keys(newErrors).length > 0) return;
 
 		setSaving(true);
-
 		const normalizedPhone = formData.phone_number || null;
-
 		const { error } = await supabase
 			.from('profiles')
 			.update({
@@ -113,12 +110,8 @@ export default function Settings() {
 			.eq('user_id', user.id);
 
 		if (error) {
-			console.error('Error updating profile:', error);
-			toast.error('Fout bij opslaan', {
-				description: error.message,
-			});
+			toast.error('Fout bij opslaan', { description: error.message });
 		} else if (profile) {
-			// Update local state
 			setProfile({
 				...profile,
 				first_name: formData.first_name || null,
@@ -126,29 +119,20 @@ export default function Settings() {
 				phone_number: normalizedPhone,
 			});
 			toast.success('Profiel opgeslagen!');
-			// Notify TopNav to refresh profile data
 			window.dispatchEvent(new Event('profile-updated'));
 		}
-
 		setSaving(false);
 	};
 
 	const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (!user || !e.target.files || e.target.files.length === 0) return;
-
 		const file = e.target.files[0];
 		const fileExt = file.name.split('.').pop();
-		// Use consistent filename to overwrite previous avatar
 		const fileName = `${user.id}.${fileExt}`;
 		const filePath = fileName;
-
 		setSaving(true);
 
-		// Delete any existing avatar files for this user (handles extension changes)
-		const { data: existingFiles } = await supabase.storage.from('avatars').list('', {
-			search: user.id,
-		});
-
+		const { data: existingFiles } = await supabase.storage.from('avatars').list('', { search: user.id });
 		if (existingFiles && existingFiles.length > 0) {
 			const filesToDelete = existingFiles.filter((f) => f.name.startsWith(user.id)).map((f) => f.name);
 			if (filesToDelete.length > 0) {
@@ -156,123 +140,78 @@ export default function Settings() {
 			}
 		}
 
-		// Upload new file
 		const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
-
 		if (uploadError) {
-			console.error('Error uploading avatar:', uploadError);
-			toast.error('Fout bij uploaden avatar', {
-				description: uploadError.message,
-			});
+			toast.error('Fout bij uploaden avatar', { description: uploadError.message });
 			setSaving(false);
 			return;
 		}
 
-		// Get public URL with cache-busting parameter
 		const {
 			data: { publicUrl },
 		} = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-		// Add cache-busting timestamp to prevent browser caching old avatar
 		const avatarUrlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
 
-		// Update profile
 		const { error: updateError } = await supabase
 			.from('profiles')
 			.update({ avatar_url: avatarUrlWithCacheBust })
 			.eq('user_id', user.id);
 
 		if (updateError) {
-			console.error('Error updating avatar URL:', updateError);
-			toast.error('Fout bij opslaan avatar', {
-				description: updateError.message,
-			});
+			toast.error('Fout bij opslaan avatar', { description: updateError.message });
 		} else if (profile) {
 			setProfile({ ...profile, avatar_url: avatarUrlWithCacheBust });
 			toast.success('Avatar opgeslagen!');
-			// Notify TopNav to refresh profile data
 			window.dispatchEvent(new Event('profile-updated'));
 		}
-
 		setSaving(false);
 	};
 
 	const handleAvatarDelete = async () => {
 		if (!user) return;
-
 		setSaving(true);
-
-		// Delete avatar files from storage
-		const { data: existingFiles } = await supabase.storage.from('avatars').list('', {
-			search: user.id,
-		});
-
+		const { data: existingFiles } = await supabase.storage.from('avatars').list('', { search: user.id });
 		if (existingFiles && existingFiles.length > 0) {
 			const filesToDelete = existingFiles.filter((f) => f.name.startsWith(user.id)).map((f) => f.name);
 			if (filesToDelete.length > 0) {
 				const { error: deleteError } = await supabase.storage.from('avatars').remove(filesToDelete);
 				if (deleteError) {
-					console.error('Error deleting avatar files:', deleteError);
-					toast.error('Fout bij verwijderen avatar', {
-						description: deleteError.message,
-					});
+					toast.error('Fout bij verwijderen avatar', { description: deleteError.message });
 					setSaving(false);
 					return;
 				}
 			}
 		}
-
-		// Clear avatar_url in profile
 		const { error: updateError } = await supabase
 			.from('profiles')
 			.update({ avatar_url: null })
 			.eq('user_id', user.id);
-
 		if (updateError) {
-			console.error('Error clearing avatar URL:', updateError);
-			toast.error('Fout bij verwijderen avatar', {
-				description: updateError.message,
-			});
+			toast.error('Fout bij verwijderen avatar', { description: updateError.message });
 		} else if (profile) {
 			setProfile({ ...profile, avatar_url: null });
 			toast.success('Avatar verwijderd!');
-			// Notify TopNav to refresh profile data
 			window.dispatchEvent(new Event('profile-updated'));
 		}
-
 		setSaving(false);
 	};
 
 	const handleDeleteAccount = async () => {
 		if (!user) return;
-
 		setDeleting(true);
-
 		try {
-			// Get current session for authorization
 			const {
 				data: { session },
 			} = await supabase.auth.getSession();
-
 			if (!session) {
-				toast.error('Sessie verlopen', {
-					description: 'Log opnieuw in en probeer het nogmaals.',
-				});
+				toast.error('Sessie verlopen', { description: 'Log opnieuw in en probeer het nogmaals.' });
 				setDeleting(false);
 				return;
 			}
-
-			// Call the Edge Function using supabase.functions.invoke (handles auth automatically)
-			const { data, error: invokeError } = await supabase.functions.invoke('delete-user', {
-				method: 'POST',
-			});
-
+			const { data, error: invokeError } = await supabase.functions.invoke('delete-user', { method: 'POST' });
 			if (invokeError) {
-				// Handle specific error for last site_admin
 				if (data?.code === 'last_site_admin') {
-					toast.error('Kan account niet verwijderen', {
-						description: data.error,
-					});
+					toast.error('Kan account niet verwijderen', { description: data.error });
 				} else {
 					toast.error('Fout bij verwijderen account', {
 						description: invokeError.message || 'Er is een onbekende fout opgetreden.',
@@ -281,13 +220,9 @@ export default function Settings() {
 				setDeleting(false);
 				return;
 			}
-
-			// Success - sign out and redirect
 			toast.success('Account verwijderd', {
 				description: 'Je account en alle bijbehorende gegevens zijn verwijderd.',
 			});
-
-			// Sign out and redirect to login
 			await supabase.auth.signOut();
 			navigate('/login');
 		} catch (error) {
@@ -310,7 +245,7 @@ export default function Settings() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">{NAV_LABELS.settings}</h1>
+					<h1 className="text-3xl font-bold tracking-tight">{TAB_TITLES[defaultTab]}</h1>
 					<p className="text-muted-foreground">Beheer je voorkeuren en accountinstellingen</p>
 				</div>
 				<p>Laden...</p>
@@ -321,28 +256,31 @@ export default function Settings() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-3xl font-bold tracking-tight">{NAV_LABELS.settings}</h1>
+				<h1 className="text-3xl font-bold tracking-tight">{TAB_TITLES[defaultTab]}</h1>
 				<p className="text-muted-foreground">Beheer je voorkeuren en accountinstellingen</p>
 			</div>
 
-			<Tabs defaultValue="profile">
+			<Tabs
+				defaultValue={defaultTab}
+				onValueChange={(v) => {
+					if (v === 'profile') navigate('/account/profile', { replace: true });
+					else if (v === 'appearance') navigate('/account/appearance', { replace: true });
+					else if (v === 'danger') navigate('/account/danger', { replace: true });
+				}}
+			>
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="appearance">Weergave</TabsTrigger>
-					{canSeeAccounting && <TabsTrigger value="accounting">Boekhouding</TabsTrigger>}
-					{canSeeAccounting && <TabsTrigger value="import">Data-import</TabsTrigger>}
 					<TabsTrigger value="danger">Account</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="profile" className="space-y-6 mt-6">
-					{/* Profile Information */}
 					<Card>
 						<CardHeader>
 							<CardTitle>Profiel</CardTitle>
 							<CardDescription>Wijzig je persoonlijke informatie</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
-							{/* Avatar */}
 							<div className="flex items-center gap-4">
 								<Avatar className="h-20 w-20">
 									<AvatarImage src={profile?.avatar_url || undefined} alt="Avatar" />
@@ -387,7 +325,6 @@ export default function Settings() {
 								</div>
 							</div>
 
-							{/* Profile Form */}
 							<form onSubmit={handleSubmit} className="space-y-4">
 								<div className="grid grid-cols-2 gap-4">
 									<div className="space-y-2">
@@ -398,11 +335,7 @@ export default function Settings() {
 											onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
 											disabled={saving}
 										/>
-										{errors.first_name && (
-											<p className="text-xs text-destructive">{errors.first_name}</p>
-										)}
 									</div>
-
 									<div className="space-y-2">
 										<Label htmlFor="last_name">Achternaam</Label>
 										<Input
@@ -411,9 +344,6 @@ export default function Settings() {
 											onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
 											disabled={saving}
 										/>
-										{errors.last_name && (
-											<p className="text-xs text-destructive">{errors.last_name}</p>
-										)}
 									</div>
 								</div>
 
@@ -445,7 +375,6 @@ export default function Settings() {
 				</TabsContent>
 
 				<TabsContent value="appearance" className="space-y-6 mt-6">
-					{/* Theme Settings */}
 					<Card>
 						<CardHeader>
 							<CardTitle>Thema</CardTitle>
@@ -482,20 +411,7 @@ export default function Settings() {
 					</Card>
 				</TabsContent>
 
-				{canSeeAccounting && (
-					<TabsContent value="accounting" className="space-y-6 mt-6">
-						<AccountingSettingsManager />
-					</TabsContent>
-				)}
-
-				{canSeeAccounting && (
-					<TabsContent value="import" className="space-y-6 mt-6">
-						<LegacyImportManager />
-					</TabsContent>
-				)}
-
 				<TabsContent value="danger" className="space-y-6 mt-6">
-					{/* Danger Zone - Delete Account */}
 					<Card className="border-destructive/50">
 						<CardHeader>
 							<CardTitle className="text-destructive">Gevarenzone</CardTitle>
@@ -523,7 +439,6 @@ export default function Settings() {
 				</TabsContent>
 			</Tabs>
 
-			{/* Delete Account Confirmation Dialog */}
 			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
@@ -541,7 +456,6 @@ export default function Settings() {
 						<Alert variant="error" title="Let op!">
 							Na het verwijderen van je account kun je dit niet meer ongedaan maken.
 						</Alert>
-
 						<div className="space-y-2">
 							<Label htmlFor="confirm-email">
 								Typ je e-mailadres ter bevestiging: <span className="font-mono">{user?.email}</span>

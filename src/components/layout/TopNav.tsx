@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LuLogOut, LuMoon, LuSearch, LuSun } from 'react-icons/lu';
+import { LuLogOut, LuMoon, LuPalette, LuSearch, LuShieldAlert, LuSun, LuUser } from 'react-icons/lu';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -171,6 +171,19 @@ export function TopNav() {
 								)}
 							</div>
 						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onClick={() => navigate('/account/profile')}>
+							<LuUser className="mr-2 h-4 w-4" />
+							<span>Profiel</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => navigate('/account/appearance')}>
+							<LuPalette className="mr-2 h-4 w-4" />
+							<span>Weergave</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => navigate('/account/danger')}>
+							<LuShieldAlert className="mr-2 h-4 w-4" />
+							<span>Account</span>
+						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={handleSignOut}>
 							<LuLogOut className="mr-2 h-4 w-4" />

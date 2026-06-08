@@ -10,8 +10,8 @@ import {
 	subYears,
 } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
-import { Navigate } from 'react-router-dom';
+import { LuFileSpreadsheet, LuFileText, LuSettings } from 'react-icons/lu';
+import { Link, Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -223,10 +223,18 @@ export default function AccountingReportPage() {
 
 	return (
 		<div className="space-y-6">
-			<PageHeader
-				title={NAV_LABELS.accounting}
-				subtitle="Journaalposten voor Exact Online op basis van Stripe-facturen"
-			/>
+			<div className="flex items-start justify-between gap-4">
+				<PageHeader
+					title={NAV_LABELS.accounting}
+					subtitle="Journaalposten voor Exact Online op basis van Stripe-facturen"
+				/>
+				<Button asChild variant="outline" size="sm">
+					<Link to="/boekhouding/instellingen">
+						<LuSettings className="mr-2 h-4 w-4" />
+						Instellingen
+					</Link>
+				</Button>
+			</div>
 
 			<div className="flex flex-wrap gap-2">
 				{(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
