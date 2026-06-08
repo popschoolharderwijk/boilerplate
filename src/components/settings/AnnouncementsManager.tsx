@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { LuAlertTriangle, LuImage, LuLink, LuMegaphone, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuImage, LuLink, LuMegaphone, LuPencil, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -199,7 +199,7 @@ export function AnnouncementsManager() {
 			<CardContent>
 				{isSchemaMissing ? (
 					<div className="flex gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-						<LuAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+						<LuTriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
 						<div>
 							<p className="font-medium">Nieuwsberichten zijn nog niet beschikbaar.</p>
 							{error && <p className="mt-1 text-xs opacity-80">{error}</p>}
