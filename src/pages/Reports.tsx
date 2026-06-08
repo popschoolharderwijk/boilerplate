@@ -46,9 +46,17 @@ interface ReportRow {
 	age_category: 'under_21' | '21_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
+	/** For duo-lestype rijen: 'teacher_block' = 1 blok per duo-occurrence (BTW gesplitst per leerling),
+	 *  'student_lesson' = 2 leerling-lessen per duo-occurrence. NULL voor niet-duo en projecten. */
+	duo_perspective: 'teacher_block' | 'student_lesson' | null;
 	project_id: string | null;
 	project_name: string | null;
 }
+
+const DUO_PERSPECTIVE_LABELS: Record<'teacher_block' | 'student_lesson', string> = {
+	teacher_block: 'docent-blokken',
+	student_lesson: 'per leerling',
+};
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
 
