@@ -639,15 +639,36 @@ export default function LessonTypeInfo() {
 								/>
 							</div>
 
-							<div className="flex items-center gap-6">
+							<div className="flex flex-wrap items-center gap-6">
 								<label className="flex cursor-pointer items-center gap-2">
 									<input
 										type="checkbox"
 										checked={form.is_group_lesson}
-										onChange={(e) => setForm({ ...form, is_group_lesson: e.target.checked })}
+										onChange={(e) =>
+											setForm({
+												...form,
+												is_group_lesson: e.target.checked,
+												is_duo_lesson: e.target.checked ? false : form.is_duo_lesson,
+											})
+										}
 										className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
 									/>
 									<span className="text-sm font-medium">Groepsles</span>
+								</label>
+								<label className="flex cursor-pointer items-center gap-2">
+									<input
+										type="checkbox"
+										checked={form.is_duo_lesson}
+										onChange={(e) =>
+											setForm({
+												...form,
+												is_duo_lesson: e.target.checked,
+												is_group_lesson: e.target.checked ? false : form.is_group_lesson,
+											})
+										}
+										className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+									/>
+									<span className="text-sm font-medium">Duo-les (2 leerlingen)</span>
 								</label>
 								<label className="flex cursor-pointer items-center gap-2">
 									<input
