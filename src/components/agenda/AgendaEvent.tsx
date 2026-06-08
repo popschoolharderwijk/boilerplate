@@ -89,7 +89,14 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 						aria-hidden
 					/>
 				)}
-				{isLessonEvent && !isProjectEvent && !isLessonGroupEvent && (
+				{isLessonEvent && !isProjectEvent && !isLessonGroupEvent && isDuoLesson && (
+					<LuUsers
+						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
+						title="Duo-les"
+						aria-hidden
+					/>
+				)}
+				{isLessonEvent && !isProjectEvent && !isLessonGroupEvent && !isDuoLesson && (
 					<LuMusic
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Les"
