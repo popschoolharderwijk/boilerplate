@@ -430,19 +430,22 @@ export default function Reports() {
 			}));
 	}, [data]);
 
-	// Summary stats: based on rows currently visible in table (quick filter + search)
+	// Summary stats: based on rows currently visible in table (quick filter + search).
+	// Voor duo-lessen tellen we alleen de 'teacher_block' weergave mee om dubbeltelling te voorkomen
+	// (student_lesson rijen geven dezelfde uren nog eens vanuit per-leerling perspectief).
 	const summary = useMemo(() => {
-		const totalMinutes = dataVisibleInTable.reduce((sum, r) => sum + r.total_minutes, 0);
-		const totalLessons = dataVisibleInTable
+		const canonical = dataVisibleInTable.filter((r) => r.duo_perspective !== 'student_lesson');
+		const totalMinutes = canonical.reduce((sum, r) => sum + r.total_minutes, 0);
+		const totalLessons = canonical
 			.filter((r) => r.source_type === 'lesson')
 			.reduce((sum, r) => sum + r.lesson_count, 0);
-		const under21Minutes = dataVisibleInTable
+		const under21Minutes = canonical
 			.filter((r) => r.age_category === 'under_21')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		const over21Minutes = dataVisibleInTable
+		const over21Minutes = canonical
 			.filter((r) => r.age_category === '21_plus')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		const projectMinutes = dataVisibleInTable
+		const projectMinutes = canonical
 			.filter((r) => r.source_type === 'project')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
 		return { totalMinutes, totalLessons, under21Minutes, over21Minutes, projectMinutes };
