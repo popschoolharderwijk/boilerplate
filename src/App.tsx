@@ -104,6 +104,7 @@ const App = () => (
 						<Route path="/boekhouding" element={<AccountingReport />} />
 						<Route path="/boekhouding/instellingen" element={<AccountingSettingsPage />} />
 						<Route path="/data-import" element={<LegacyImport />} />
+						<Route path="/announcements" element={<Announcements />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
 
