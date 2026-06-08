@@ -44,6 +44,7 @@ const emptyForm: LessonTypeFormState = {
 	color: '',
 	cost_center: '',
 	is_group_lesson: false,
+	is_duo_lesson: false,
 	is_active: true,
 };
 
