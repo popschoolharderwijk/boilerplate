@@ -46,9 +46,17 @@ interface ReportRow {
 	age_category: 'under_21' | '21_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
+	/** For duo-lestype rijen: 'teacher_block' = 1 blok per duo-occurrence (BTW gesplitst per leerling),
+	 *  'student_lesson' = 2 leerling-lessen per duo-occurrence. NULL voor niet-duo en projecten. */
+	duo_perspective: 'teacher_block' | 'student_lesson' | null;
 	project_id: string | null;
 	project_name: string | null;
 }
+
+const DUO_PERSPECTIVE_LABELS: Record<'teacher_block' | 'student_lesson', string> = {
+	teacher_block: 'docent-blokken',
+	student_lesson: 'per leerling',
+};
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
 
@@ -161,14 +169,28 @@ function ReportsDataTable({
 							{row.project_name}
 						</Badge>
 					) : row.lesson_type_name ? (
-						<LessonTypeBadge
-							lessonType={{
-								name: row.lesson_type_name,
-								icon: row.lesson_type_icon ?? '',
-								color: row.lesson_type_color ?? '',
-							}}
-							size="sm"
-						/>
+						<div className="flex items-center gap-2">
+							<LessonTypeBadge
+								lessonType={{
+									name: row.lesson_type_name,
+									icon: row.lesson_type_icon ?? '',
+									color: row.lesson_type_color ?? '',
+								}}
+								size="sm"
+							/>
+							{row.duo_perspective && (
+								<span
+									className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+									title={
+										row.duo_perspective === 'teacher_block'
+											? 'Duo: 1 lesblok per duo-paar, BTW gesplitst per leerling'
+											: 'Duo: 2 leerling-lessen per duo-paar'
+									}
+								>
+									{DUO_PERSPECTIVE_LABELS[row.duo_perspective]}
+								</span>
+							)}
+						</div>
 					) : null,
 			},
 			{
@@ -282,7 +304,7 @@ function ReportsDataTable({
 			getRowKey={(row) =>
 				row.source_type === 'project'
 					? `project-${row.teacher_user_id}-${row.project_id}`
-					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`
+					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}-${row.duo_perspective ?? 'std'}`
 			}
 			emptyMessage="Geen gegevens gevonden voor de geselecteerde periode en filters."
 			initialSortColumn="total_minutes"
@@ -408,19 +430,22 @@ export default function Reports() {
 			}));
 	}, [data]);
 
-	// Summary stats: based on rows currently visible in table (quick filter + search)
+	// Summary stats: based on rows currently visible in table (quick filter + search).
+	// Voor duo-lessen tellen we alleen de 'teacher_block' weergave mee om dubbeltelling te voorkomen
+	// (student_lesson rijen geven dezelfde uren nog eens vanuit per-leerling perspectief).
 	const summary = useMemo(() => {
-		const totalMinutes = dataVisibleInTable.reduce((sum, r) => sum + r.total_minutes, 0);
-		const totalLessons = dataVisibleInTable
+		const canonical = dataVisibleInTable.filter((r) => r.duo_perspective !== 'student_lesson');
+		const totalMinutes = canonical.reduce((sum, r) => sum + r.total_minutes, 0);
+		const totalLessons = canonical
 			.filter((r) => r.source_type === 'lesson')
 			.reduce((sum, r) => sum + r.lesson_count, 0);
-		const under21Minutes = dataVisibleInTable
+		const under21Minutes = canonical
 			.filter((r) => r.age_category === 'under_21')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		const over21Minutes = dataVisibleInTable
+		const over21Minutes = canonical
 			.filter((r) => r.age_category === '21_plus')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		const projectMinutes = dataVisibleInTable
+		const projectMinutes = canonical
 			.filter((r) => r.source_type === 'project')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
 		return { totalMinutes, totalLessons, under21Minutes, over21Minutes, projectMinutes };
