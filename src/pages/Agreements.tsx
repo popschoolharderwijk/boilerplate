@@ -366,9 +366,17 @@ export default function Agreements() {
 					<div className="flex items-center gap-2">
 						<LessonTypeBadge lessonType={r.lesson_type} size="sm" showName={false} />
 						<div>
-							<div>
+							<div className="flex items-center gap-1">
 								<span>{DAY_NAMES[r.day_of_week]?.slice(0, 2)}</span>
-								<span className="text-muted-foreground"> {formatTime(r.start_time)}</span>
+								<span className="text-muted-foreground">{formatTime(r.start_time)}</span>
+								{r.duo_pair_id && (
+									<span
+										className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium text-primary"
+										title="Duo-overeenkomst"
+									>
+										Duo
+									</span>
+								)}
 							</div>
 							<p className="text-xs text-muted-foreground">{frequencyLabels[r.frequency]}</p>
 						</div>
