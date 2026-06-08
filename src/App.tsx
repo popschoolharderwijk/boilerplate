@@ -4,7 +4,9 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemedToaster } from './components/ThemedToaster';
 import { ThemeProvider } from './components/ThemeProvider';
+import Account from './pages/Account';
 import AccountingReport from './pages/AccountingReport';
+import AccountingSettingsPage from './pages/AccountingSettingsPage';
 import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
@@ -13,6 +15,7 @@ import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
 import EmailTemplates from './pages/EmailTemplates';
 import IncassoStart from './pages/IncassoStart';
+import LegacyImport from './pages/LegacyImport';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
 import LessonTypeInfo from './pages/LessonTypeInfo';
@@ -28,7 +31,6 @@ import NotFound from './pages/NotFound';
 import Projects from './pages/Projects';
 import PublicSignup from './pages/PublicSignup';
 import Reports from './pages/Reports';
-import Settings from './pages/Settings';
 import SignupRequests from './pages/SignupRequests';
 import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
@@ -82,7 +84,10 @@ const App = () => (
 						<Route path="/abonnementen" element={<Subscriptions />} />
 						<Route path="/lesvrije-periodes" element={<NoLessonPeriods />} />
 						<Route path="/email-templates" element={<EmailTemplates />} />
-						<Route path="/settings" element={<Settings />} />
+						<Route path="/account" element={<Account defaultTab="profile" />} />
+						<Route path="/account/profile" element={<Account defaultTab="profile" />} />
+						<Route path="/account/appearance" element={<Account defaultTab="appearance" />} />
+						<Route path="/account/danger" element={<Account defaultTab="danger" />} />
 						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />
 						<Route path="/teachers/availability" element={<TeacherAvailability />} />
@@ -96,6 +101,8 @@ const App = () => (
 						<Route path="/students/:userId" element={<StudentDetail />} />
 						<Route path="/reports" element={<Reports />} />
 						<Route path="/boekhouding" element={<AccountingReport />} />
+						<Route path="/boekhouding/instellingen" element={<AccountingSettingsPage />} />
+						<Route path="/data-import" element={<LegacyImport />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
 

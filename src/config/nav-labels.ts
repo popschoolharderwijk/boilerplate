@@ -14,6 +14,8 @@ import {
 	LuMail,
 	LuMusic2,
 	LuSettings,
+	LuShieldAlert,
+	LuUpload,
 	LuUser,
 	LuUserCog,
 	LuUsers,
@@ -44,10 +46,15 @@ export const NAV_LABELS = {
 	myTrial: 'Mijn proefles',
 	reports: 'Rapportage',
 	accounting: 'Boekhouding',
+	accountingSettings: 'Boekhouding-instellingen',
+	dataImport: 'Data-import',
 	subscriptions: 'Facturatie',
 	noLessonPeriods: 'Lesvrije periodes',
 	emailTemplates: 'E-mailtemplates',
 	manual: 'Handleiding',
+	accountProfile: 'Profiel',
+	accountAppearance: 'Weergave',
+	accountDanger: 'Account',
 } as const;
 
 export type NavLabelKey = keyof typeof NAV_LABELS;
@@ -76,8 +83,13 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	myTrial: LuGraduationCap,
 	reports: LuChartBar,
 	accounting: LuCalculator,
+	accountingSettings: LuCalculator,
+	dataImport: LuUpload,
 	subscriptions: LuCreditCard,
 	noLessonPeriods: LuCalendarOff,
 	emailTemplates: LuMail,
 	manual: LuBookOpen,
+	accountProfile: LuUser,
+	accountAppearance: LuSettings,
+	accountDanger: LuShieldAlert,
 };
