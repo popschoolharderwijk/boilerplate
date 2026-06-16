@@ -1,15 +1,12 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { LuCheck, LuMusic } from 'react-icons/lu';
-import {
-	type LessonTypeOptionRow,
-	LessonTypeOptionSelect,
-	type OptionSnapshot,
-} from '@/components/lesson-type-options/LessonTypeOptionSelect';
+import { LessonTypeOptionSelect, type OptionSnapshot } from '@/components/lesson-type-options/LessonTypeOptionSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { frequencyLabels } from '@/lib/frequencies';
+import type { LessonTypeOptionRow } from '@/types/lesson-agreements';
 
 interface LessonType {
 	id: string;

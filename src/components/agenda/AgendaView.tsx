@@ -6,7 +6,6 @@ import { AgendaEventFormDialog, type DeleteScope, type DeviationInfo } from '@/c
 import { StudentInfoModal } from '@/components/students/StudentInfoModal';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { AgendaLessonAgreement } from '@/types/lesson-agreements';
 import { useAgendaData } from '@/hooks/useAgendaData';
 import { useAgendaUI } from '@/hooks/useAgendaUI';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDateToDb } from '@/lib/date/date-format';
 import { formatTimeFromDate } from '@/lib/time/time-format';
 import type { AgendaEventRow, CancellationType } from '@/types/agenda-events';
+import type { AgendaLessonAgreement } from '@/types/lesson-agreements';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { CalendarViewProvider } from '@/components/agenda/CalendarViewContext';

@@ -1,17 +1,17 @@
 {
-  "version": 1,
-  "skills": {
-    "caveman": {
-      "source": "JuliusBrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "b0e7741886c0c32270cedc1a2fc21c2879d90964d3ce00f24952de7064613404"
-    },
-    "fallow": {
-      "source": "fallow-rs/fallow-skills",
-      "sourceType": "github",
-      "skillPath": "fallow/skills/fallow/SKILL.md",
-      "computedHash": "11b20d3b41f47b3f6ca065843f71b4d25f48f43df41a82c08a2467ba8e90b523"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"caveman": {
+			"source": "JuliusBrussee/caveman",
+			"sourceType": "github",
+			"skillPath": "skills/caveman/SKILL.md",
+			"computedHash": "b0e7741886c0c32270cedc1a2fc21c2879d90964d3ce00f24952de7064613404"
+		},
+		"fallow": {
+			"source": "fallow-rs/fallow-skills",
+			"sourceType": "github",
+			"skillPath": "fallow/skills/fallow/SKILL.md",
+			"computedHash": "11b20d3b41f47b3f6ca065843f71b4d25f48f43df41a82c08a2467ba8e90b523"
+		}
+	}
 }

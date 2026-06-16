@@ -5,8 +5,8 @@
 //
 // Auth required. Toegestaan: admin, site_admin, teacher (staff).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 
 interface Body {
 	student_user_id_a: string;
@@ -27,13 +27,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VALID_FREQUENCIES = new Set(['weekly', 'biweekly', 'monthly']);
-
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
 
 function validate(body: unknown): { ok: true; value: Body } | { ok: false; error: string } {
 	if (typeof body !== 'object' || body === null) return { ok: false, error: 'Body moet een object zijn' };
@@ -107,20 +100,22 @@ function validate(body: unknown): { ok: true; value: Body } | { ok: false; error
 }
 
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let raw: unknown;
 	try {
 		raw = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 	const parsed = validate(raw);
-	if (!parsed.ok) return json(400, { error: parsed.error });
+	if (!parsed.ok) return jsonResponse(400, { error: parsed.error });
 	const body = parsed.value;
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -139,13 +134,13 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	// Authz: alleen staff (admin/site_admin/teacher) mag duo-overeenkomsten aanmaken.
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
 	if (role !== 'admin' && role !== 'site_admin' && role !== 'teacher') {
-		return json(403, { error: 'Geen rechten' });
+		return jsonResponse(403, { error: 'Geen rechten' });
 	}
 
 	// Controleer dat lessoort daadwerkelijk een duo-lestype is.
@@ -154,10 +149,10 @@ Deno.serve(async (req) => {
 		.select('id, is_duo_lesson, is_group_lesson, is_active')
 		.eq('id', body.lesson_type_id)
 		.maybeSingle();
-	if (ltErr || !lessonType) return json(404, { error: 'Lessoort niet gevonden' });
-	if (!lessonType.is_duo_lesson) return json(422, { error: 'Lessoort is geen duo-lestype' });
-	if (lessonType.is_group_lesson) return json(422, { error: 'Lessoort is een groepsles, niet duo' });
-	if (!lessonType.is_active) return json(422, { error: 'Lessoort is niet actief' });
+	if (ltErr || !lessonType) return jsonResponse(404, { error: 'Lessoort niet gevonden' });
+	if (!lessonType.is_duo_lesson) return jsonResponse(422, { error: 'Lessoort is geen duo-lestype' });
+	if (lessonType.is_group_lesson) return jsonResponse(422, { error: 'Lessoort is een groepsles, niet duo' });
+	if (!lessonType.is_active) return jsonResponse(422, { error: 'Lessoort is niet actief' });
 
 	// Genereer duo_pair_id en maak beide overeenkomsten aan.
 	const duoPairId = crypto.randomUUID();
@@ -184,7 +179,7 @@ Deno.serve(async (req) => {
 		.single();
 	if (errA || !rowA) {
 		console.error('Duo create A failed', errA);
-		return json(400, { error: getSafeErrorMessage(errA ?? new Error('Aanmaken overeenkomst A mislukt')) });
+		return jsonResponse(400, { error: getSafeErrorMessage(errA ?? new Error('Aanmaken overeenkomst A mislukt')) });
 	}
 
 	// Insert overeenkomst B. Trigger valideert slot-match en max-2-leden.
@@ -197,10 +192,10 @@ Deno.serve(async (req) => {
 		console.error('Duo create B failed, rolling back A', errB);
 		// Rollback: verwijder eerste rij zodat we geen halve duo achterlaten.
 		await admin.from('lesson_agreements').delete().eq('id', rowA.id);
-		return json(400, { error: getSafeErrorMessage(errB ?? new Error('Aanmaken overeenkomst B mislukt')) });
+		return jsonResponse(400, { error: getSafeErrorMessage(errB ?? new Error('Aanmaken overeenkomst B mislukt')) });
 	}
 
-	return json(200, {
+	return jsonResponse(200, {
 		ok: true,
 		duo_pair_id: duoPairId,
 		agreement_ids: [rowA.id, rowB.id],

@@ -10,8 +10,8 @@
 // Body: { event_key: string, to: string, vars?: Record<string, string> }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
 import { getEmailEvent } from '../_shared/email-events.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 
 interface SendBody {
 	event_key: string;
@@ -56,13 +56,6 @@ function appendPortalFooter(html: string, baseUrl: string, recipient: string): s
 	return `${html}${footer}`;
 }
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 function renderTemplate(template: string, vars: Record<string, string>): string {
 	return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
 		const value = vars[key];
@@ -81,21 +74,23 @@ function normalizeVars(input: SendBody['vars']): Record<string, string> {
 }
 
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: SendBody;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 
-	if (!body.event_key || typeof body.event_key !== 'string') return json(400, { error: 'event_key vereist' });
-	if (!body.to || !EMAIL_RE.test(body.to)) return json(400, { error: 'Ongeldig e-mailadres' });
+	if (!body.event_key || typeof body.event_key !== 'string') return jsonResponse(400, { error: 'event_key vereist' });
+	if (!body.to || !EMAIL_RE.test(body.to)) return jsonResponse(400, { error: 'Ongeldig e-mailadres' });
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -105,7 +100,7 @@ Deno.serve(async (req) => {
 
 	if (!resendKey || !fromEmail) {
 		console.error('Missing RESEND_API_KEY_TRANSACTIONAL or RESEND_FROM_EMAIL');
-		return json(500, { error: 'Mail-configuratie ontbreekt' });
+		return jsonResponse(500, { error: 'Mail-configuratie ontbreekt' });
 	}
 
 	// Authz: token kan een gebruiker-JWT zijn of de service-role key (server-to-server).
@@ -121,11 +116,11 @@ Deno.serve(async (req) => {
 			data: { user },
 			error: userErr,
 		} = await userClient.auth.getUser();
-		if (userErr || !user) return json(401, { error: 'Invalid token' });
+		if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 	}
 
 	const eventDef = getEmailEvent(body.event_key);
-	if (!eventDef) return json(404, { error: `Onbekend event: ${body.event_key}` });
+	if (!eventDef) return jsonResponse(404, { error: `Onbekend event: ${body.event_key}` });
 
 	const admin = createClient(supabaseUrl, serviceKey, {
 		auth: { autoRefreshToken: false, persistSession: false },
@@ -139,10 +134,10 @@ Deno.serve(async (req) => {
 
 	if (tErr) {
 		console.error('template fetch error', tErr);
-		return json(500, { error: 'Kon template niet ophalen' });
+		return jsonResponse(500, { error: 'Kon template niet ophalen' });
 	}
-	if (!template) return json(404, { error: 'Template bestaat niet' });
-	if (!template.is_enabled) return json(200, { skipped: true, reason: 'template_disabled' });
+	if (!template) return jsonResponse(404, { error: 'Template bestaat niet' });
+	if (!template.is_enabled) return jsonResponse(200, { skipped: true, reason: 'template_disabled' });
 
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
@@ -166,9 +161,9 @@ Deno.serve(async (req) => {
 	if (!resendResp.ok) {
 		const errText = await resendResp.text();
 		console.error('Resend error', resendResp.status, errText);
-		return json(502, { error: 'Mail-verzending mislukt', detail: errText });
+		return jsonResponse(502, { error: 'Mail-verzending mislukt', detail: errText });
 	}
 
 	const result = await resendResp.json().catch(() => ({}));
-	return json(200, { ok: true, message_id: (result as { id?: string }).id ?? null });
+	return jsonResponse(200, { ok: true, message_id: (result as { id?: string }).id ?? null });
 });

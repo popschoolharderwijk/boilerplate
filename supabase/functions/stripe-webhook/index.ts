@@ -3,7 +3,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import {
 	attachDefaultPaymentMethod,
 	getReusablePaymentMethodIdFromSetupIntent,
@@ -12,13 +12,6 @@ import {
 	getStripeId,
 } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
-
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
 
 const ALLOWED_STATUSES = new Set([
 	'trialing',
@@ -149,12 +142,14 @@ async function upsertInvoice(admin: ReturnType<typeof createClient>, inv: Stripe
 }
 
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const signature = req.headers.get('stripe-signature');
 	const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-	if (!signature || !webhookSecret) return json(400, { error: 'Missing signature/secret' });
+	if (!signature || !webhookSecret) return jsonResponse(400, { error: 'Missing signature/secret' });
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -170,7 +165,7 @@ Deno.serve(async (req) => {
 		event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret);
 	} catch (err) {
 		console.error('signature verification failed', err);
-		return json(400, { error: `Webhook Error: ${getSafeErrorMessage(err, 'invalid signature')}` });
+		return jsonResponse(400, { error: `Webhook Error: ${getSafeErrorMessage(err, 'invalid signature')}` });
 	}
 
 	try {
@@ -235,9 +230,9 @@ Deno.serve(async (req) => {
 				// no-op
 				break;
 		}
-		return json(200, { received: true });
+		return jsonResponse(200, { received: true });
 	} catch (err) {
 		console.error('webhook handler error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Webhook handler failed') });
+		return jsonResponse(500, { error: getSafeErrorMessage(err, 'Webhook handler failed') });
 	}
 });

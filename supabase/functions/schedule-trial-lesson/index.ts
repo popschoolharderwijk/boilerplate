@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 
-	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id)) return jsonResponse(400, { error: 'Ongeldige docent' });
+	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id))
+		return jsonResponse(400, { error: 'Ongeldige docent' });
 	if (!body.scheduled_date || !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduled_date))
 		return jsonResponse(400, { error: 'Ongeldige datum' });
 	if (!body.scheduled_start_time || !/^\d{2}:\d{2}(:\d{2})?$/.test(body.scheduled_start_time))
@@ -57,7 +58,8 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: 'Ongeldige duur' });
 	if (body.signup_request_id && !UUID_RE.test(body.signup_request_id))
 		return jsonResponse(400, { error: 'Ongeldig request id' });
-	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id)) return jsonResponse(400, { error: 'Ongeldige lessoort' });
+	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id))
+		return jsonResponse(400, { error: 'Ongeldige lessoort' });
 	if (body.lesson_type_option_id && !UUID_RE.test(body.lesson_type_option_id))
 		return jsonResponse(400, { error: 'Ongeldige optie' });
 
@@ -81,7 +83,8 @@ Deno.serve(async (req) => {
 	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff') return jsonResponse(403, { error: 'Geen rechten' });
+	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff')
+		return jsonResponse(403, { error: 'Geen rechten' });
 
 	// Resolve student data either from signup request or from request body
 	let studentEmail: string | null = null;

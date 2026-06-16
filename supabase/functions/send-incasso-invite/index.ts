@@ -6,7 +6,7 @@
 // Bij een minderjarige leerling (date_of_birth -> <18 nu) wordt de mail naar
 // `parent_email` gestuurd indien aanwezig, anders naar het student-account.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import { getSafeErrorMessage } from '../_shared/stripe.ts';
 
 interface Body {
@@ -21,13 +21,6 @@ const ALLOWED_SITE_HOSTS = new Set([
 	'id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app',
 	'098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com',
 ]);
-
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
 
 function getRedirectBaseUrl(req: Request) {
 	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), FALLBACK_SITE_URL];
@@ -48,20 +41,22 @@ function getRedirectBaseUrl(req: Request) {
 }
 
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
-		return json(400, { error: 'Ongeldig lesson_agreement_id' });
+		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -81,7 +76,7 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	// Authz: privileged of de leerling zelf
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
@@ -93,10 +88,10 @@ Deno.serve(async (req) => {
 		.select('id, student_user_id, is_active')
 		.eq('id', body.lesson_agreement_id)
 		.maybeSingle();
-	if (agErr || !agreement) return json(404, { error: 'Overeenkomst niet gevonden' });
-	if (!agreement.is_active) return json(409, { error: 'Overeenkomst is niet actief' });
+	if (agErr || !agreement) return jsonResponse(404, { error: 'Overeenkomst niet gevonden' });
+	if (!agreement.is_active) return jsonResponse(409, { error: 'Overeenkomst is niet actief' });
 	if (!isPrivileged && agreement.student_user_id !== user.id) {
-		return json(403, { error: 'Geen rechten' });
+		return jsonResponse(403, { error: 'Geen rechten' });
 	}
 
 	// Mailadres = het account-emailadres van de leerling. Dit is gegarandeerd
@@ -109,7 +104,7 @@ Deno.serve(async (req) => {
 		.eq('user_id', agreement.student_user_id)
 		.maybeSingle();
 	const recipient = profile?.email ?? null;
-	if (!recipient) return json(422, { error: 'Geen e-mailadres bekend voor leerling' });
+	if (!recipient) return jsonResponse(422, { error: 'Geen e-mailadres bekend voor leerling' });
 
 	const redirectTo = `${siteUrl}/incasso/start?agreement=${agreement.id}`;
 
@@ -128,7 +123,7 @@ Deno.serve(async (req) => {
 	});
 	if (otpErr) {
 		console.error('signInWithOtp error', otpErr);
-		return json(502, { error: getSafeErrorMessage(otpErr) });
+		return jsonResponse(502, { error: getSafeErrorMessage(otpErr) });
 	}
 
 	await admin.from('incasso_invitations').insert({
@@ -137,5 +132,5 @@ Deno.serve(async (req) => {
 		sent_by: user.id,
 	});
 
-	return json(200, { ok: true, recipient });
+	return jsonResponse(200, { ok: true, recipient });
 });

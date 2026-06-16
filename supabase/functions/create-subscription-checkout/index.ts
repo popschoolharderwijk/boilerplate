@@ -122,7 +122,9 @@ Deno.serve(async (req) => {
 				await attachDefaultPaymentMethod(stripe, customerId, paymentMethodId);
 			} catch (e) {
 				console.error('attach payment method failed', e);
-				return jsonResponse(409, { error: getSafeErrorMessage(e, 'Kon betaalmethode niet koppelen aan klant') });
+				return jsonResponse(409, {
+					error: getSafeErrorMessage(e, 'Kon betaalmethode niet koppelen aan klant'),
+				});
 			}
 			const built = await createScheduleForAgreement(admin, stripe, {
 				lessonAgreementId: agreement.id,
