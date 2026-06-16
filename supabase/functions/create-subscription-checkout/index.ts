@@ -8,7 +8,7 @@
 // Auth required. Allowed initiators: privileged staff/admin or the student themselves.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import {
 	attachDefaultPaymentMethod,
 	getReusablePaymentMethodIdFromSetupIntent,
@@ -27,28 +27,23 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
-		return json(400, { error: 'Ongeldig lesson_agreement_id' });
+		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
 	const mode: 'checkout' | 'direct' | 'complete' =
 		body.mode === 'direct' || body.mode === 'complete' ? body.mode : 'checkout';
@@ -69,7 +64,7 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	// RLS-checked agreement load (caller must have access)
 	const { data: agreement, error: agreementErr } = await userClient
@@ -77,8 +72,8 @@ Deno.serve(async (req) => {
 		.select('id, student_user_id, is_active')
 		.eq('id', body.lesson_agreement_id)
 		.maybeSingle();
-	if (agreementErr || !agreement) return json(404, { error: 'Lesovereenkomst niet gevonden' });
-	if (!agreement.is_active) return json(409, { error: 'Lesovereenkomst is niet actief' });
+	if (agreementErr || !agreement) return jsonResponse(404, { error: 'Lesovereenkomst niet gevonden' });
+	if (!agreement.is_active) return jsonResponse(409, { error: 'Lesovereenkomst is niet actief' });
 
 	const billingUserId = agreement.student_user_id;
 
@@ -87,14 +82,14 @@ Deno.serve(async (req) => {
 		.select('email, first_name, last_name')
 		.eq('user_id', billingUserId)
 		.maybeSingle();
-	if (!profile?.email) return json(400, { error: 'Geen e-mail bekend voor leerling' });
+	if (!profile?.email) return jsonResponse(400, { error: 'Geen e-mail bekend voor leerling' });
 
 	try {
 		const stripe = getStripe();
 
 		if (mode === 'complete') {
 			if (!body.checkout_session_id || !body.checkout_session_id.startsWith('cs_')) {
-				return json(400, { error: 'Ongeldige checkout sessie' });
+				return jsonResponse(400, { error: 'Ongeldige checkout sessie' });
 			}
 
 			const { data: existingAgreement } = await admin
@@ -103,14 +98,14 @@ Deno.serve(async (req) => {
 				.eq('id', agreement.id)
 				.maybeSingle();
 			if (existingAgreement?.stripe_schedule_id) {
-				return json(200, { mode: 'complete', schedule_id: existingAgreement.stripe_schedule_id });
+				return jsonResponse(200, { mode: 'complete', schedule_id: existingAgreement.stripe_schedule_id });
 			}
 
 			const session = await stripe.checkout.sessions.retrieve(body.checkout_session_id, {
 				expand: ['setup_intent.latest_attempt'],
 			});
 			if (session.mode !== 'setup' || session.metadata?.lesson_agreement_id !== agreement.id) {
-				return json(409, { error: 'Checkout sessie hoort niet bij deze lesovereenkomst' });
+				return jsonResponse(409, { error: 'Checkout sessie hoort niet bij deze lesovereenkomst' });
 			}
 
 			const customerId = getStripeId(session.customer);
@@ -120,21 +115,21 @@ Deno.serve(async (req) => {
 					? getReusablePaymentMethodIdFromSetupIntent(setupIntent)
 					: null;
 			if (!customerId || !paymentMethodId) {
-				return json(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
+				return jsonResponse(409, { error: 'Betaalmethode is nog niet beschikbaar in Stripe' });
 			}
 
 			try {
 				await attachDefaultPaymentMethod(stripe, customerId, paymentMethodId);
 			} catch (e) {
 				console.error('attach payment method failed', e);
-				return json(409, { error: getSafeErrorMessage(e, 'Kon betaalmethode niet koppelen aan klant') });
+				return jsonResponse(409, { error: getSafeErrorMessage(e, 'Kon betaalmethode niet koppelen aan klant') });
 			}
 			const built = await createScheduleForAgreement(admin, stripe, {
 				lessonAgreementId: agreement.id,
 				customerId,
 				defaultPaymentMethod: paymentMethodId,
 			});
-			return json(200, {
+			return jsonResponse(200, {
 				mode: 'complete',
 				schedule_id: built.scheduleId,
 				subscription_id: built.subscriptionId,
@@ -162,11 +157,11 @@ Deno.serve(async (req) => {
 		if (mode === 'direct') {
 			// Verify the customer has a usable default payment method
 			const customer = await stripe.customers.retrieve(customerId);
-			if (customer.deleted) return json(400, { error: 'Stripe customer is verwijderd' });
+			if (customer.deleted) return jsonResponse(400, { error: 'Stripe customer is verwijderd' });
 			const defaultPm = customer.invoice_settings?.default_payment_method;
 			const defaultPmId = typeof defaultPm === 'string' ? defaultPm : defaultPm?.id;
 			if (!defaultPmId) {
-				return json(409, {
+				return jsonResponse(409, {
 					error: 'Geen standaard betaalmethode op deze klant. Start eerst een checkout om een SEPA-mandaat te koppelen.',
 				});
 			}
@@ -177,7 +172,7 @@ Deno.serve(async (req) => {
 				defaultPaymentMethod: defaultPmId,
 			});
 
-			return json(200, {
+			return jsonResponse(200, {
 				mode: 'direct',
 				schedule_id: built.scheduleId,
 				subscription_id: built.subscriptionId,
@@ -215,9 +210,9 @@ Deno.serve(async (req) => {
 			cancel_url: cancelUrl,
 		});
 
-		return json(200, { mode: 'checkout', url: session.url, session_id: session.id });
+		return jsonResponse(200, { mode: 'checkout', url: session.url, session_id: session.id });
 	} catch (err) {
 		console.error('checkout/schedule error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Kon Stripe flow niet starten') });
+		return jsonResponse(500, { error: getSafeErrorMessage(err, 'Kon Stripe flow niet starten') });
 	}
 });

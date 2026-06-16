@@ -6,7 +6,7 @@
 // Marks the request as approved and links created_agreement_id when applicable.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 
 interface Body {
 	request_id: string;
@@ -16,29 +16,24 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
-	if (!body.request_id || !UUID_RE.test(body.request_id)) return json(400, { error: 'Ongeldig request id' });
+	if (!body.request_id || !UUID_RE.test(body.request_id)) return jsonResponse(400, { error: 'Ongeldig request id' });
 	if (body.override_lesson_group_id != null && !UUID_RE.test(body.override_lesson_group_id)) {
-		return json(400, { error: 'Ongeldig groep id' });
+		return jsonResponse(400, { error: 'Ongeldig groep id' });
 	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -58,11 +53,11 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin') return json(403, { error: 'Geen rechten' });
+	if (role !== 'admin' && role !== 'site_admin') return jsonResponse(403, { error: 'Geen rechten' });
 
 	// Load request
 	const { data: reqRow, error: reqErr } = await admin
@@ -70,9 +65,9 @@ Deno.serve(async (req) => {
 		.select('*')
 		.eq('id', body.request_id)
 		.single();
-	if (reqErr || !reqRow) return json(404, { error: 'Aanmelding niet gevonden' });
+	if (reqErr || !reqRow) return jsonResponse(404, { error: 'Aanmelding niet gevonden' });
 	if (reqRow.status !== 'pending' && reqRow.status !== 'trial_scheduled')
-		return json(409, { error: 'Aanmelding is al verwerkt' });
+		return jsonResponse(409, { error: 'Aanmelding is al verwerkt' });
 
 	// Find or create user by email
 	let studentUserId: string | null = null;
@@ -95,7 +90,7 @@ Deno.serve(async (req) => {
 		});
 		if (createErr || !created.user) {
 			console.error('createUser error', createErr);
-			return json(500, { error: 'Kon gebruiker niet aanmaken' });
+			return jsonResponse(500, { error: 'Kon gebruiker niet aanmaken' });
 		}
 		studentUserId = created.user.id;
 
@@ -148,7 +143,7 @@ Deno.serve(async (req) => {
 		});
 		if (memberErr && !memberErr.message?.includes('duplicate')) {
 			console.error('member insert error', memberErr);
-			return json(500, { error: 'Kon leerling niet aan groep toevoegen' });
+			return jsonResponse(500, { error: 'Kon leerling niet aan groep toevoegen' });
 		}
 		const { data: ag } = await admin
 			.from('lesson_agreements')
@@ -173,7 +168,7 @@ Deno.serve(async (req) => {
 	// For individual requests we DON'T mark approved here; staff completes via wizard
 	// which will mark it approved on save (see AgreementWizard fromRequest handling).
 
-	return json(200, {
+	return jsonResponse(200, {
 		student_user_id: studentUserId,
 		created_agreement_id: createdAgreementId,
 		status: targetGroupId ? 'approved' : 'pending',

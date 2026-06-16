@@ -6,7 +6,8 @@ import { AgendaEventFormDialog, type DeleteScope, type DeviationInfo } from '@/c
 import { StudentInfoModal } from '@/components/students/StudentInfoModal';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { type LessonAgreementWithTeacher, useAgendaData } from '@/hooks/useAgendaData';
+import type { AgendaLessonAgreement } from '@/types/lesson-agreements';
+import { useAgendaData } from '@/hooks/useAgendaData';
 import { useAgendaUI } from '@/hooks/useAgendaUI';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -120,7 +121,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 
 	const readonlyParticipantIds = useMemo(() => {
 		if (editingEvent?.source_type !== 'lesson_agreement' || !editingEvent.source_id) return [];
-		const agreement = agreementsMap.get(editingEvent.source_id) as LessonAgreementWithTeacher | undefined;
+		const agreement = agreementsMap.get(editingEvent.source_id) as AgendaLessonAgreement | undefined;
 		if (!agreement) return [];
 		const ids: string[] = [agreement.student_user_id];
 		if (agreement.teacherUserId) ids.push(agreement.teacherUserId);
@@ -131,7 +132,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		if (!isPrivileged) return false;
 		if (editingEvent?.source_type !== 'lesson_agreement') return true;
 		if (!editingEvent.source_id) return true;
-		const agreement = agreementsMap.get(editingEvent.source_id) as LessonAgreementWithTeacher | undefined;
+		const agreement = agreementsMap.get(editingEvent.source_id) as AgendaLessonAgreement | undefined;
 		if (!agreement) return true;
 		return effectiveUserId === agreement.teacherUserId;
 	}, [isPrivileged, editingEvent?.source_type, editingEvent?.source_id, agreementsMap, effectiveUserId]);

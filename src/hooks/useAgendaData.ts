@@ -6,18 +6,9 @@ import { generateAgendaEvents, type NoLessonPeriod } from '@/lib/agenda/eventGen
 import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
 import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
-import type { LessonAgreementQuery, LessonAgreementWithStudent } from '@/types/lesson-agreements';
+import type { AgendaLessonAgreement, LessonAgreementQuery } from '@/types/lesson-agreements';
 import type { ProjectInfo } from '@/types/projects';
 import type { User } from '@/types/users';
-
-export interface LessonAgreementWithTeacher extends LessonAgreementWithStudent {
-	teacherUserId?: string;
-	teacherProfile?: {
-		first_name: string | null;
-		last_name: string | null;
-		email: string | null;
-	} | null;
-}
 
 export interface LessonGroupInfo {
 	id: string;
@@ -33,7 +24,7 @@ export interface UseAgendaDataResult {
 	deviations: AgendaEventDeviationRow[];
 	deviationsByEventId: Map<string, Map<string, AgendaEventDeviationRow>>;
 	recurringByEventId: Map<string, AgendaEventDeviationRow[]>;
-	agreementsMap: Map<string, LessonAgreementWithTeacher>;
+	agreementsMap: Map<string, AgendaLessonAgreement>;
 	participantCountByEventId: Map<string, number>;
 	participantNamesByEventId: Map<string, string[]>;
 	projectsMap: Map<string, ProjectInfo>;
@@ -65,7 +56,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	const [participantNamesByDeviationId, setParticipantNamesByDeviationId] = useState<Map<string, string[]>>(
 		new Map(),
 	);
-	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
+	const [agreements, setAgreements] = useState<AgendaLessonAgreement[]>([]);
 	const [projectsMap, setProjectsMap] = useState<Map<string, ProjectInfo>>(new Map());
 	const [lessonGroupsMap, setLessonGroupsMap] = useState<Map<string, LessonGroupInfo>>(new Map());
 	const [profileMap, setProfileMap] = useState<Map<string, User>>(new Map());
@@ -296,7 +287,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			setParticipantCountByDeviationId(countByDeviation);
 			setParticipantNamesByDeviationId(namesByDeviation);
 
-			const withProfiles: LessonAgreementWithTeacher[] =
+			const withProfiles: AgendaLessonAgreement[] =
 				agreementsError || agreementsData.length === 0
 					? []
 					: agreementsData.map((a) => {
@@ -314,7 +305,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 								},
 								teacherUserId,
 								teacherProfile: teacherUserId ? (profileMap.get(teacherUserId) ?? null) : null,
-							} satisfies LessonAgreementWithTeacher;
+							} satisfies AgendaLessonAgreement;
 						});
 			setAgreements(withProfiles);
 			setLoading(false);
@@ -354,7 +345,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	}, [deviations]);
 
 	const agreementsMap = useMemo(
-		() => new Map<string, LessonAgreementWithTeacher>(agreements.map((a) => [a.id, a])),
+		() => new Map<string, AgendaLessonAgreement>(agreements.map((a) => [a.id, a])),
 		[agreements],
 	);
 

@@ -148,6 +148,12 @@ export type LessonAgreementWithStudent = LessonAgreementBaseFields & {
 	lesson_types: LessonTypeJoined;
 };
 
+/** Lesson agreement enriched for agenda calendar (student + teacher profiles). */
+export type AgendaLessonAgreement = LessonAgreementWithStudent & {
+	teacherUserId?: string;
+	teacherProfile?: Pick<User, 'first_name' | 'last_name' | 'email'> | null;
+};
+
 /**
  * Lesson agreement from student's perspective (includes teacher profile)
  * Duration/frequency/price come from agreement snapshot.

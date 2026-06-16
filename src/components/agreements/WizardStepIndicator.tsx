@@ -16,7 +16,7 @@ export const STEP_ORDER: WizardStep[] = [
 	WizardStep.Confirm,
 ];
 
-export const STEP_CONFIG: Record<WizardStep, { label: string; icon: IconType }> = {
+const STEP_CONFIG: Record<WizardStep, { label: string; icon: IconType }> = {
 	[WizardStep.User]: { label: 'Leerling', icon: LuUser },
 	[WizardStep.Period]: { label: 'Periode', icon: LuCalendar },
 	[WizardStep.TeacherSlot]: { label: 'Docent & tijdslot', icon: LuClock },

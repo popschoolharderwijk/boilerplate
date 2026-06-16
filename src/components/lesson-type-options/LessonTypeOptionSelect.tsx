@@ -7,19 +7,17 @@ export interface OptionSnapshot {
 	price_per_lesson: number;
 }
 
-export interface LessonTypeOptionRow extends OptionSnapshot {
-	id: string;
-}
+type SelectOption = OptionSnapshot & { id: string };
 
 interface Props {
-	options: LessonTypeOptionRow[];
+	options: SelectOption[];
 	value: OptionSnapshot | null;
 	onChange: (snap: OptionSnapshot | null) => void;
 	placeholder?: string;
 	id?: string;
 }
 
-export function findOptionId(options: LessonTypeOptionRow[], snap: OptionSnapshot | null): string {
+function findOptionId(options: SelectOption[], snap: OptionSnapshot | null): string {
 	if (!snap) return '';
 	return (
 		options.find(

@@ -6,8 +6,8 @@
 // - Marks the related signup request as 'trial_scheduled' when applicable.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 
 interface Body {
 	signup_request_id?: string | null;
@@ -32,39 +32,34 @@ interface Body {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 
-	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id)) return json(400, { error: 'Ongeldige docent' });
+	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id)) return jsonResponse(400, { error: 'Ongeldige docent' });
 	if (!body.scheduled_date || !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduled_date))
-		return json(400, { error: 'Ongeldige datum' });
+		return jsonResponse(400, { error: 'Ongeldige datum' });
 	if (!body.scheduled_start_time || !/^\d{2}:\d{2}(:\d{2})?$/.test(body.scheduled_start_time))
-		return json(400, { error: 'Ongeldige tijd' });
+		return jsonResponse(400, { error: 'Ongeldige tijd' });
 	if (!Number.isInteger(body.duration_minutes) || body.duration_minutes <= 0)
-		return json(400, { error: 'Ongeldige duur' });
+		return jsonResponse(400, { error: 'Ongeldige duur' });
 	if (body.signup_request_id && !UUID_RE.test(body.signup_request_id))
-		return json(400, { error: 'Ongeldig request id' });
-	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id)) return json(400, { error: 'Ongeldige lessoort' });
+		return jsonResponse(400, { error: 'Ongeldig request id' });
+	if (body.lesson_type_id && !UUID_RE.test(body.lesson_type_id)) return jsonResponse(400, { error: 'Ongeldige lessoort' });
 	if (body.lesson_type_option_id && !UUID_RE.test(body.lesson_type_option_id))
-		return json(400, { error: 'Ongeldige optie' });
+		return jsonResponse(400, { error: 'Ongeldige optie' });
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -83,10 +78,10 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff') return json(403, { error: 'Geen rechten' });
+	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff') return jsonResponse(403, { error: 'Geen rechten' });
 
 	// Resolve student data either from signup request or from request body
 	let studentEmail: string | null = null;
@@ -109,9 +104,9 @@ Deno.serve(async (req) => {
 			)
 			.eq('id', body.signup_request_id)
 			.maybeSingle();
-		if (!req) return json(404, { error: 'Aanmelding niet gevonden' });
+		if (!req) return jsonResponse(404, { error: 'Aanmelding niet gevonden' });
 		if (req.status !== 'pending' && req.status !== 'trial_scheduled')
-			return json(409, { error: 'Aanmelding is al verwerkt' });
+			return jsonResponse(409, { error: 'Aanmelding is al verwerkt' });
 		signupReq = { id: req.id, status: req.status };
 		studentEmail = req.email;
 		studentFirstName = req.first_name;
@@ -134,9 +129,9 @@ Deno.serve(async (req) => {
 		parentPhone = body.parent_phone_number?.trim() || null;
 	}
 
-	if (!studentEmail || !EMAIL_RE.test(studentEmail)) return json(400, { error: 'Ongeldig e-mailadres' });
-	if (!studentFirstName || !studentLastName) return json(400, { error: 'Naam is verplicht' });
-	if (!lessonTypeId) return json(400, { error: 'Lessoort is verplicht' });
+	if (!studentEmail || !EMAIL_RE.test(studentEmail)) return jsonResponse(400, { error: 'Ongeldig e-mailadres' });
+	if (!studentFirstName || !studentLastName) return jsonResponse(400, { error: 'Naam is verplicht' });
+	if (!lessonTypeId) return jsonResponse(400, { error: 'Lessoort is verplicht' });
 
 	try {
 		// Find or create user
@@ -156,7 +151,7 @@ Deno.serve(async (req) => {
 			});
 			if (createErr || !created.user) {
 				console.error('createUser', createErr);
-				return json(500, { error: 'Kon gebruiker niet aanmaken' });
+				return jsonResponse(500, { error: 'Kon gebruiker niet aanmaken' });
 			}
 			studentUserId = created.user.id;
 			if (studentPhone) {
@@ -211,7 +206,7 @@ Deno.serve(async (req) => {
 			.single();
 		if (trialErr || !trial) {
 			console.error('trial insert', trialErr);
-			return json(500, { error: 'Kon proefles niet aanmaken' });
+			return jsonResponse(500, { error: 'Kon proefles niet aanmaken' });
 		}
 
 		// Lesson type info for title
@@ -243,7 +238,7 @@ Deno.serve(async (req) => {
 		if (evErr || !ev) {
 			console.error('agenda insert', evErr);
 			await admin.from('trial_lessons').delete().eq('id', trial.id);
-			return json(500, { error: 'Kon agenda-event niet aanmaken' });
+			return jsonResponse(500, { error: 'Kon agenda-event niet aanmaken' });
 		}
 
 		// Participants: teacher + student
@@ -303,13 +298,13 @@ Deno.serve(async (req) => {
 			});
 		}
 
-		return json(200, {
+		return jsonResponse(200, {
 			trial_id: trial.id,
 			student_user_id: studentUserId,
 			agenda_event_id: ev.id,
 		});
 	} catch (err) {
 		console.error('schedule-trial-lesson error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Onverwachte fout') });
+		return jsonResponse(500, { error: getSafeErrorMessage(err, 'Onverwachte fout') });
 	}
 });

@@ -4,7 +4,7 @@
 // and use its released_subscription when available.
 // Admin/site_admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
@@ -13,28 +13,23 @@ interface Body {
 	lesson_agreement_id?: string;
 }
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 	if (!body.stripe_subscription_id && !body.lesson_agreement_id) {
-		return json(400, { error: 'Geef stripe_subscription_id of lesson_agreement_id mee' });
+		return jsonResponse(400, { error: 'Geef stripe_subscription_id of lesson_agreement_id mee' });
 	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -53,11 +48,11 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin') return json(403, { error: 'Geen rechten' });
+	if (role !== 'admin' && role !== 'site_admin') return jsonResponse(403, { error: 'Geen rechten' });
 
 	try {
 		const stripe = getStripe();
@@ -89,7 +84,7 @@ Deno.serve(async (req) => {
 					stripeSubscriptionId = released;
 				} else {
 					// No subscription yet — just refresh schedule status into the row.
-					return json(200, {
+					return jsonResponse(200, {
 						synced: false,
 						info: `Schedule status is ${schedule.status}; nog geen actief abonnement gekoppeld.`,
 						schedule_status: schedule.status,
@@ -99,7 +94,7 @@ Deno.serve(async (req) => {
 		}
 
 		if (!stripeSubscriptionId) {
-			return json(400, { error: 'Geen Stripe-abonnement gevonden om te syncen' });
+			return jsonResponse(400, { error: 'Geen Stripe-abonnement gevonden om te syncen' });
 		}
 
 		const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
@@ -108,7 +103,7 @@ Deno.serve(async (req) => {
 
 		const lessonAgreementId = sub.metadata?.lesson_agreement_id ?? lessonAgreementIdHint;
 		if (!lessonAgreementId) {
-			return json(400, { error: 'Subscription mist lesson_agreement_id metadata' });
+			return jsonResponse(400, { error: 'Subscription mist lesson_agreement_id metadata' });
 		}
 		const priceId = sub.items.data[0]?.price?.id ?? '';
 		const firstItem = sub.items.data[0];
@@ -136,9 +131,9 @@ Deno.serve(async (req) => {
 				typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
 		});
 
-		return json(200, { synced: true, status: sub.status });
+		return jsonResponse(200, { synced: true, status: sub.status });
 	} catch (err) {
 		console.error('sync error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Kon subscription niet syncen') });
+		return jsonResponse(500, { error: getSafeErrorMessage(err, 'Kon subscription niet syncen') });
 	}
 });

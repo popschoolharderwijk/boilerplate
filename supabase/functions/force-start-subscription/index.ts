@@ -6,7 +6,7 @@
 //
 // Privileged staff/admin only.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe, getStripeId } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
 
@@ -16,28 +16,23 @@ interface Body {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function json(status: number, payload: unknown) {
-	return new Response(JSON.stringify(payload), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-	});
-}
-
 Deno.serve(async (req) => {
-	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-	if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+	const preflight = handleCorsPreflight(req);
+	if (preflight) return preflight;
+	const notPost = requirePost(req);
+	if (notPost) return notPost;
 
 	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return json(401, { error: 'Missing authorization header' });
+	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
 
 	let body: Body;
 	try {
 		body = await req.json();
 	} catch {
-		return json(400, { error: 'Invalid JSON' });
+		return jsonResponse(400, { error: 'Invalid JSON' });
 	}
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
-		return json(400, { error: 'Ongeldig lesson_agreement_id' });
+		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
 
 	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -56,10 +51,10 @@ Deno.serve(async (req) => {
 		data: { user },
 		error: userErr,
 	} = await userClient.auth.getUser();
-	if (userErr || !user) return json(401, { error: 'Invalid token' });
+	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
 	const { data: privileged, error: privErr } = await userClient.rpc('is_privileged');
-	if (privErr || privileged !== true) return json(403, { error: 'Onvoldoende rechten' });
+	if (privErr || privileged !== true) return jsonResponse(403, { error: 'Onvoldoende rechten' });
 
 	const lessonAgreementId = body.lesson_agreement_id;
 
@@ -68,9 +63,9 @@ Deno.serve(async (req) => {
 		.select('id, stripe_schedule_id')
 		.eq('id', lessonAgreementId)
 		.maybeSingle();
-	if (agErr || !agreement) return json(404, { error: 'Lesovereenkomst niet gevonden' });
+	if (agErr || !agreement) return jsonResponse(404, { error: 'Lesovereenkomst niet gevonden' });
 	if (!agreement.stripe_schedule_id) {
-		return json(400, { error: 'Geen Stripe schedule gekoppeld aan deze lesovereenkomst' });
+		return jsonResponse(400, { error: 'Geen Stripe schedule gekoppeld aan deze lesovereenkomst' });
 	}
 
 	try {
@@ -81,16 +76,16 @@ Deno.serve(async (req) => {
 		});
 
 		if (schedule.status !== 'not_started' && schedule.status !== 'active') {
-			return json(400, { error: `Schedule status is ${schedule.status}; kan niet geforceerd starten` });
+			return jsonResponse(400, { error: `Schedule status is ${schedule.status}; kan niet geforceerd starten` });
 		}
 
 		const customerId = getStripeId(schedule.customer);
-		if (!customerId) return json(400, { error: 'Kon Stripe customer niet bepalen' });
+		if (!customerId) return jsonResponse(400, { error: 'Kon Stripe customer niet bepalen' });
 
 		const firstPhase = schedule.phases?.[0];
 		const firstItem = firstPhase?.items?.[0];
 		const priceId = getStripeId(firstItem?.price);
-		if (!priceId) return json(400, { error: 'Kon prijs uit schedule niet lezen' });
+		if (!priceId) return jsonResponse(400, { error: 'Kon prijs uit schedule niet lezen' });
 
 		const phaseDpm = firstPhase?.default_payment_method;
 		const defaultPaymentMethod = (phaseDpm ? getStripeId(phaseDpm) : null) ?? undefined;
@@ -143,13 +138,13 @@ Deno.serve(async (req) => {
 
 		await admin.from('lesson_agreements').update({ stripe_schedule_id: null }).eq('id', lessonAgreementId);
 
-		return json(200, {
+		return jsonResponse(200, {
 			ok: true,
 			stripe_subscription_id: subscription.id,
 			status: subscription.status,
 		});
 	} catch (err) {
 		console.error('force-start-subscription error', err);
-		return json(500, { error: getSafeErrorMessage(err, 'Kon abonnement niet forceren') });
+		return jsonResponse(500, { error: getSafeErrorMessage(err, 'Kon abonnement niet forceren') });
 	}
 });

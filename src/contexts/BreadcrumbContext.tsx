@@ -1,9 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
-
-export interface BreadcrumbItem {
-	label: string;
-	href?: string;
-}
+import type { BreadcrumbItem } from '@/config/breadcrumbs';
 
 interface BreadcrumbContextValue {
 	/** Extra items after the route base (e.g. teacher name on /teachers/:id). */
