@@ -28,6 +28,17 @@ supabase db push --dry-run
 # Migraties worden normaal automatisch toegepast; gebruik dit alleen als sanity check.
 ```
 
+## Stap 2b: Bootstrap-seed op productie (optioneel)
+
+Migraties bevatten geen referentiedata. Voor lestypes, e-mailtemplates en accounting-defaults staat [`supabase/seeds/bootstrap.sql`](../supabase/seeds/bootstrap.sql). Productie heeft `enabled = false` voor seed; pas bootstrap **handmatig** toe na nieuwe bootstrap-events:
+
+```bash
+supabase link --project-ref bnagepkxryauifzyoxgo
+supabase db push --include-seed
+```
+
+Alleen `bootstrap.sql` draait op prod (geen `test.sql`). Idempotent — overschrijft geen bestaande aangepaste templates. **Nooit** `db reset --linked` op productie.
+
 ## Stap 3: Config pushen (indien gewijzigd)
 
 ```bash

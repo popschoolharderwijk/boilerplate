@@ -67,7 +67,7 @@ const DEV_ROLES: DevUser[] = [
 	{ email: 'staff-one@test.nl', firstName: 'Lisa', description: 'Medewerker' },
 ];
 
-// Role to email mapping (using first user per role from seed.sql) - for legacy support
+// Role to email mapping (using first user per role from seeds/test.sql) - for legacy support
 const ROLE_EMAILS: Record<Exclude<DevLoginRole, 'dev'>, string> = {
 	site_admin: 'site-admin@test.nl',
 	admin: 'admin-one@test.nl',

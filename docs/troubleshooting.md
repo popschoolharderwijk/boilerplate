@@ -3,7 +3,7 @@
 ## Database tests falen in CI (RLS/Auth)
 
 1. Controleer of alle vereiste GitHub secrets aanwezig zijn: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`
-2. Controleer of `supabase db reset --linked --yes` in de workflow is geslaagd (seed wordt dan toegepast)
+2. Controleer of `supabase db reset --linked --yes` in de workflow is geslaagd (`seeds/bootstrap.sql` + `seeds/test.sql` worden dan toegepast)
 3. Verifieer dat `RESEND_API_KEY` secret is ingesteld in GitHub (voor email-tests)
 4. Voor Auth tests: controleer of password policy correct is in `config.toml`
 

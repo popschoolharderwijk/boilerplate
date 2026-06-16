@@ -5,7 +5,7 @@ import { fixtures } from '../fixtures';
 import { TEACHER_AVAILABILITY } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
-// Setup: Use seed data (from supabase/seed.sql)
+// Setup: Use seed data (from supabase/seeds/test.sql)
 const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 

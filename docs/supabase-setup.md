@@ -184,7 +184,8 @@ Update `supabase/config.toml` met de nieuwe project ID en auth settings:
 project_id = "<nieuwe-project-id>"
 
 [remotes.nieuw.db.seed]
-enabled = true  # of false voor production
+enabled = true  # false voor production
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]  # prod: alleen bootstrap.sql
 
 [remotes.nieuw.auth]
 site_url = "https://jouw-domein.nl"

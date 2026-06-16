@@ -17,7 +17,14 @@ Tests draaien tegen een **remote Supabase-project** (geen lokale instance). Er z
 
 ## Seed Data voor RLS Tests
 
-Het gelinkte project wordt voor tests gereset en geseeded met `supabase/seed.sql`. De seed bevat:
+Bij `supabase db reset --linked` worden twee seed-bestanden toegepast (zie `supabase/config.toml`):
+
+| Bestand | Doel |
+|---------|------|
+| [`supabase/seeds/bootstrap.sql`](../supabase/seeds/bootstrap.sql) | Productie-veilige referentiedata: lestypes, opties, e-mailtemplates, accounting singleton |
+| [`supabase/seeds/test.sql`](../supabase/seeds/test.sql) | RLS-testdata: testusers, rollen, agreements, agenda, projecten |
+
+`seeds/test.sql` bevat onder andere:
 
 | Type | Gebruikers |
 |------|-----------|
@@ -28,8 +35,8 @@ Het gelinkte project wordt voor tests gereset en geseeded met `supabase/seed.sql
 | **students** | `student-001@test.nl` t/m `student-060@test.nl` (60) |
 | **users (geen rol)** | `user-001@test.nl` t/m `user-010@test.nl` (10) |
 
-Daarnaast bevat de seed:
-- **Lesson types**: Referentiedata voor lestypes
+Daarnaast bevat `seeds/test.sql` (bootstrap levert lestypes):
+- **Lesson types**: Referentiedata in `seeds/bootstrap.sql` (niet in test.sql)
 - **Students**: Koppeling van student-gebruikers aan student-records
 - **Teachers**: Koppeling van teacher-gebruikers aan teacher-records
 - **Lesson agreements**: Lesovereenkomsten tussen studenten en docenten

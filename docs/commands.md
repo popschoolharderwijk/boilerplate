@@ -128,7 +128,7 @@ De Dev Login knop heeft een dropdown waarmee je kunt kiezen uit verschillende ro
 - **Student** (`student-001@test.nl`)
 - **User (geen rol)** (`user-001@test.nl`)
 
-Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev).
+Deze users komen uit de test seed (`supabase/seeds/test.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev) na `bun run reset-db:dev`.
 
 ### Configuratie
 

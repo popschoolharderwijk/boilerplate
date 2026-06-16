@@ -238,13 +238,13 @@ export function setupDatabaseStateVerification(): {
 } {
 	const setupState = async (): Promise<DatabaseState> => {
 		// Capture initial database state
-		// Tests rely on seed data from supabase/seed.sql - it must be available
+		// Tests rely on seed data from supabase/seeds/test.sql (+ bootstrap.sql) - it must be available
 		return await captureDatabaseState();
 	};
 
 	const verifyState = async (initialState: DatabaseState): Promise<void> => {
 		// Verify database integrity after tests
-		// All data should come from seed.sql - tests should not modify database state
+		// All data should come from seeds/test.sql - tests should not modify database state
 		const finalState = await captureDatabaseState();
 		const comparison = compareDatabaseStates(initialState, finalState);
 

@@ -662,7 +662,7 @@ EXECUTE FUNCTION public.handle_auth_user_email_update();
 -- 2. Then the original site_admin can be removed/demoted
 --
 -- FIRST SITE_ADMIN:
--- Must be created via direct database access (seed.sql or migration).
+-- Must be created via direct database access (seeds/test.sql or migration).
 
 CREATE OR REPLACE FUNCTION public.prevent_last_site_admin_removal()
 RETURNS TRIGGER
