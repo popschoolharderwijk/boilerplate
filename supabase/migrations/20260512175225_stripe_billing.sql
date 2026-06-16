@@ -1,3 +1,9 @@
+-- Consolidated Stripe/billing setup: stripe_customers, subscriptions, subscription_invoices,
+-- age-based pricing on lesson_type_options, and follow-up adjustments on subscriptions.
+
+-- ============================================================
+-- Part 1: initial stripe_customers / subscriptions / invoices
+-- ============================================================
 
 -- Add stripe_price_id to lesson_agreements (phase 1: manual mapping)
 ALTER TABLE public.lesson_agreements
@@ -105,3 +111,61 @@ CREATE POLICY "subscription_invoices_select"
   );
 
 SELECT public.apply_audit_trail('public.subscription_invoices'::regclass);
+
+-- ============================================================
+-- Part 2: age-based pricing + stripe_schedule_id linkage
+-- ============================================================
+-- Leeftijdsspecifieke prijzen op lesopties (in centen om afrondingsfouten te voorkomen)
+ALTER TABLE public.lesson_type_options
+  ADD COLUMN IF NOT EXISTS price_per_lesson_under_21_cents integer,
+  ADD COLUMN IF NOT EXISTS price_per_lesson_adult_cents integer;
+
+-- Stripe Subscription Schedule koppeling
+ALTER TABLE public.subscriptions
+  ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
+
+ALTER TABLE public.lesson_agreements
+  ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
+
+-- Backfill standaardtarieven voor bestaande weekly/biweekly opties
+UPDATE public.lesson_type_options
+SET price_per_lesson_under_21_cents = 1950,
+    price_per_lesson_adult_cents = 2360
+WHERE frequency = 'weekly'
+  AND price_per_lesson_under_21_cents IS NULL;
+
+UPDATE public.lesson_type_options
+SET price_per_lesson_under_21_cents = 2055,
+    price_per_lesson_adult_cents = 2498
+WHERE frequency = 'biweekly'
+  AND price_per_lesson_under_21_cents IS NULL;
+-- ============================================================
+-- Part 3: subscriptions adjustments (nullable stripe_subscription_id, status set, unique index)
+-- ============================================================
+ALTER TABLE public.subscriptions
+  ALTER COLUMN stripe_subscription_id DROP NOT NULL;
+
+ALTER TABLE public.subscriptions
+  DROP CONSTRAINT IF EXISTS subscriptions_stripe_subscription_id_key;
+
+DROP INDEX IF EXISTS public.idx_subscriptions_active_per_agreement;
+
+ALTER TABLE public.subscriptions
+  DROP CONSTRAINT IF EXISTS subscriptions_status_check;
+
+ALTER TABLE public.subscriptions
+  ADD CONSTRAINT subscriptions_status_check CHECK (status IN (
+    'scheduled','trialing','active','past_due','canceled','unpaid','incomplete','incomplete_expired','paused'
+  ));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id_unique
+  ON public.subscriptions(stripe_subscription_id)
+  WHERE stripe_subscription_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_stripe_schedule_id_unique
+  ON public.subscriptions(stripe_schedule_id)
+  WHERE stripe_schedule_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_subscriptions_active_per_agreement
+  ON public.subscriptions(lesson_agreement_id)
+  WHERE status IN ('scheduled','trialing','active','past_due','unpaid','incomplete','paused');
