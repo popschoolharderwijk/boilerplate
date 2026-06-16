@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { AgendaView } from '@/components/agenda/AgendaView';
 import { TeacherAvailabilitySection } from '@/components/teachers/TeacherAvailabilitySection';
@@ -19,71 +19,59 @@ export default function TeacherInfo() {
 	const [loading, setLoading] = useState(true);
 	const [teacherProfile, setTeacherProfile] = useState<Teacher | null>(null);
 	const [targetTeacherUserId, setTargetTeacherUserId] = useState<string | null>(null);
+	const [profileVersion, setProfileVersion] = useState(0);
 
-	// Determine which teacher we're viewing
 	useEffect(() => {
 		if (authLoading) return;
 
-		// If id is provided in URL, use that (for admins viewing other teachers)
 		if (id) {
 			setTargetTeacherUserId(id);
 			return;
 		}
 
-		// If no id and user is a teacher, use their own teacherUserId
 		if (isTeacher && teacherUserId) {
 			setTargetTeacherUserId(teacherUserId);
 			return;
 		}
 
-		// Otherwise, can't determine teacher
 		setTargetTeacherUserId(null);
 	}, [id, isTeacher, teacherUserId, authLoading]);
 
-	// Load teacher profile
-	const loadProfile = useCallback(async () => {
+	useEffect(() => {
 		if (!targetTeacherUserId) return;
+		void profileVersion;
 
 		setLoading(true);
-
-		// Get teacher data
-		const { data: teacherData, error: teacherError } = await supabase
+		void supabase
 			.from('teachers')
 			.select('user_id, bio, is_active, created_at, updated_at')
 			.eq('user_id', targetTeacherUserId)
-			.single();
+			.single()
+			.then(({ data: teacherData, error: teacherError }) => {
+				if (teacherError) {
+					console.error('Error loading teacher:', teacherError);
+					setLoading(false);
+					return;
+				}
 
-		if (teacherError) {
-			console.error('Error loading teacher:', teacherError);
-			setLoading(false);
-			return;
-		}
-
-		// Get profile data
-		const { data: profileData, error: profileError } = await supabase
-			.from('profiles')
-			.select('user_id, first_name, last_name, email, avatar_url, phone_number')
-			.eq('user_id', teacherData.user_id)
-			.single();
-
-		if (profileError) {
-			console.error('Error loading profile:', profileError);
-			setLoading(false);
-			return;
-		}
-
-		setTeacherProfile({
-			...teacherData,
-			...profileData,
-		} as Teacher);
-		setLoading(false);
-	}, [targetTeacherUserId]);
-
-	useEffect(() => {
-		if (targetTeacherUserId) {
-			loadProfile();
-		}
-	}, [targetTeacherUserId, loadProfile]);
+				void supabase
+					.from('profiles')
+					.select('user_id, first_name, last_name, email, avatar_url, phone_number')
+					.eq('user_id', teacherData.user_id)
+					.single()
+					.then(({ data: profileData, error: profileError }) => {
+						if (profileError) {
+							console.error('Error loading profile:', profileError);
+						} else {
+							setTeacherProfile({
+								...teacherData,
+								...profileData,
+							} as Teacher);
+						}
+						setLoading(false);
+					});
+			});
+	}, [targetTeacherUserId, profileVersion]);
 
 	const { setBreadcrumbSuffix } = useBreadcrumb();
 	useEffect(() => {
@@ -99,37 +87,17 @@ export default function TeacherInfo() {
 		return () => setBreadcrumbSuffix([]);
 	}, [teacherProfile, setBreadcrumbSuffix]);
 
-	// Check access
-	const canView = useCallback(() => {
-		if (!targetTeacherUserId) return false;
-		// Admins can view all teachers
-		if (isAdmin || isSiteAdmin) return true;
-		// Teachers can only view their own profile
-		if (isTeacher && teacherUserId === targetTeacherUserId) return true;
-		return false;
-	}, [targetTeacherUserId, isAdmin, isSiteAdmin, isTeacher, teacherUserId]);
+	const canAccess =
+		!!targetTeacherUserId && (isAdmin || isSiteAdmin || (isTeacher && teacherUserId === targetTeacherUserId));
 
-	// Check if can edit
-	const canEdit = useCallback(() => {
-		if (!targetTeacherUserId) return false;
-		// Admins can edit all teachers
-		if (isAdmin || isSiteAdmin) return true;
-		// Teachers can only edit their own profile
-		if (isTeacher && teacherUserId === targetTeacherUserId) return true;
-		return false;
-	}, [targetTeacherUserId, isAdmin, isSiteAdmin, isTeacher, teacherUserId]);
-
-	// Show loading while auth is loading or while we're determining targetTeacherUserId
 	if (authLoading || !targetTeacherUserId) {
 		return <PageSkeleton variant="header-and-tabs" />;
 	}
 
-	// Check access after we know targetTeacherUserId
-	if (!canView()) {
+	if (!canAccess) {
 		return <Navigate to="/" replace />;
 	}
 
-	// Show loading while fetching teacher profile
 	if (loading || !teacherProfile) {
 		return <PageSkeleton variant="header-and-tabs" />;
 	}
@@ -161,7 +129,6 @@ export default function TeacherInfo() {
 				subtitle={teacherProfile.email}
 			/>
 
-			{/* Tabs */}
 			<Tabs defaultValue="profile" className="space-y-2">
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
@@ -169,36 +136,33 @@ export default function TeacherInfo() {
 				</TabsList>
 
 				<TabsContent value="profile">
-					{/* Two-column grid: both columns scale with viewport */}
 					<div className="grid gap-6 lg:grid-cols-2">
-						{/* Left column: Profile + Lesson types */}
 						<div className="space-y-6 min-w-0">
 							<TeacherProfileSection
 								teacherUserId={targetTeacherUserId}
 								user_id={teacherProfile.user_id}
-								canEdit={canEdit()}
-								onUpdate={loadProfile}
+								canEdit={canAccess}
+								onUpdate={() => setProfileVersion((v) => v + 1)}
 								initialBio={teacherProfile.bio}
 								initialFirstName={teacherProfile.first_name}
 								initialLastName={teacherProfile.last_name}
 								initialPhoneNumber={teacherProfile.phone_number}
 							/>
-							<TeacherLessonTypesSection teacherUserId={targetTeacherUserId} canEdit={canEdit()} />
+							<TeacherLessonTypesSection teacherUserId={targetTeacherUserId} canEdit={canAccess} />
 							<div className="text-xs italic text-muted-foreground space-y-1">
 								<p>Aangemaakt: {new Date(teacherProfile.created_at).toLocaleString('nl-NL')}</p>
 								<p>Laatst bijgewerkt: {new Date(teacherProfile.updated_at).toLocaleString('nl-NL')}</p>
 							</div>
 						</div>
 
-						{/* Right column: Availability (scales with viewport) */}
 						<div className="min-w-0">
-							<TeacherAvailabilitySection teacherUserId={targetTeacherUserId} canEdit={canEdit()} />
+							<TeacherAvailabilitySection teacherUserId={targetTeacherUserId} canEdit={canAccess} />
 						</div>
 					</div>
 				</TabsContent>
 
 				<TabsContent value="agenda">
-					<AgendaView userId={targetTeacherUserId} canEdit={canEdit()} />
+					<AgendaView userId={targetTeacherUserId} canEdit={canAccess} />
 				</TabsContent>
 			</Tabs>
 		</div>

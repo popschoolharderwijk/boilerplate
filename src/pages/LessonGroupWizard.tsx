@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LuCalendarClock, LuCircleCheck, LuClipboardCheck, LuMusic2, LuTriangleAlert, LuUsers } from 'react-icons/lu';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -305,39 +305,29 @@ export default function LessonGroupWizard() {
 	}, [step, teacherUserId, startDate, endDate, durationMinutes, frequency, id, isEditMode]);
 
 	// ----- derived -----
-	const selectedLessonType = useMemo(
-		() => lessonTypes.find((lt) => lt.id === lessonTypeId),
-		[lessonTypes, lessonTypeId],
-	);
-	const selectedTeacher = useMemo(() => teachers.find((t) => t.userId === teacherUserId), [teachers, teacherUserId]);
+	const selectedLessonType = lessonTypes.find((lt) => lt.id === lessonTypeId);
+	const selectedTeacher = teachers.find((t) => t.userId === teacherUserId);
 
 	const stepIndex = LG_STEP_ORDER.indexOf(step);
 	const isFirst = stepIndex === 0;
 	const isLast = stepIndex === LG_STEP_ORDER.length - 1;
 
-	const canProceed = useCallback(
-		(s: LGStep): boolean => {
-			switch (s) {
-				case LGStep.Basics:
-					return Boolean(
-						name.trim() &&
-							lessonTypeId &&
-							durationMinutes > 0 &&
-							pricePerLesson >= 0 &&
-							startDate &&
-							endDate &&
-							new Date(endDate) >= new Date(startDate),
-					);
-				case LGStep.Teacher:
-					return Boolean(teacherUserId && slot && slot.status !== 'occupied');
-				case LGStep.Members:
-					return true; // members optional
-				case LGStep.Confirm:
-					return true;
-			}
-		},
-		[name, lessonTypeId, durationMinutes, pricePerLesson, startDate, endDate, teacherUserId, slot],
-	);
+	const stepCanProceed =
+		step === LGStep.Basics
+			? Boolean(
+					name.trim() &&
+						lessonTypeId &&
+						durationMinutes > 0 &&
+						pricePerLesson >= 0 &&
+						startDate &&
+						endDate &&
+						new Date(endDate) >= new Date(startDate),
+				)
+			: step === LGStep.Teacher
+				? Boolean(teacherUserId && slot && slot.status !== 'occupied')
+				: true;
+
+	const teacherStepCanProceed = Boolean(teacherUserId && slot && slot.status !== 'occupied');
 
 	const goNext = () => {
 		if (isLast) return;
@@ -775,11 +765,11 @@ export default function LessonGroupWizard() {
 				)}
 				<div className="flex-1" />
 				{!isLast ? (
-					<Button onClick={goNext} disabled={stepIndex < highestStep ? false : !canProceed(step)}>
+					<Button onClick={goNext} disabled={stepIndex < highestStep ? false : !stepCanProceed}>
 						Volgende
 					</Button>
 				) : (
-					<SubmitButton onClick={handleSave} loading={saving} disabled={!canProceed(LGStep.Teacher)}>
+					<SubmitButton onClick={handleSave} loading={saving} disabled={!teacherStepCanProceed}>
 						{isEditMode ? 'Opslaan' : 'Aanmaken'}
 					</SubmitButton>
 				)}

@@ -61,6 +61,46 @@ const emptyForm: FormState = {
 
 type StudentFormMode = 'new-user' | 'existing-user';
 
+function isValidEmail(email: string): boolean {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidPhone(phone: string): boolean {
+	return /^[0-9]{10}$/.test(phone.replace(/\s/g, ''));
+}
+
+function studentRecordFields(form: FormState) {
+	return {
+		date_of_birth: form.date_of_birth || null,
+		parent_name: form.parent_name || null,
+		parent_email: form.parent_email || null,
+		parent_phone_number: form.parent_phone_number || null,
+		debtor_info_same_as_student: form.debtor_info_same_as_student,
+		debtor_name: form.debtor_info_same_as_student ? null : form.debtor_name || null,
+		debtor_address: form.debtor_info_same_as_student ? null : form.debtor_address || null,
+		debtor_postal_code: form.debtor_info_same_as_student ? null : form.debtor_postal_code || null,
+		debtor_city: form.debtor_info_same_as_student ? null : form.debtor_city || null,
+	};
+}
+
+function formFromStudent(student: Student): FormState {
+	return {
+		email: student.email ?? '',
+		first_name: student.first_name ?? '',
+		last_name: student.last_name ?? '',
+		phone_number: student.phone_number ?? '',
+		date_of_birth: student.date_of_birth ?? null,
+		parent_name: student.parent_name ?? '',
+		parent_email: student.parent_email ?? '',
+		parent_phone_number: student.parent_phone_number ?? '',
+		debtor_info_same_as_student: student.debtor_info_same_as_student,
+		debtor_name: student.debtor_name ?? '',
+		debtor_address: student.debtor_address ?? '',
+		debtor_postal_code: student.debtor_postal_code ?? '',
+		debtor_city: student.debtor_city ?? '',
+	};
+}
+
 export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: StudentFormDialogProps) {
 	const isEditMode = !!student;
 	const [form, setForm] = useState<FormState>(emptyForm);
@@ -68,145 +108,62 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 	const [mode, setMode] = useState<StudentFormMode>('new-user');
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-	// Initialize form when dialog opens or student changes
 	useEffect(() => {
-		if (open) {
-			if (student) {
-				setForm({
-					email: student.email ?? '',
-					first_name: student.first_name ?? '',
-					last_name: student.last_name ?? '',
-					phone_number: student.phone_number ?? '',
-					date_of_birth: student.date_of_birth ?? null,
-					parent_name: student.parent_name ?? '',
-					parent_email: student.parent_email ?? '',
-					parent_phone_number: student.parent_phone_number ?? '',
-					debtor_info_same_as_student: student.debtor_info_same_as_student,
-					debtor_name: student.debtor_name ?? '',
-					debtor_address: student.debtor_address ?? '',
-					debtor_postal_code: student.debtor_postal_code ?? '',
-					debtor_city: student.debtor_city ?? '',
-				});
-				setMode('new-user');
-				setSelectedUserId(null);
-			} else {
-				setForm(emptyForm);
-				setMode('new-user');
-				setSelectedUserId(null);
-			}
+		if (!open) return;
+		if (student) {
+			setForm(formFromStudent(student));
+		} else {
+			setForm(emptyForm);
 		}
+		setMode('new-user');
+		setSelectedUserId(null);
 	}, [open, student]);
 
-	// Load user data when existing user is selected (only for email, not for form fields)
-	const loadUserData = async (userId: string) => {
-		const profile = await fetchProfileContactByUserId(userId);
-		if (!profile) return;
-
-		// Only set email for validation, keep other fields empty for existing users
-		setForm({
-			...emptyForm,
-			email: profile.email,
-		});
+	const resetDialog = () => {
+		setForm(emptyForm);
+		setMode('new-user');
+		setSelectedUserId(null);
 	};
 
-	const handleOpenChange = (newOpen: boolean) => {
-		if (!saving) {
-			if (!newOpen) {
-				setForm(emptyForm);
-				setMode('new-user');
-				setSelectedUserId(null);
-			}
-			onOpenChange(newOpen);
-		}
-	};
+	const runFormAction = async (action: 'submit') => {
+		if (action !== 'submit') return;
 
-	const validateForm = (): boolean => {
 		if (!isEditMode) {
 			if (mode === 'existing-user' && !selectedUserId) {
 				toast.error('Selecteer een gebruiker');
-				return false;
+				return;
 			}
 			if (mode === 'new-user' && !form.email) {
 				toast.error('Email is verplicht');
-				return false;
+				return;
 			}
 		}
 
-		// Validate email format
-		if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+		if (form.email && !isValidEmail(form.email)) {
 			toast.error('Ongeldig emailadres');
-			return false;
+			return;
 		}
-
-		// Validate phone numbers (10 digits)
-		if (form.phone_number && !/^[0-9]{10}$/.test(form.phone_number.replace(/\s/g, ''))) {
+		if (form.phone_number && !isValidPhone(form.phone_number)) {
 			toast.error('Telefoonnummer moet 10 cijfers bevatten');
-			return false;
+			return;
 		}
-		if (form.parent_phone_number && !/^[0-9]{10}$/.test(form.parent_phone_number.replace(/\s/g, ''))) {
+		if (form.parent_phone_number && !isValidPhone(form.parent_phone_number)) {
 			toast.error('Ouder telefoonnummer moet 10 cijfers bevatten');
-			return false;
+			return;
 		}
-
-		// If debtor info is not same as student, validate debtor fields
-		if (!form.debtor_info_same_as_student) {
-			if (!form.debtor_name || !form.debtor_address || !form.debtor_postal_code || !form.debtor_city) {
-				toast.error(
-					'Alle debiteur NAW velden zijn verplicht als debiteurinformatie niet gelijk is aan leerlinginformatie',
-				);
-				return false;
-			}
-		}
-
-		return true;
-	};
-
-	const handleSubmit = async () => {
-		if (!validateForm()) {
+		if (
+			!form.debtor_info_same_as_student &&
+			(!form.debtor_name || !form.debtor_address || !form.debtor_postal_code || !form.debtor_city)
+		) {
+			toast.error(
+				'Alle debiteur NAW velden zijn verplicht als debiteurinformatie niet gelijk is aan leerlinginformatie',
+			);
 			return;
 		}
 
 		setSaving(true);
-
 		try {
-			if (isEditMode) {
-				await handleEdit();
-			} else {
-				await handleCreate();
-			}
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const handleCreate = async () => {
-		let userId: string;
-
-		if (mode === 'existing-user' && selectedUserId) {
-			// Use existing user - no need to update profile, just use the user_id
-			userId = selectedUserId;
-		} else {
-			// Create new user via Supabase Auth Admin API
-			const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-				email: form.email,
-				email_confirm: true,
-				user_metadata: {
-					first_name: form.first_name || undefined,
-					last_name: form.last_name || undefined,
-				},
-			});
-
-			if (authError || !authData.user) {
-				toast.error('Fout bij aanmaken gebruiker', {
-					description: authError?.message || 'Onbekende fout',
-				});
-				return;
-			}
-
-			userId = authData.user.id;
-
-			// Update profile with phone number
-			if (form.first_name || form.last_name || form.phone_number) {
+			if (isEditMode && student) {
 				const { error: profileError } = await supabase
 					.from('profiles')
 					.update({
@@ -214,101 +171,90 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 						last_name: form.last_name || null,
 						phone_number: form.phone_number || null,
 					})
-					.eq('user_id', userId);
+					.eq('user_id', student.user_id);
 
 				if (profileError) {
-					console.error('Error updating profile:', profileError);
-					toast.error('Fout bij bijwerken profiel', {
-						description: profileError.message,
+					toast.error('Fout bij bijwerken profiel', { description: profileError.message });
+					return;
+				}
+
+				const { error: studentError } = await supabase
+					.from('students')
+					.update(studentRecordFields(form))
+					.eq('user_id', student.user_id);
+
+				if (studentError) {
+					toast.error('Fout bij bijwerken leerling', { description: studentError.message });
+					return;
+				}
+
+				toast.success('Leerling bijgewerkt');
+				resetDialog();
+				onOpenChange(false);
+				onSuccess();
+				return;
+			}
+
+			let userId = selectedUserId ?? '';
+			if (mode !== 'existing-user' || !selectedUserId) {
+				const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+					email: form.email,
+					email_confirm: true,
+					user_metadata: {
+						first_name: form.first_name || undefined,
+						last_name: form.last_name || undefined,
+					},
+				});
+
+				if (authError || !authData.user) {
+					toast.error('Fout bij aanmaken gebruiker', {
+						description: authError?.message || 'Onbekende fout',
 					});
 					return;
 				}
+
+				userId = authData.user.id;
+
+				if (form.first_name || form.last_name || form.phone_number) {
+					const { error: profileError } = await supabase
+						.from('profiles')
+						.update({
+							first_name: form.first_name || null,
+							last_name: form.last_name || null,
+							phone_number: form.phone_number || null,
+						})
+						.eq('user_id', userId);
+
+					if (profileError) {
+						console.error('Error updating profile:', profileError);
+						toast.error('Fout bij bijwerken profiel', { description: profileError.message });
+						return;
+					}
+				}
 			}
-		}
 
-		// Create student record
-		const { data: studentData, error: studentError } = await supabase
-			.from('students')
-			.insert({
-				user_id: userId,
-				date_of_birth: form.date_of_birth || null,
-				parent_name: form.parent_name || null,
-				parent_email: form.parent_email || null,
-				parent_phone_number: form.parent_phone_number || null,
-				debtor_info_same_as_student: form.debtor_info_same_as_student,
-				debtor_name: form.debtor_info_same_as_student ? null : form.debtor_name || null,
-				debtor_address: form.debtor_info_same_as_student ? null : form.debtor_address || null,
-				debtor_postal_code: form.debtor_info_same_as_student ? null : form.debtor_postal_code || null,
-				debtor_city: form.debtor_info_same_as_student ? null : form.debtor_city || null,
-			})
-			.select('id')
-			.single();
+			const { data: studentData, error: studentError } = await supabase
+				.from('students')
+				.insert({ user_id: userId, ...studentRecordFields(form) })
+				.select('id')
+				.single();
 
-		if (studentError || !studentData) {
-			toast.error('Fout bij aanmaken leerling', {
-				description: studentError?.message || 'Onbekende fout',
+			if (studentError || !studentData) {
+				toast.error('Fout bij aanmaken leerling', {
+					description: studentError?.message || 'Onbekende fout',
+				});
+				return;
+			}
+
+			toast.success('Leerling aangemaakt', {
+				description: `Leerling ${form.email} is succesvol aangemaakt.`,
 			});
-			return;
+			resetDialog();
+			onOpenChange(false);
+			onSuccess();
+		} finally {
+			setSaving(false);
 		}
-
-		toast.success('Leerling aangemaakt', {
-			description: `Leerling ${form.email} is succesvol aangemaakt.`,
-		});
-
-		setForm(emptyForm);
-		setMode('new-user');
-		setSelectedUserId(null);
-		onOpenChange(false);
-		onSuccess();
-	};
-
-	const handleEdit = async () => {
-		if (!student) return;
-
-		// Update profile (first_name, last_name, phone_number)
-		const { error: profileError } = await supabase
-			.from('profiles')
-			.update({
-				first_name: form.first_name || null,
-				last_name: form.last_name || null,
-				phone_number: form.phone_number || null,
-			})
-			.eq('user_id', student.user_id);
-
-		if (profileError) {
-			toast.error('Fout bij bijwerken profiel', {
-				description: profileError.message,
-			});
-			return;
-		}
-
-		// Update student record
-		const { error: studentError } = await supabase
-			.from('students')
-			.update({
-				date_of_birth: form.date_of_birth || null,
-				parent_name: form.parent_name || null,
-				parent_email: form.parent_email || null,
-				parent_phone_number: form.parent_phone_number || null,
-				debtor_info_same_as_student: form.debtor_info_same_as_student,
-				debtor_name: form.debtor_info_same_as_student ? null : form.debtor_name || null,
-				debtor_address: form.debtor_info_same_as_student ? null : form.debtor_address || null,
-				debtor_postal_code: form.debtor_info_same_as_student ? null : form.debtor_postal_code || null,
-				debtor_city: form.debtor_info_same_as_student ? null : form.debtor_city || null,
-			})
-			.eq('user_id', student.user_id);
-
-		if (studentError) {
-			toast.error('Fout bij bijwerken leerling', {
-				description: studentError.message,
-			});
-			return;
-		}
-
-		toast.success('Leerling bijgewerkt');
-		setForm(emptyForm);
-		onOpenChange(false);
-		onSuccess();
 	};
 
 	const dialogTitle = isEditMode ? 'Leerling bewerken' : 'Nieuwe leerling toevoegen';
@@ -319,7 +265,14 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 	const savingLabel = isEditMode ? 'Opslaan...' : 'Toevoegen...';
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog
+			open={open}
+			onOpenChange={(newOpen) => {
+				if (saving) return;
+				if (!newOpen) resetDialog();
+				onOpenChange(newOpen);
+			}}
+		>
 			<DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
 				<DialogHeader className="pb-2">
 					<DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
@@ -328,7 +281,6 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 					)}
 				</DialogHeader>
 				<div className="space-y-4 py-2">
-					{/* Mode selector for new students */}
 					{!isEditMode && (
 						<div className="space-y-1.5">
 							<Label className="text-sm">Type leerling</Label>
@@ -360,23 +312,23 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 						</div>
 					)}
 
-					{/* User selector for existing users */}
 					{!isEditMode && mode === 'existing-user' && (
 						<div className="space-y-1.5">
 							<Label className="text-sm">Selecteer gebruiker *</Label>
 							<UserSelectSingle
 								value={selectedUserId}
-								onChange={async (user) => {
+								onChange={(user) => {
 									setSelectedUserId(user?.user_id ?? null);
-									if (user) {
-										await loadUserData(user.user_id);
-									}
+									if (!user) return;
+									void fetchProfileContactByUserId(user.user_id).then((profile) => {
+										if (!profile) return;
+										setForm({ ...emptyForm, email: profile.email });
+									});
 								}}
 							/>
 						</div>
 					)}
 
-					{/* Personal information */}
 					<div className="space-y-3 border-t pt-3">
 						<h3 className="text-sm font-semibold">Persoonsgegevens</h3>
 						<div className="grid grid-cols-2 gap-4">
@@ -435,7 +387,6 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 						</div>
 					</div>
 
-					{/* Parent/guardian information */}
 					<div className="space-y-3 border-t pt-3">
 						<h3 className="text-sm font-semibold">Ouder/voogd gegevens (optioneel)</h3>
 						<div className="grid grid-cols-2 gap-4">
@@ -468,7 +419,6 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 						</div>
 					</div>
 
-					{/* Debtor information */}
 					<div className="space-y-3 border-t pt-3">
 						<h3 className="text-sm font-semibold">Debiteurgegevens</h3>
 						<label className="flex items-center gap-2 cursor-pointer">
@@ -477,14 +427,14 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 								id="debtor-same-as-student"
 								checked={form.debtor_info_same_as_student}
 								onChange={(e) => {
+									const checked = e.target.checked;
 									setForm({
 										...form,
-										debtor_info_same_as_student: e.target.checked,
-										// Clear debtor fields when checked
-										debtor_name: e.target.checked ? '' : form.debtor_name,
-										debtor_address: e.target.checked ? '' : form.debtor_address,
-										debtor_postal_code: e.target.checked ? '' : form.debtor_postal_code,
-										debtor_city: e.target.checked ? '' : form.debtor_city,
+										debtor_info_same_as_student: checked,
+										debtor_name: checked ? '' : form.debtor_name,
+										debtor_address: checked ? '' : form.debtor_address,
+										debtor_postal_code: checked ? '' : form.debtor_postal_code,
+										debtor_city: checked ? '' : form.debtor_city,
 									});
 								}}
 								className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
@@ -542,10 +492,18 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 					</div>
 				</div>
 				<DialogFooter>
-					<Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
+					<Button
+						variant="outline"
+						onClick={() => {
+							if (saving) return;
+							resetDialog();
+							onOpenChange(false);
+						}}
+						disabled={saving}
+					>
 						Annuleren
 					</Button>
-					<SubmitButton onClick={handleSubmit} loading={saving} loadingLabel={savingLabel}>
+					<SubmitButton onClick={() => runFormAction('submit')} loading={saving} loadingLabel={savingLabel}>
 						{submitLabel}
 					</SubmitButton>
 				</DialogFooter>

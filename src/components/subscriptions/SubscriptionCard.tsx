@@ -20,6 +20,15 @@ interface SubscriptionCardProps {
 	hideStartAction?: boolean;
 }
 
+type SubscriptionAction =
+	| 'send-invite'
+	| 'start-checkout'
+	| 'start-direct'
+	| 'open-portal'
+	| 'sync'
+	| 'rebuild'
+	| 'force-start';
+
 function formatCents(amount: number, currency: string): string {
 	return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: currency.toUpperCase() }).format(amount / 100);
 }
@@ -47,133 +56,135 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 		};
 	}, [lessonAgreementId]);
 
-	const handleSendInvite = async () => {
-		setBusy(true);
-		const { error } = await supabase.functions.invoke('send-incasso-invite', {
-			body: { lesson_agreement_id: lessonAgreementId },
-		});
-		setBusy(false);
-		if (error) {
-			toast.error(error.message ?? 'Kon uitnodiging niet versturen');
-			return;
-		}
-		setLastInviteAt(new Date().toISOString());
-		toast.success('Betaaluitnodiging verstuurd');
-	};
-
-	const handleStartCheckout = async (mode: 'checkout' | 'direct') => {
-		setBusy(true);
-		const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
-			body: { lesson_agreement_id: lessonAgreementId, mode },
-		});
-		setBusy(false);
-		if (error || (data as { error?: string })?.error) {
-			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon incasso niet starten');
-			return;
-		}
-		if (mode === 'direct') {
-			toast.success('Incasso geactiveerd op bestaand mandaat');
-			void refresh();
-			return;
-		}
-		const url = (data as { url?: string })?.url;
-		if (url) {
-			// Open in new tab — Stripe Checkout sets X-Frame-Options: DENY,
-			// so navigating the (Lovable preview) iframe results in a black screen.
-			const win = window.open(url, '_blank', 'noopener,noreferrer');
-			if (!win) {
-				// Popup blocked: fall back to top-level navigation.
-				try {
-					if (window.top) window.top.location.href = url;
-					else window.location.href = url;
-				} catch {
-					window.location.href = url;
-				}
+	const runAction = async (action: SubscriptionAction) => {
+		if (action === 'force-start') {
+			if (
+				!window.confirm(
+					'TEST: bestaand schedule wordt geannuleerd en er wordt direct een actief abonnement aangemaakt met onmiddellijke incasso. Doorgaan?',
+				)
+			) {
+				return;
 			}
 		}
-	};
 
-	const handleOpenPortal = async () => {
 		setBusy(true);
-		let targetUserId: string | undefined;
-		if (isPrivileged) {
-			const { data: agreement } = await supabase
-				.from('lesson_agreements')
-				.select('student_user_id')
-				.eq('id', lessonAgreementId)
-				.maybeSingle();
-			targetUserId = agreement?.student_user_id ?? undefined;
-		}
-		const { data, error } = await supabase.functions.invoke('create-customer-portal', {
-			body: targetUserId ? { user_id: targetUserId } : {},
-		});
-		setBusy(false);
-		if (error || (data as { error?: string })?.error) {
-			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon portaal niet openen');
-			return;
-		}
-		const url = (data as { url?: string })?.url;
-		if (url) window.open(url, '_blank', 'noopener,noreferrer');
-	};
+		try {
+			if (action === 'send-invite') {
+				const { error } = await supabase.functions.invoke('send-incasso-invite', {
+					body: { lesson_agreement_id: lessonAgreementId },
+				});
+				if (error) {
+					toast.error(error.message ?? 'Kon uitnodiging niet versturen');
+					return;
+				}
+				setLastInviteAt(new Date().toISOString());
+				toast.success('Betaaluitnodiging verstuurd');
+				return;
+			}
 
-	const handleRebuild = async () => {
-		setBusy(true);
-		const { data, error } = await supabase.functions.invoke('rebuild-subscription-schedule', {
-			body: { lesson_agreement_id: lessonAgreementId },
-		});
-		setBusy(false);
-		if (error || (data as { error?: string })?.error) {
-			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon tarieven niet bijwerken');
-			return;
-		}
-		const result = (data as { results?: Array<{ ok: boolean; detail?: { updatedPhases?: number } }> })
-			?.results?.[0];
-		const updated = result?.detail?.updatedPhases ?? 0;
-		toast.success(
-			updated > 0
-				? `Nieuwe tarieven toegepast op ${updated} toekomstige maand(en)`
-				: 'Geen toekomstige maanden om bij te werken',
-		);
-		void refresh();
-	};
+			if (action === 'start-checkout' || action === 'start-direct') {
+				const mode = action === 'start-direct' ? 'direct' : 'checkout';
+				const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+					body: { lesson_agreement_id: lessonAgreementId, mode },
+				});
+				if (error || (data as { error?: string })?.error) {
+					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon incasso niet starten');
+					return;
+				}
+				if (mode === 'direct') {
+					toast.success('Incasso geactiveerd op bestaand mandaat');
+					void refresh();
+					return;
+				}
+				const url = (data as { url?: string })?.url;
+				if (url) {
+					const win = window.open(url, '_blank', 'noopener,noreferrer');
+					if (!win) {
+						try {
+							if (window.top) window.top.location.href = url;
+							else window.location.href = url;
+						} catch {
+							window.location.href = url;
+						}
+					}
+				}
+				return;
+			}
 
-	const handleForceStart = async () => {
-		if (
-			!window.confirm(
-				'TEST: bestaand schedule wordt geannuleerd en er wordt direct een actief abonnement aangemaakt met onmiddellijke incasso. Doorgaan?',
-			)
-		)
-			return;
-		setBusy(true);
-		const { data, error } = await supabase.functions.invoke('force-start-subscription', {
-			body: { lesson_agreement_id: lessonAgreementId },
-		});
-		setBusy(false);
-		if (error || (data as { error?: string })?.error) {
-			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon niet forceren');
-			return;
-		}
-		toast.success('Abonnement direct geactiveerd in Stripe');
-		void refresh();
-	};
+			if (action === 'open-portal') {
+				let targetUserId: string | undefined;
+				if (isPrivileged) {
+					const { data: agreement } = await supabase
+						.from('lesson_agreements')
+						.select('student_user_id')
+						.eq('id', lessonAgreementId)
+						.maybeSingle();
+					targetUserId = agreement?.student_user_id ?? undefined;
+				}
+				const { data, error } = await supabase.functions.invoke('create-customer-portal', {
+					body: targetUserId ? { user_id: targetUserId } : {},
+				});
+				if (error || (data as { error?: string })?.error) {
+					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon portaal niet openen');
+					return;
+				}
+				const url = (data as { url?: string })?.url;
+				if (url) window.open(url, '_blank', 'noopener,noreferrer');
+				return;
+			}
 
-	const handleSyncFromStripe = async () => {
-		setBusy(true);
-		const { data, error } = await supabase.functions.invoke('sync-stripe-subscription', {
-			body: { lesson_agreement_id: lessonAgreementId },
-		});
-		setBusy(false);
-		const payload = data as { synced?: boolean; status?: string; info?: string; error?: string } | null;
-		if (error || payload?.error) {
-			toast.error(payload?.error ?? error?.message ?? 'Kon niet syncen met Stripe');
-			return;
+			if (action === 'rebuild') {
+				const { data, error } = await supabase.functions.invoke('rebuild-subscription-schedule', {
+					body: { lesson_agreement_id: lessonAgreementId },
+				});
+				if (error || (data as { error?: string })?.error) {
+					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon tarieven niet bijwerken');
+					return;
+				}
+				const result = (data as { results?: Array<{ ok: boolean; detail?: { updatedPhases?: number } }> })
+					?.results?.[0];
+				const updated = result?.detail?.updatedPhases ?? 0;
+				toast.success(
+					updated > 0
+						? `Nieuwe tarieven toegepast op ${updated} toekomstige maand(en)`
+						: 'Geen toekomstige maanden om bij te werken',
+				);
+				void refresh();
+				return;
+			}
+
+			if (action === 'force-start') {
+				const { data, error } = await supabase.functions.invoke('force-start-subscription', {
+					body: { lesson_agreement_id: lessonAgreementId },
+				});
+				if (error || (data as { error?: string })?.error) {
+					toast.error((data as { error?: string })?.error ?? error?.message ?? 'Kon niet forceren');
+					return;
+				}
+				toast.success('Abonnement direct geactiveerd in Stripe');
+				void refresh();
+				return;
+			}
+
+			if (action === 'sync') {
+				const { data, error } = await supabase.functions.invoke('sync-stripe-subscription', {
+					body: { lesson_agreement_id: lessonAgreementId },
+				});
+				const payload = data as { synced?: boolean; status?: string; info?: string; error?: string } | null;
+				if (error || payload?.error) {
+					toast.error(payload?.error ?? error?.message ?? 'Kon niet syncen met Stripe');
+					return;
+				}
+				if (payload?.synced) {
+					toast.success(`Gesynchroniseerd met Stripe (status: ${payload.status ?? 'onbekend'})`);
+				} else {
+					toast.info(payload?.info ?? 'Geen wijzigingen — Stripe heeft nog geen actief abonnement');
+				}
+				void refresh();
+			}
+		} finally {
+			setBusy(false);
 		}
-		if (payload?.synced) {
-			toast.success(`Gesynchroniseerd met Stripe (status: ${payload.status ?? 'onbekend'})`);
-		} else {
-			toast.info(payload?.info ?? 'Geen wijzigingen — Stripe heeft nog geen actief abonnement');
-		}
-		void refresh();
 	};
 
 	const status = subscription?.status as SubscriptionStatus | undefined;
@@ -195,12 +206,12 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 						{!hideStartAction && isPrivileged && (
 							<div className="flex flex-col gap-2">
 								<div className="flex flex-wrap gap-2">
-									<Button onClick={handleSendInvite} disabled={busy} className="w-fit">
+									<Button onClick={() => runAction('send-invite')} disabled={busy} className="w-fit">
 										<LuMail className="mr-1.5 h-4 w-4" />
 										{lastInviteAt ? 'Stuur uitnodiging opnieuw' : 'Stuur betaaluitnodiging'}
 									</Button>
 									<Button
-										onClick={() => handleStartCheckout('checkout')}
+										onClick={() => runAction('start-checkout')}
 										disabled={busy}
 										variant="outline"
 										className="w-fit"
@@ -208,7 +219,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 										Start incasso (checkout)
 									</Button>
 									<Button
-										onClick={() => handleStartCheckout('direct')}
+										onClick={() => runAction('start-direct')}
 										disabled={busy}
 										variant="outline"
 										className="w-fit"
@@ -246,14 +257,19 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 						)}
 
 						<div className="flex flex-wrap gap-2">
-							<Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={busy}>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => runAction('open-portal')}
+								disabled={busy}
+							>
 								Beheer betaling
 							</Button>
 							{isPrivileged && (
 								<Button
 									variant="outline"
 									size="sm"
-									onClick={handleSyncFromStripe}
+									onClick={() => runAction('sync')}
 									disabled={busy}
 									title="Haal de actuele status uit Stripe en werk deze rij bij"
 								>
@@ -265,7 +281,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 								<Button
 									variant="outline"
 									size="sm"
-									onClick={handleRebuild}
+									onClick={() => runAction('rebuild')}
 									disabled={busy}
 									title="Herbereken toekomstige maanden met de huidige tarieven"
 								>
@@ -276,7 +292,7 @@ export function SubscriptionCard({ lessonAgreementId, hideStartAction = false }:
 								<Button
 									variant="destructive"
 									size="sm"
-									onClick={handleForceStart}
+									onClick={() => runAction('force-start')}
 									disabled={busy}
 									title="TEST: cancel schedule en start abonnement direct"
 								>

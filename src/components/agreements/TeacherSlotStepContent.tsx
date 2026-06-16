@@ -27,62 +27,7 @@ const SLOT_STATUS_TITLE: Record<SlotStatus, string> = {
 	occupied: 'Bezet',
 };
 
-function SlotStatusIcon({
-	status,
-	occupiedOccurrences,
-	totalOccurrences,
-}: {
-	status: SlotStatus;
-	occupiedOccurrences: number;
-	totalOccurrences: number;
-}) {
-	const Icon = SLOT_STATUS_ICON[status];
-	const title =
-		status === 'partial'
-			? `Deels bezet (${occupiedOccurrences}/${totalOccurrences} momenten)`
-			: SLOT_STATUS_TITLE[status];
-	return (
-		<Icon
-			className={cn(
-				'h-3.5 w-3.5 shrink-0',
-				status === 'free' && 'text-green-600 dark:text-green-400',
-				status === 'partial' && 'text-amber-600 dark:text-amber-400',
-				status === 'occupied' && 'text-muted-foreground opacity-70',
-			)}
-			title={title}
-			aria-label={title}
-		/>
-	);
-}
-
-/** Monday=1, ..., Sunday=0 for sort key (day_of_week from DB) */
-function sortKeyDay(dayOfWeek: number): number {
-	return (dayOfWeek + 6) % 7;
-}
-
-function sortSlotsByDayThenTime(slots: SlotWithStatus[]): SlotWithStatus[] {
-	return [...slots].sort((a, b) => {
-		const dayA = sortKeyDay(a.day_of_week);
-		const dayB = sortKeyDay(b.day_of_week);
-		if (dayA !== dayB) return dayA - dayB;
-		return (a.start_time || '').localeCompare(b.start_time || '');
-	});
-}
-
-function groupSlotsByDay(slots: SlotWithStatus[]): Map<number, SlotWithStatus[]> {
-	const map = new Map<number, SlotWithStatus[]>();
-	for (const slot of slots) {
-		const day = slot.day_of_week;
-		const arr = map.get(day) ?? [];
-		if (arr.length === 0) map.set(day, arr);
-		arr.push(slot);
-	}
-	// Sort by time within each day
-	for (const arr of map.values()) {
-		arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-	}
-	return map;
-}
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
 
 interface TeacherOption {
 	id: string;
@@ -123,9 +68,18 @@ export function TeacherSlotStepContent({
 	onTeacherChange,
 	onSlotClick,
 }: TeacherSlotStepContentProps) {
-	const sortedSlots = useMemo(() => sortSlotsByDayThenTime(slotsWithStatus), [slotsWithStatus]);
-	const slotsByDay = useMemo(() => groupSlotsByDay(sortedSlots), [sortedSlots]);
-	const dayOrder = useMemo(() => [1, 2, 3, 4, 5, 6, 0] as const, []); // Monday first, Sunday last
+	const slotsByDay = useMemo(() => {
+		const map = new Map<number, SlotWithStatus[]>();
+		for (const slot of slotsWithStatus) {
+			const arr = map.get(slot.day_of_week) ?? [];
+			if (arr.length === 0) map.set(slot.day_of_week, arr);
+			arr.push(slot);
+		}
+		for (const arr of map.values()) {
+			arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+		}
+		return map;
+	}, [slotsWithStatus]);
 
 	return (
 		<div className="space-y-4 py-4">
@@ -183,7 +137,7 @@ export function TeacherSlotStepContent({
 										Geen beschikbare slots voor deze docent in de gekozen periode.
 									</p>
 								) : (
-									dayOrder.map((dayOfWeek) => {
+									DAY_ORDER.map((dayOfWeek) => {
 										const daySlots = slotsByDay.get(dayOfWeek);
 										if (!daySlots?.length) return null;
 										return (
@@ -202,6 +156,11 @@ export function TeacherSlotStepContent({
 															formatTime(currentAgreementSlot.start_time) ===
 																formatTime(slot.start_time);
 														const isOccupied = slot.status === 'occupied';
+														const StatusIcon = SLOT_STATUS_ICON[slot.status];
+														const statusTitle =
+															slot.status === 'partial'
+																? `Deels bezet (${slot.occupiedOccurrences}/${slot.totalOccurrences} momenten)`
+																: SLOT_STATUS_TITLE[slot.status];
 														return (
 															<button
 																key={`${slot.day_of_week}-${slot.start_time}-${idx}`}
@@ -233,10 +192,18 @@ export function TeacherSlotStepContent({
 																		: '')
 																}
 															>
-																<SlotStatusIcon
-																	status={slot.status}
-																	occupiedOccurrences={slot.occupiedOccurrences}
-																	totalOccurrences={slot.totalOccurrences}
+																<StatusIcon
+																	className={cn(
+																		'h-3.5 w-3.5 shrink-0',
+																		slot.status === 'free' &&
+																			'text-green-600 dark:text-green-400',
+																		slot.status === 'partial' &&
+																			'text-amber-600 dark:text-amber-400',
+																		slot.status === 'occupied' &&
+																			'text-muted-foreground opacity-70',
+																	)}
+																	title={statusTitle}
+																	aria-label={statusTitle}
 																/>
 																<span className="font-medium tabular-nums">
 																	{formatTime(slot.start_time)}

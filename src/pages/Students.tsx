@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
@@ -20,6 +20,98 @@ import {
 	type PaginatedStudentsResponseRaw,
 	type StudentWithAgreements,
 } from '@/types/students';
+
+type StudentAction =
+	| { kind: 'edit'; student: StudentWithAgreements }
+	| { kind: 'delete'; student: StudentWithAgreements }
+	| { kind: 'confirm-delete' };
+
+const STUDENT_SORT_COLUMNS: Record<string, string> = {
+	student: 'name',
+	phone_number: 'phone_number',
+	status: 'status',
+	agreements: 'agreements',
+};
+
+function buildStudentColumns(
+	navigate: (path: string) => void,
+	requestsByEmail: Map<string, SignupRequestDetail[]>,
+): DataTableColumn<StudentWithAgreements>[] {
+	return [
+		{
+			key: 'student',
+			label: 'Leerling',
+			sortable: true,
+			className: 'w-64 max-w-64',
+			render: (s) => (
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						navigate(`/students/${s.user_id}`);
+					}}
+					className="text-left hover:underline"
+				>
+					<UserDisplay profile={s} showEmail />
+				</button>
+			),
+		},
+		{
+			key: 'phone_number',
+			label: 'Telefoon',
+			sortable: true,
+			render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
+			className: 'text-muted-foreground w-32',
+		},
+		{
+			key: 'status',
+			label: 'Status',
+			sortable: true,
+			render: (s) => (
+				<Badge variant={s.active_agreements_count > 0 ? 'default' : 'secondary'}>
+					{s.active_agreements_count > 0 ? 'Actief' : 'Inactief'}
+				</Badge>
+			),
+			className: 'w-24',
+		},
+		{
+			key: 'agreements',
+			label: 'Overeenkomsten',
+			sortable: true,
+			render: (s) => (
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						navigate(`/students/${s.user_id}`);
+					}}
+					className="text-sm hover:underline"
+				>
+					{s.agreements.length} {s.agreements.length === 1 ? 'overeenkomst' : 'overeenkomsten'}
+				</button>
+			),
+		},
+		{
+			key: 'signup_requests',
+			label: 'Aanmeldingen',
+			render: (s) => {
+				const count = s.email ? (requestsByEmail.get(s.email)?.length ?? 0) : 0;
+				return (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							navigate(`/students/${s.user_id}`);
+						}}
+						className="text-sm hover:underline"
+					>
+						{count} {count === 1 ? 'aanmelding' : 'aanmeldingen'}
+					</button>
+				);
+			},
+		},
+	];
+}
 
 export default function Students() {
 	const navigate = useNavigate();
@@ -54,7 +146,6 @@ export default function Students() {
 	});
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	// Apply ?search= query param once on mount
 	// biome-ignore lint/correctness/useExhaustiveDependencies: only run on mount
 	useEffect(() => {
 		const q = searchParams.get('search');
@@ -75,26 +166,15 @@ export default function Students() {
 		student: StudentWithAgreements | null;
 	}>({ open: false, student: null });
 
-	// Load paginated students
-	const loadStudents = useCallback(async () => {
-		if (!hasAccess) return;
+	const loadStudents = useCallback(() => {
+		if (authLoading || !hasAccess) return;
 
 		setLoading(true);
+		const offset = (currentPage - 1) * rowsPerPage;
+		const dbSortColumn = sortColumn ? (STUDENT_SORT_COLUMNS[sortColumn] ?? 'name') : 'name';
 
-		try {
-			const offset = (currentPage - 1) * rowsPerPage;
-
-			// Map DataTable column keys to database sort column names
-			const columnMapping: Record<string, string> = {
-				student: 'name',
-				phone_number: 'phone_number',
-				status: 'status',
-				agreements: 'agreements',
-			};
-
-			const dbSortColumn = sortColumn ? columnMapping[sortColumn] || 'name' : 'name';
-
-			const { data, error } = await supabase.rpc('get_students_paginated', {
+		void Promise.resolve(
+			supabase.rpc('get_students_paginated', {
 				p_limit: rowsPerPage,
 				p_offset: offset,
 				p_search: debouncedSearchQuery || null,
@@ -102,30 +182,32 @@ export default function Students() {
 				p_lesson_type_id: selectedLessonTypeId,
 				p_sort_column: dbSortColumn,
 				p_sort_direction: sortDirection || 'asc',
-			});
+			}),
+		)
+			.then(async ({ data, error }) => {
+				if (error) {
+					console.error('Error loading students:', error);
+					toast.error('Fout bij laden leerlingen');
+					setLoading(false);
+					return;
+				}
 
-			if (error) {
+				const result = data as unknown as PaginatedStudentsResponseRaw;
+				const flat = (result.data ?? []).map(flattenStudentWithAgreements);
+				setStudents(flat);
+				setTotalCount(result.total_count ?? 0);
+
+				const emails = flat.map((s) => s.email).filter((e): e is string => Boolean(e));
+				setRequestsByEmail(await fetchSignupRequestsByEmails(emails));
+				setLoading(false);
+			})
+			.catch((error) => {
 				console.error('Error loading students:', error);
 				toast.error('Fout bij laden leerlingen');
 				setLoading(false);
-				return;
-			}
-
-			const result = data as unknown as PaginatedStudentsResponseRaw;
-			const flat = (result.data ?? []).map(flattenStudentWithAgreements);
-			setStudents(flat);
-			setTotalCount(result.total_count ?? 0);
-
-			// Load signup requests for the visible students (matched by email)
-			const emails = flat.map((s) => s.email).filter((e): e is string => Boolean(e));
-			setRequestsByEmail(await fetchSignupRequestsByEmails(emails));
-			setLoading(false);
-		} catch (error) {
-			console.error('Error loading students:', error);
-			toast.error('Fout bij laden leerlingen');
-			setLoading(false);
-		}
+			});
 	}, [
+		authLoading,
 		hasAccess,
 		currentPage,
 		rowsPerPage,
@@ -138,130 +220,42 @@ export default function Students() {
 		setTotalCount,
 	]);
 
-	// Load students when dependencies change
 	useEffect(() => {
-		if (!authLoading) {
-			loadStudents();
+		loadStudents();
+	}, [loadStudents]);
+
+	const reloadStudents = loadStudents;
+
+	const runAction = async (action: StudentAction) => {
+		if (action.kind === 'edit') {
+			setStudentFormDialog({ open: true, student: action.student });
+			return;
 		}
-	}, [authLoading, loadStudents]);
+		if (action.kind === 'delete') {
+			setDeleteDialog({ open: true, student: action.student, deleteUser: false });
+			return;
+		}
 
-	const columns: DataTableColumn<StudentWithAgreements>[] = useMemo(
-		() => [
-			{
-				key: 'student',
-				label: 'Leerling',
-				sortable: true,
-				className: 'w-64 max-w-64',
-				render: (s) => (
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation();
-							navigate(`/students/${s.user_id}`);
-						}}
-						className="text-left hover:underline"
-					>
-						<UserDisplay profile={s} showEmail />
-					</button>
-				),
-			},
-			{
-				key: 'phone_number',
-				label: 'Telefoon',
-				sortable: true,
-				render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
-				className: 'text-muted-foreground w-32',
-			},
-			{
-				key: 'status',
-				label: 'Status',
-				sortable: true,
-				render: (s) => (
-					<Badge variant={s.active_agreements_count > 0 ? 'default' : 'secondary'}>
-						{s.active_agreements_count > 0 ? 'Actief' : 'Inactief'}
-					</Badge>
-				),
-				className: 'w-24',
-			},
-			{
-				key: 'agreements',
-				label: 'Overeenkomsten',
-				sortable: true,
-				render: (s) => (
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation();
-							navigate(`/students/${s.user_id}`);
-						}}
-						className="text-sm hover:underline"
-					>
-						{s.agreements.length} {s.agreements.length === 1 ? 'overeenkomst' : 'overeenkomsten'}
-					</button>
-				),
-			},
-			{
-				key: 'signup_requests',
-				label: 'Aanmeldingen',
-				render: (s) => {
-					const count = s.email ? (requestsByEmail.get(s.email)?.length ?? 0) : 0;
-					return (
-						<button
-							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								navigate(`/students/${s.user_id}`);
-							}}
-							className="text-sm hover:underline"
-						>
-							{count} {count === 1 ? 'aanmelding' : 'aanmeldingen'}
-						</button>
-					);
-				},
-			},
-		],
-		[requestsByEmail, navigate],
-	);
-
-	const handleEdit = useCallback((student: StudentWithAgreements) => {
-		setStudentFormDialog({ open: true, student });
-	}, []);
-
-	const handleDelete = useCallback((student: StudentWithAgreements) => {
-		setDeleteDialog({ open: true, student, deleteUser: false });
-	}, []);
-
-	const confirmDelete = useCallback(async () => {
 		if (!deleteDialog?.student) return;
 
 		try {
-			// If also delete user, call delete-user function which will cascade delete everything
 			if (deleteDialog.deleteUser) {
 				const { error: userDeleteError } = await supabase.functions.invoke('delete-user', {
 					body: { userId: deleteDialog.student.user_id },
 				});
-
 				if (userDeleteError) {
 					console.error('Error deleting user:', userDeleteError);
-					toast.error('Fout bij verwijderen gebruiker', {
-						description: userDeleteError.message,
-					});
+					toast.error('Fout bij verwijderen gebruiker', { description: userDeleteError.message });
 					throw new Error(userDeleteError.message);
 				}
-
 				toast.success('Leerling en gebruiker verwijderd');
 			} else {
-				// Delete all lesson agreements first - this will trigger automatic student deletion
-				// Students cannot be deleted directly (no DELETE policy), they are automatically
-				// deleted via triggers when all lesson_agreements are removed
 				const agreementIds = deleteDialog.student.agreements.map((a) => a.id);
-
 				if (agreementIds.length > 0) {
 					const { error: agreementsError } = await supabase
 						.from('lesson_agreements')
 						.delete()
 						.in('id', agreementIds);
-
 					if (agreementsError) {
 						console.error('Error deleting lesson agreements:', agreementsError);
 						toast.error('Fout bij verwijderen lesovereenkomsten', {
@@ -270,14 +264,11 @@ export default function Students() {
 						throw new Error(agreementsError.message);
 					}
 				}
-
-				// The student will be automatically deleted by the trigger when all agreements are removed
 				toast.success('Leerling verwijderd');
 			}
 
-			// Reload students to get updated data
 			setDeleteDialog(null);
-			loadStudents();
+			reloadStudents();
 		} catch (error) {
 			console.error('Error deleting student:', error);
 			toast.error('Fout bij verwijderen leerling', {
@@ -285,9 +276,10 @@ export default function Students() {
 			});
 			throw error;
 		}
-	}, [deleteDialog, loadStudents]);
+	};
 
-	// Redirect if no access
+	const columns = buildStudentColumns(navigate, requestsByEmail);
+
 	if (!authLoading && !hasAccess) {
 		return <Navigate to="/" replace />;
 	}
@@ -316,20 +308,18 @@ export default function Students() {
 				initialSortDirection={sortDirection || undefined}
 				onSortChange={handleSortChange}
 				rowActions={{
-					onEdit: isPrivileged ? handleEdit : undefined,
-					onDelete: isAdmin || isSiteAdmin ? handleDelete : undefined,
+					onEdit: isPrivileged ? (student) => runAction({ kind: 'edit', student }) : undefined,
+					onDelete: isAdmin || isSiteAdmin ? (student) => runAction({ kind: 'delete', student }) : undefined,
 				}}
 			/>
 
-			{/* Create/Edit Student Dialog */}
 			<StudentFormDialog
 				open={studentFormDialog.open}
 				onOpenChange={(open) => setStudentFormDialog({ ...studentFormDialog, open })}
-				onSuccess={loadStudents}
+				onSuccess={reloadStudents}
 				student={studentFormDialog.student ?? undefined}
 			/>
 
-			{/* Delete Student Dialog */}
 			{deleteDialog && (
 				<ConfirmDeleteDialog
 					open={deleteDialog.open}
@@ -344,7 +334,7 @@ export default function Students() {
 							wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
 						</>
 					}
-					onConfirm={confirmDelete}
+					onConfirm={() => runAction({ kind: 'confirm-delete' })}
 					extraContent={
 						<>
 							<p className="text-sm text-muted-foreground">

@@ -66,100 +66,100 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		[getEnrichedEvents, ui.currentDate, effectiveUserId, ui.optimisticMove],
 	);
 
-	const selectedOccurrenceDeviation = useMemo(() => {
-		if (!ui.selectedEvent?.resource.eventId || !ui.selectedEvent?.resource.originalDate || !ui.editingEvent?.id)
-			return null;
-		return (
-			deviationsByEventId.get(ui.selectedEvent.resource.eventId)?.get(ui.selectedEvent.resource.originalDate) ??
-			null
-		);
-	}, [
-		ui.selectedEvent?.resource.eventId,
-		ui.selectedEvent?.resource.originalDate,
-		ui.editingEvent?.id,
-		deviationsByEventId,
-	]);
+	const selectedOccurrenceDeviation =
+		!ui.selectedEvent?.resource.eventId || !ui.selectedEvent?.resource.originalDate || !ui.editingEvent?.id
+			? null
+			: (deviationsByEventId
+					.get(ui.selectedEvent.resource.eventId)
+					?.get(ui.selectedEvent.resource.originalDate) ?? null);
 
-	const occurrenceParticipantIds = useMemo(() => {
-		const ids = selectedOccurrenceDeviation?.participant_ids;
-		return ids && ids.length > 0 ? ids : null;
-	}, [selectedOccurrenceDeviation]);
+	const occurrenceParticipantIds =
+		selectedOccurrenceDeviation?.participant_ids && selectedOccurrenceDeviation.participant_ids.length > 0
+			? selectedOccurrenceDeviation.participant_ids
+			: null;
 
-	const occurrenceOverrides = useMemo(() => {
-		const d = selectedOccurrenceDeviation;
-		return d ? { title: d.title ?? null, description: d.description ?? null, color: d.color ?? null } : null;
-	}, [selectedOccurrenceDeviation]);
+	const occurrenceOverrides = selectedOccurrenceDeviation
+		? {
+				title: selectedOccurrenceDeviation.title ?? null,
+				description: selectedOccurrenceDeviation.description ?? null,
+				color: selectedOccurrenceDeviation.color ?? null,
+			}
+		: null;
 
-	const occurrenceTimes = useMemo(() => {
-		if (!ui.selectedEvent?.resource.isDeviation) return { start: null, end: null };
-		return {
-			start: ui.selectedEvent.start ? formatTimeFromDate(ui.selectedEvent.start) : null,
-			end: ui.selectedEvent.end ? formatTimeFromDate(ui.selectedEvent.end) : null,
-		};
-	}, [ui.selectedEvent]);
+	const occurrenceTimes = !ui.selectedEvent?.resource.isDeviation
+		? { start: null, end: null }
+		: {
+				start: ui.selectedEvent.start ? formatTimeFromDate(ui.selectedEvent.start) : null,
+				end: ui.selectedEvent.end ? formatTimeFromDate(ui.selectedEvent.end) : null,
+			};
 
-	const readonlyParticipantIds = useMemo(() => {
-		if (ui.editingEvent?.source_type !== 'lesson_agreement' || !ui.editingEvent.source_id) return [];
-		const agreement = agreementsMap.get(ui.editingEvent.source_id) as AgendaLessonAgreement | undefined;
-		if (!agreement) return [];
-		const ids: string[] = [agreement.student_user_id];
-		if (agreement.teacherUserId) ids.push(agreement.teacherUserId);
-		return ids;
-	}, [ui.editingEvent?.source_type, ui.editingEvent?.source_id, agreementsMap]);
+	const editingAgreement =
+		ui.editingEvent?.source_type === 'lesson_agreement' && ui.editingEvent.source_id
+			? (agreementsMap.get(ui.editingEvent.source_id) as AgendaLessonAgreement | undefined)
+			: undefined;
 
-	const canAddParticipants = useMemo(() => {
-		if (!isPrivileged) return false;
-		if (ui.editingEvent?.source_type !== 'lesson_agreement') return true;
-		if (!ui.editingEvent.source_id) return true;
-		const agreement = agreementsMap.get(ui.editingEvent.source_id) as AgendaLessonAgreement | undefined;
-		if (!agreement) return true;
-		return effectiveUserId === agreement.teacherUserId;
-	}, [isPrivileged, ui.editingEvent?.source_type, ui.editingEvent?.source_id, agreementsMap, effectiveUserId]);
+	const readonlyParticipantIds = editingAgreement
+		? editingAgreement.teacherUserId
+			? [editingAgreement.student_user_id, editingAgreement.teacherUserId]
+			: [editingAgreement.student_user_id]
+		: [];
 
-	const deviationInfo = useMemo((): DeviationInfo | null => {
-		if (
-			!(ui.selectedEvent?.resource.isDeviation || ui.selectedEvent?.resource.isCancelled) ||
-			!ui.selectedEvent.resource.deviationId ||
-			!ui.selectedEvent.resource.originalDate ||
-			!ui.selectedEvent.resource.originalStartTime
-		)
-			return null;
-		return {
-			deviationId: ui.selectedEvent.resource.deviationId,
-			originalDate: ui.selectedEvent.resource.originalDate,
-			originalStartTime: ui.selectedEvent.resource.originalStartTime,
-			isCancelled: ui.selectedEvent.resource.isCancelled,
-			hasTimeOrDateChange: ui.selectedEvent.resource.hasTimeOrDateChange ?? false,
-		};
-	}, [
-		ui.selectedEvent?.resource.isDeviation,
-		ui.selectedEvent?.resource.isCancelled,
-		ui.selectedEvent?.resource.deviationId,
-		ui.selectedEvent?.resource.originalDate,
-		ui.selectedEvent?.resource.originalStartTime,
-		ui.selectedEvent?.resource.hasTimeOrDateChange,
-	]);
+	const canAddParticipants =
+		isPrivileged &&
+		(ui.editingEvent?.source_type !== 'lesson_agreement' ||
+			!ui.editingEvent.source_id ||
+			!editingAgreement ||
+			effectiveUserId === editingAgreement.teacherUserId);
 
-	const lessonType = useMemo(
-		() =>
-			ui.selectedEvent?.resource.lessonTypeName
-				? {
-						name: ui.selectedEvent.resource.lessonTypeName,
-						icon: ui.selectedEvent.resource.lessonTypeIcon,
-						color: ui.selectedEvent.resource.lessonTypeColor,
-					}
-				: null,
-		[
-			ui.selectedEvent?.resource.lessonTypeName,
-			ui.selectedEvent?.resource.lessonTypeIcon,
-			ui.selectedEvent?.resource.lessonTypeColor,
-		],
-	);
+	const deviationInfo: DeviationInfo | null =
+		(ui.selectedEvent?.resource.isDeviation || ui.selectedEvent?.resource.isCancelled) &&
+		ui.selectedEvent.resource.deviationId &&
+		ui.selectedEvent.resource.originalDate &&
+		ui.selectedEvent.resource.originalStartTime
+			? {
+					deviationId: ui.selectedEvent.resource.deviationId,
+					originalDate: ui.selectedEvent.resource.originalDate,
+					originalStartTime: ui.selectedEvent.resource.originalStartTime,
+					isCancelled: ui.selectedEvent.resource.isCancelled,
+					hasTimeOrDateChange: ui.selectedEvent.resource.hasTimeOrDateChange ?? false,
+				}
+			: null;
+
+	const lessonType = ui.selectedEvent?.resource.lessonTypeName
+		? {
+				name: ui.selectedEvent.resource.lessonTypeName,
+				icon: ui.selectedEvent.resource.lessonTypeIcon,
+				color: ui.selectedEvent.resource.lessonTypeColor,
+			}
+		: null;
 
 	const reloadAgenda = useCallback(() => loadData(false), [loadData]);
 
 	const handleEventDrop = useCallback(
-		async (args: { event: CalendarEvent; start: Date; end: Date }, scope: RecurrenceScope) => {
+		async (
+			args: { event: CalendarEvent; start: Date; end: Date },
+			scope: RecurrenceScope = 'single',
+			skipRecurrencePrompt = false,
+		) => {
+			if (!skipRecurrencePrompt && scope === 'single') {
+				const originalStart = args.event.start;
+				const originalEnd = args.event.end;
+				if (
+					originalStart &&
+					originalEnd &&
+					originalStart.getTime() === args.start.getTime() &&
+					originalEnd.getTime() === args.end.getTime()
+				) {
+					return;
+				}
+				if (needsRecurrenceChoice(args.event)) {
+					ui.setPendingDrop(args);
+					ui.setRecurrenceChoiceAction('change');
+					ui.setRecurrenceChoiceOpen(true);
+					return;
+				}
+			}
+
 			if (!canEdit || !user) return;
 			ui.setOptimisticMove({ originalEvent: args.event, newStart: args.start, newEnd: args.end });
 			const result = await moveAgendaEvent({
@@ -183,28 +183,6 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 			ui.setOptimisticMove(null);
 		},
 		[canEdit, user, agendaEvents, deviations, agreementsMap, reloadAgenda, ui],
-	);
-
-	const onEventDropWithChoice = useCallback(
-		(args: { event: CalendarEvent; start: Date; end: Date }) => {
-			const originalStart = args.event.start;
-			const originalEnd = args.event.end;
-			if (
-				originalStart &&
-				originalEnd &&
-				originalStart.getTime() === args.start.getTime() &&
-				originalEnd.getTime() === args.end.getTime()
-			)
-				return;
-			if (!needsRecurrenceChoice(args.event)) {
-				handleEventDrop(args, 'single');
-				return;
-			}
-			ui.setPendingDrop(args);
-			ui.setRecurrenceChoiceAction('change');
-			ui.setRecurrenceChoiceOpen(true);
-		},
-		[handleEventDrop, ui],
 	);
 
 	const handleCancelLesson = useCallback(
@@ -277,7 +255,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		canEdit,
 		isOwnAgenda,
 		scrollToTime,
-		onEventDrop: onEventDropWithChoice,
+		onEventDrop: handleEventDrop,
 		onSelectEvent: handleSelectEvent,
 		onSelectSlot: handleSelectSlot,
 		setCurrentView: ui.setCurrentView,
@@ -307,7 +285,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				action={ui.recurrenceChoiceAction}
 				onChoose={(scope) => {
 					if (ui.recurrenceChoiceAction === 'change' && ui.pendingDrop) {
-						handleEventDrop(ui.pendingDrop, scope);
+						handleEventDrop(ui.pendingDrop, scope, true);
 						ui.setPendingDrop(null);
 					} else if (ui.recurrenceChoiceAction === 'cancel') {
 						ui.setPendingCancelScope(scope);

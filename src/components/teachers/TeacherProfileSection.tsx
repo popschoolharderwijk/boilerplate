@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,57 +36,46 @@ export function TeacherProfileSection({
 	const [firstName, setFirstName] = useState<string>(initialFirstName || '');
 	const [lastName, setLastName] = useState<string>(initialLastName || '');
 	const [phoneNumber, setPhoneNumber] = useState<string>(initialPhoneNumber || '');
-	const [loading, setLoading] = useState(!initialBio && !initialFirstName); // Only show loading if no initial data
+	const [loading, setLoading] = useState(!initialBio && !initialFirstName);
 	const [saving, setSaving] = useState(false);
 
-	const loadProfile = useCallback(async () => {
+	useEffect(() => {
+		if (initialBio || initialFirstName || initialLastName || initialPhoneNumber) return;
 		if (!teacherUserId || !user_id) return;
 
 		setLoading(true);
-
-		// Load bio
-		const { data: teacherData, error: teacherError } = await supabase
+		void supabase
 			.from('teachers')
 			.select('bio')
 			.eq('user_id', teacherUserId)
-			.single();
+			.single()
+			.then(async ({ data: teacherData, error: teacherError }) => {
+				if (teacherError) {
+					console.error('Error loading bio:', teacherError);
+					toast.error('Fout bij laden profiel');
+					setLoading(false);
+					return;
+				}
 
-		if (teacherError) {
-			console.error('Error loading bio:', teacherError);
-			toast.error('Fout bij laden profiel');
-			setLoading(false);
-			return;
-		}
+				const { data: profileData, error: profileError } = await supabase
+					.from('profiles')
+					.select('first_name, last_name, phone_number')
+					.eq('user_id', user_id)
+					.single();
 
-		// Load profile data
-		const { data: profileData, error: profileError } = await supabase
-			.from('profiles')
-			.select('first_name, last_name, phone_number')
-			.eq('user_id', user_id)
-			.single();
+				if (profileError) {
+					console.error('Error loading profile:', profileError);
+					toast.error('Fout bij laden profiel');
+				} else {
+					setBio(teacherData?.bio || '');
+					setFirstName(profileData?.first_name || '');
+					setLastName(profileData?.last_name || '');
+					setPhoneNumber(profileData?.phone_number || '');
+				}
+				setLoading(false);
+			});
+	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, teacherUserId, user_id]);
 
-		if (profileError) {
-			console.error('Error loading profile:', profileError);
-			toast.error('Fout bij laden profiel');
-			setLoading(false);
-			return;
-		}
-
-		setBio(teacherData?.bio || '');
-		setFirstName(profileData?.first_name || '');
-		setLastName(profileData?.last_name || '');
-		setPhoneNumber(profileData?.phone_number || '');
-		setLoading(false);
-	}, [teacherUserId, user_id]);
-
-	// Only load profile if no initial data was provided
-	useEffect(() => {
-		if (!initialBio && !initialFirstName && !initialLastName && !initialPhoneNumber) {
-			loadProfile();
-		}
-	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, loadProfile]);
-
-	// Update state when initial props change
 	useEffect(() => {
 		if (initialBio !== undefined) setBio(initialBio || '');
 		if (initialFirstName !== undefined) setFirstName(initialFirstName || '');
@@ -94,12 +83,11 @@ export function TeacherProfileSection({
 		if (initialPhoneNumber !== undefined) setPhoneNumber(initialPhoneNumber || '');
 	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber]);
 
-	const handleSave = async () => {
+	const runAction = async () => {
 		if (!teacherUserId || !user_id || !canEdit || !user) return;
 
 		setSaving(true);
 
-		// Update bio
 		const { error: bioError } = await supabase
 			.from('teachers')
 			.update({ bio: bio || null })
@@ -107,14 +95,11 @@ export function TeacherProfileSection({
 
 		if (bioError) {
 			console.error('Error updating bio:', bioError);
-			toast.error('Fout bij bijwerken bio', {
-				description: bioError.message,
-			});
+			toast.error('Fout bij bijwerken bio', { description: bioError.message });
 			setSaving(false);
 			return;
 		}
 
-		// Update profile data (only first_name, last_name, phone_number - email cannot be changed)
 		const { error: profileError } = await supabase
 			.from('profiles')
 			.update({
@@ -126,9 +111,7 @@ export function TeacherProfileSection({
 
 		if (profileError) {
 			console.error('Error updating profile:', profileError);
-			toast.error('Fout bij bijwerken profiel', {
-				description: profileError.message,
-			});
+			toast.error('Fout bij bijwerken profiel', { description: profileError.message });
 			setSaving(false);
 			return;
 		}
@@ -188,7 +171,7 @@ export function TeacherProfileSection({
 					/>
 				</div>
 				{canEdit && (
-					<SubmitButton onClick={handleSave} loading={saving} size="sm" loadingLabel="Opslaan...">
+					<SubmitButton onClick={() => runAction()} loading={saving} size="sm" loadingLabel="Opslaan...">
 						Opslaan
 					</SubmitButton>
 				)}

@@ -80,6 +80,7 @@ export function getSlotStatuses(
 
 			let occupiedCount = 0;
 			const startMin = timeToMinutes(sub.start_time);
+			if (startMin == null) continue;
 			const endMin = startMin + durationMinutes;
 
 			for (const dateStr of occurrenceDates) {
@@ -87,6 +88,7 @@ export function getSlotStatuses(
 				for (const agreement of existingAgreements) {
 					if (!agreementHasOccurrenceOnDate(agreement, dateStr)) continue;
 					const agreeStart = timeToMinutes(agreement.start_time);
+					if (agreeStart == null) continue;
 					const agreeEnd = agreeStart + agreement.duration_minutes;
 					if (timeRangesOverlap(startMin, endMin, agreeStart, agreeEnd)) {
 						occupied = true;

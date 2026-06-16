@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LuPlus, LuSettings } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -16,6 +16,127 @@ import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProjectRow } from '@/types/projects';
+
+type ProjectAction =
+	| { kind: 'create' }
+	| { kind: 'edit'; project: ProjectRow }
+	| { kind: 'delete'; project: ProjectRow }
+	| { kind: 'confirm-delete' };
+
+const PROJECT_COLUMNS: DataTableColumn<ProjectRow>[] = [
+	{
+		key: 'name',
+		label: 'Naam',
+		sortable: true,
+		sortValue: (p) => p.name.toLowerCase(),
+		render: (p) => (
+			<div>
+				<p className="font-medium">{p.name}</p>
+				{p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
+			</div>
+		),
+	},
+	{
+		key: 'domain',
+		label: 'Domein',
+		sortable: true,
+		sortValue: (p) => p.domain_name.toLowerCase(),
+		render: (p) => <span className="text-muted-foreground">{p.domain_name}</span>,
+	},
+	{
+		key: 'label',
+		label: 'Label',
+		sortable: true,
+		sortValue: (p) => p.label_name.toLowerCase(),
+		render: (p) => <span className="text-muted-foreground">{p.label_name}</span>,
+	},
+	{
+		key: 'slot_count',
+		label: 'Aantal',
+		sortable: true,
+		sortValue: (p) => p.slot_count,
+		render: (p) => <span className="text-muted-foreground">{p.slot_count}</span>,
+	},
+	{
+		key: 'owner',
+		label: 'Eigenaar',
+		sortable: true,
+		sortValue: (p) => (p.owner_first_name ?? p.owner_email ?? '').toLowerCase(),
+		render: (p) => (
+			<UserDisplay
+				profile={{
+					first_name: p.owner_first_name,
+					last_name: p.owner_last_name,
+					email: p.owner_email,
+					avatar_url: p.owner_avatar_url,
+				}}
+			/>
+		),
+	},
+	{
+		key: 'cost_center',
+		label: 'Kostenplaats',
+		sortable: true,
+		sortValue: (p) => p.cost_center ?? '',
+		render: (p) => <span className="text-muted-foreground">{p.cost_center ?? '—'}</span>,
+	},
+	{
+		key: 'status',
+		label: 'Status',
+		sortable: true,
+		sortValue: (p) => (p.is_active ? 1 : 0),
+		render: (p) => (
+			<Badge variant={p.is_active ? 'default' : 'secondary'}>{p.is_active ? 'Actief' : 'Inactief'}</Badge>
+		),
+	},
+];
+
+function mapProjectRow(
+	p: {
+		id: string;
+		name: string;
+		description: string | null;
+		cost_center: string | null;
+		is_active: boolean;
+		owner_user_id: string;
+		label_id: string;
+		created_at: string;
+		updated_at: string;
+		created_by: string | null;
+		updated_by: string | null;
+	},
+	labelMap: Map<string, { name: string; domain_id: string }>,
+	domainMap: Map<string, { name: string }>,
+	profileMap: Map<
+		string,
+		{ first_name: string | null; last_name: string | null; email: string | null; avatar_url: string | null }
+	>,
+	slotCountByProject: Map<string, number>,
+): ProjectRow {
+	const label = labelMap.get(p.label_id);
+	const domain = label ? domainMap.get(label.domain_id) : undefined;
+	const owner = profileMap.get(p.owner_user_id);
+	return {
+		id: p.id,
+		name: p.name,
+		description: p.description,
+		cost_center: p.cost_center,
+		is_active: p.is_active,
+		owner_user_id: p.owner_user_id,
+		label_id: p.label_id,
+		created_at: p.created_at,
+		updated_at: p.updated_at,
+		created_by: p.created_by,
+		updated_by: p.updated_by,
+		label_name: label?.name ?? '—',
+		domain_name: domain?.name ?? '—',
+		owner_first_name: owner?.first_name ?? null,
+		owner_last_name: owner?.last_name ?? null,
+		owner_email: owner?.email ?? null,
+		owner_avatar_url: owner?.avatar_url ?? null,
+		slot_count: slotCountByProject.get(p.id) ?? 0,
+	};
+}
 
 export default function Projects() {
 	const { isAdmin, isSiteAdmin, isPrivileged, isTeacher, isLoading: authLoading } = useAuth();
@@ -35,180 +156,87 @@ export default function Projects() {
 	const canEdit = isAdmin || isSiteAdmin;
 	const canSchedule = isPrivileged;
 
-	const loadProjects = useCallback(async () => {
-		if (!canView) return;
-		setLoading(true);
+	const loadProjects = useCallback(() => {
+		if (authLoading || !canView) return;
 
-		const { data: projectsData, error: projectsError } = await supabase
+		setLoading(true);
+		void supabase
 			.from('projects')
 			.select('*')
-			.order('name', { ascending: true });
+			.order('name', { ascending: true })
+			.then(async ({ data: projectsData, error: projectsError }) => {
+				if (projectsError) {
+					console.error('Error loading projects:', projectsError);
+					toast.error('Fout bij laden projecten');
+					setLoading(false);
+					return;
+				}
 
-		if (projectsError) {
-			console.error('Error loading projects:', projectsError);
-			toast.error('Fout bij laden projecten');
-			setLoading(false);
-			return;
-		}
+				const rawProjects = projectsData ?? [];
+				if (rawProjects.length === 0) {
+					setProjects([]);
+					setLoading(false);
+					return;
+				}
 
-		const rawProjects = projectsData ?? [];
-		if (rawProjects.length === 0) {
-			setProjects([]);
-			setLoading(false);
-			return;
-		}
+				const projectIds = rawProjects.map((p) => p.id);
+				const { data: projectEvents } = await supabase
+					.from('agenda_events')
+					.select('source_id')
+					.eq('source_type', 'project')
+					.in('source_id', projectIds);
+				const slotCountByProject = new Map<string, number>();
+				for (const id of projectIds) slotCountByProject.set(id, 0);
+				for (const row of projectEvents ?? []) {
+					if (row.source_id) {
+						slotCountByProject.set(row.source_id, (slotCountByProject.get(row.source_id) ?? 0) + 1);
+					}
+				}
 
-		// Count scheduled time slots (agenda_events) per project
-		const projectIds = rawProjects.map((p) => p.id);
-		const { data: projectEvents } = await supabase
-			.from('agenda_events')
-			.select('source_id')
-			.eq('source_type', 'project')
-			.in('source_id', projectIds);
-		const slotCountByProject = new Map<string, number>();
-		for (const id of projectIds) slotCountByProject.set(id, 0);
-		for (const row of projectEvents ?? []) {
-			if (row.source_id) slotCountByProject.set(row.source_id, (slotCountByProject.get(row.source_id) ?? 0) + 1);
-		}
+				const labelIds = [...new Set(rawProjects.map((p) => p.label_id))];
+				const { data: labels } = await supabase
+					.from('project_labels')
+					.select('id, name, domain_id')
+					.in('id', labelIds);
+				const domainIds = [...new Set((labels ?? []).map((l) => l.domain_id))];
+				const { data: domains } = await supabase.from('project_domains').select('id, name').in('id', domainIds);
+				const ownerIds = [...new Set(rawProjects.map((p) => p.owner_user_id))];
+				const { data: profiles } = await supabase
+					.from('view_profiles_with_display_name')
+					.select('user_id, first_name, last_name, email, avatar_url')
+					.in('user_id', ownerIds);
 
-		// Fetch labels + domains
-		const labelIds = [...new Set(rawProjects.map((p) => p.label_id))];
-		const { data: labels } = await supabase.from('project_labels').select('id, name, domain_id').in('id', labelIds);
+				const labelMap = new Map((labels ?? []).map((l) => [l.id, l]));
+				const domainMap = new Map((domains ?? []).map((d) => [d.id, d]));
+				const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
-		const domainIds = [...new Set((labels ?? []).map((l) => l.domain_id))];
-		const { data: domains } = await supabase.from('project_domains').select('id, name').in('id', domainIds);
-
-		// Fetch owner profiles
-		const ownerIds = [...new Set(rawProjects.map((p) => p.owner_user_id))];
-		const { data: profiles } = await supabase
-			.from('view_profiles_with_display_name')
-			.select('user_id, first_name, last_name, email, avatar_url')
-			.in('user_id', ownerIds);
-
-		const labelMap = new Map((labels ?? []).map((l) => [l.id, l]));
-		const domainMap = new Map((domains ?? []).map((d) => [d.id, d]));
-		const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-
-		const rows: ProjectRow[] = rawProjects.map((p) => {
-			const label = labelMap.get(p.label_id);
-			const domain = label ? domainMap.get(label.domain_id) : undefined;
-			const owner = profileMap.get(p.owner_user_id);
-			return {
-				id: p.id,
-				name: p.name,
-				description: p.description,
-				cost_center: p.cost_center,
-				is_active: p.is_active,
-				owner_user_id: p.owner_user_id,
-				label_id: p.label_id,
-				created_at: p.created_at,
-				updated_at: p.updated_at,
-				created_by: p.created_by,
-				updated_by: p.updated_by,
-				label_name: label?.name ?? '—',
-				domain_name: domain?.name ?? '—',
-				owner_first_name: owner?.first_name ?? null,
-				owner_last_name: owner?.last_name ?? null,
-				owner_email: owner?.email ?? null,
-				owner_avatar_url: owner?.avatar_url ?? null,
-				slot_count: slotCountByProject.get(p.id) ?? 0,
-			};
-		});
-
-		setProjects(rows);
-		setLoading(false);
-	}, [canView]);
+				setProjects(
+					rawProjects.map((p) => mapProjectRow(p, labelMap, domainMap, profileMap, slotCountByProject)),
+				);
+				setLoading(false);
+			});
+	}, [authLoading, canView]);
 
 	useEffect(() => {
-		if (!authLoading) {
-			loadProjects();
+		loadProjects();
+	}, [loadProjects]);
+
+	const reloadProjects = loadProjects;
+
+	const runAction = async (action: ProjectAction) => {
+		if (action.kind === 'create') {
+			setFormDialog({ open: true, project: null });
+			return;
 		}
-	}, [authLoading, loadProjects]);
+		if (action.kind === 'edit') {
+			setFormDialog({ open: true, project: action.project });
+			return;
+		}
+		if (action.kind === 'delete') {
+			setDeleteDialog({ open: true, project: action.project });
+			return;
+		}
 
-	const columns: DataTableColumn<ProjectRow>[] = useMemo(
-		() => [
-			{
-				key: 'name',
-				label: 'Naam',
-				sortable: true,
-				sortValue: (p) => p.name.toLowerCase(),
-				render: (p) => (
-					<div>
-						<p className="font-medium">{p.name}</p>
-						{p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
-					</div>
-				),
-			},
-			{
-				key: 'domain',
-				label: 'Domein',
-				sortable: true,
-				sortValue: (p) => p.domain_name.toLowerCase(),
-				render: (p) => <span className="text-muted-foreground">{p.domain_name}</span>,
-			},
-			{
-				key: 'label',
-				label: 'Label',
-				sortable: true,
-				sortValue: (p) => p.label_name.toLowerCase(),
-				render: (p) => <span className="text-muted-foreground">{p.label_name}</span>,
-			},
-			{
-				key: 'slot_count',
-				label: 'Aantal',
-				sortable: true,
-				sortValue: (p) => p.slot_count,
-				render: (p) => <span className="text-muted-foreground">{p.slot_count}</span>,
-			},
-			{
-				key: 'owner',
-				label: 'Eigenaar',
-				sortable: true,
-				sortValue: (p) => (p.owner_first_name ?? p.owner_email ?? '').toLowerCase(),
-				render: (p) => (
-					<UserDisplay
-						profile={{
-							first_name: p.owner_first_name,
-							last_name: p.owner_last_name,
-							email: p.owner_email,
-							avatar_url: p.owner_avatar_url,
-						}}
-					/>
-				),
-			},
-			{
-				key: 'cost_center',
-				label: 'Kostenplaats',
-				sortable: true,
-				sortValue: (p) => p.cost_center ?? '',
-				render: (p) => <span className="text-muted-foreground">{p.cost_center ?? '—'}</span>,
-			},
-			{
-				key: 'status',
-				label: 'Status',
-				sortable: true,
-				sortValue: (p) => (p.is_active ? 1 : 0),
-				render: (p) => (
-					<Badge variant={p.is_active ? 'default' : 'secondary'}>{p.is_active ? 'Actief' : 'Inactief'}</Badge>
-				),
-			},
-		],
-		[],
-	);
-
-	const handleCreate = useCallback(() => {
-		setFormDialog({ open: true, project: null });
-	}, []);
-
-	const handleEdit = useCallback((project: ProjectRow) => {
-		setFormDialog({ open: true, project });
-	}, []);
-
-	const handleDelete = useCallback((project: ProjectRow) => {
-		setDeleteDialog({ open: true, project });
-	}, []);
-
-	const confirmDelete = useCallback(async () => {
 		if (!deleteDialog?.project) return;
 		const { data, error } = await supabase.from('projects').delete().eq('id', deleteDialog.project.id).select('id');
 		if (error) {
@@ -226,14 +254,7 @@ export default function Projects() {
 		toast.success('Project verwijderd', { description: `${deleteDialog.project.name} is verwijderd.` });
 		setProjects((prev) => prev.filter((p) => p.id !== deleteDialog.project?.id));
 		setDeleteDialog(null);
-	}, [deleteDialog]);
-
-	const renderExpandedRow = useCallback(
-		(project: ProjectRow) => (
-			<ProjectAgendaEvents projectId={project.id} canSchedule={canSchedule && project.is_active} />
-		),
-		[canSchedule],
-	);
+	};
 
 	if (!canView) {
 		return <Navigate to="/" replace />;
@@ -245,7 +266,7 @@ export default function Projects() {
 				title={NAV_LABELS.projects}
 				description={`Beheer alle ${NAV_LABELS.projects.toLowerCase()}`}
 				data={projects}
-				columns={columns}
+				columns={PROJECT_COLUMNS}
 				searchQuery={searchQuery}
 				onSearchChange={setSearchQuery}
 				searchFields={[
@@ -262,12 +283,14 @@ export default function Projects() {
 				initialSortDirection="asc"
 				expandedRowKey={expandedProjectId}
 				onExpandToggle={setExpandedProjectId}
-				renderExpandedRow={renderExpandedRow}
+				renderExpandedRow={(project) => (
+					<ProjectAgendaEvents projectId={project.id} canSchedule={canSchedule && project.is_active} />
+				)}
 				headerActions={
 					<div className="flex items-center gap-2">
 						{canEdit && (
 							<>
-								<Button onClick={handleCreate}>
+								<Button onClick={() => runAction({ kind: 'create' })}>
 									<LuPlus className="mr-2 h-4 w-4" />
 									Project toevoegen
 								</Button>
@@ -284,8 +307,8 @@ export default function Projects() {
 					</div>
 				}
 				rowActions={{
-					onEdit: canEdit ? handleEdit : undefined,
-					onDelete: canEdit ? handleDelete : undefined,
+					onEdit: canEdit ? (project) => runAction({ kind: 'edit', project }) : undefined,
+					onDelete: canEdit ? (project) => runAction({ kind: 'delete', project }) : undefined,
 				}}
 			/>
 
@@ -293,7 +316,7 @@ export default function Projects() {
 				open={formDialog.open}
 				onOpenChange={(open) => !open && setFormDialog({ open: false, project: null })}
 				project={formDialog.project}
-				onSaved={loadProjects}
+				onSaved={reloadProjects}
 			/>
 
 			{deleteDialog && (
@@ -307,7 +330,7 @@ export default function Projects() {
 							actie kan niet ongedaan worden gemaakt.
 						</>
 					}
-					onConfirm={confirmDelete}
+					onConfirm={() => runAction({ kind: 'confirm-delete' })}
 				/>
 			)}
 

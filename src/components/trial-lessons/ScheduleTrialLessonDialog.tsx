@@ -59,16 +59,6 @@ function formatDateHeader(dateStr: string): string {
 	return `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${d.toLocaleString('nl-NL', { month: 'long' })}`;
 }
 
-function teacherName(t: TeacherInfo | undefined): string {
-	if (!t) return 'Onbekende docent';
-	return `${t.firstName ?? ''} ${t.lastName ?? ''}`.trim() || 'Docent';
-}
-
-function teacherInitials(t: TeacherInfo | undefined): string {
-	if (!t) return '?';
-	return `${(t.firstName ?? '?')[0] ?? '?'}${(t.lastName ?? '')[0] ?? ''}`.toUpperCase();
-}
-
 export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, onScheduled }: Props) {
 	const [fromDate, setFromDate] = useState(todayPlus(1));
 	const [toDate, setToDate] = useState(todayPlus(30));
@@ -203,32 +193,28 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 		})();
 	}, [open, signupRequest, fromDate, toDate]);
 
-	const freeSlots = useMemo<FreeSlotForTeacher[]>(() => {
-		if (!fromDate || !toDate || availabilityByTeacher.size === 0) return [];
+	const slotsGroupedByDate = useMemo(() => {
+		const map = new Map<string, FreeSlotForTeacher[]>();
+		if (!fromDate || !toDate || availabilityByTeacher.size === 0) return map;
 		const start = new Date(`${fromDate}T12:00:00`);
 		const end = new Date(`${toDate}T12:00:00`);
-		if (end < start) return [];
-		return getFreeSlotsAcrossTeachers(
+		if (end < start) return map;
+		for (const s of getFreeSlotsAcrossTeachers(
 			start,
 			end,
 			availabilityByTeacher,
 			agreementsByTeacher,
 			trialsByTeacher,
 			duration,
-		);
-	}, [fromDate, toDate, duration, availabilityByTeacher, agreementsByTeacher, trialsByTeacher]);
-
-	const groupedByDate = useMemo(() => {
-		const map = new Map<string, FreeSlotForTeacher[]>();
-		for (const s of freeSlots) {
+		)) {
 			const arr = map.get(s.date) ?? [];
 			arr.push(s);
 			map.set(s.date, arr);
 		}
 		return map;
-	}, [freeSlots]);
+	}, [fromDate, toDate, duration, availabilityByTeacher, agreementsByTeacher, trialsByTeacher]);
 
-	const submit = async (e: FormEvent) => {
+	const runFormAction = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!selected) {
 			toast.error('Selecteer een tijdslot');
@@ -271,7 +257,7 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 							: 'Kies een vrij tijdslot binnen de periode.'}
 					</DialogDescription>
 				</DialogHeader>
-				<form onSubmit={submit} className="space-y-3">
+				<form onSubmit={runFormAction} className="space-y-3">
 					{!signupRequest && (
 						<>
 							<div className="grid grid-cols-2 gap-3">
@@ -340,13 +326,13 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 										<LuLoader className="h-4 w-4 animate-spin" />
 										Slots laden…
 									</div>
-								) : groupedByDate.size === 0 ? (
+								) : slotsGroupedByDate.size === 0 ? (
 									<div className="p-6 text-center text-sm text-muted-foreground">
 										Geen vrije tijdsloten in deze periode.
 									</div>
 								) : (
 									<div className="divide-y">
-										{Array.from(groupedByDate.entries()).map(([date, slots]) => (
+										{Array.from(slotsGroupedByDate.entries()).map(([date, slots]) => (
 											<div key={date}>
 												<div className="sticky top-0 bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
 													{formatDateHeader(date)}
@@ -358,6 +344,13 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 															selected?.date === slot.date &&
 															selected?.start_time === slot.start_time &&
 															selected?.teacher_user_id === slot.teacher_user_id;
+														const displayName = t
+															? `${t.firstName ?? ''} ${t.lastName ?? ''}`.trim() ||
+																'Docent'
+															: 'Onbekende docent';
+														const initials = t
+															? `${(t.firstName ?? '?')[0] ?? '?'}${(t.lastName ?? '')[0] ?? ''}`.toUpperCase()
+															: '?';
 														return (
 															<li
 																key={`${slot.date}-${slot.start_time}-${slot.teacher_user_id}`}
@@ -377,18 +370,18 @@ export function ScheduleTrialLessonDialog({ open, onOpenChange, signupRequest, o
 																		{t?.avatarUrl ? (
 																			<AvatarImage
 																				src={t.avatarUrl}
-																				alt={teacherName(t)}
+																				alt={displayName}
 																			/>
 																		) : null}
 																		<AvatarFallback className="text-[10px]">
 																			{t ? (
-																				teacherInitials(t)
+																				initials
 																			) : (
 																				<LuUser className="h-3 w-3" />
 																			)}
 																		</AvatarFallback>
 																	</Avatar>
-																	<span className="truncate">{teacherName(t)}</span>
+																	<span className="truncate">{displayName}</span>
 																</button>
 															</li>
 														);

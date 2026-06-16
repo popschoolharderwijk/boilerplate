@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LuCalendarPlus, LuCheck, LuInbox, LuX } from 'react-icons/lu';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -22,6 +22,112 @@ type Row = Tables<'lesson_signup_requests'> & {
 	trial_teacher_name: string | null;
 };
 
+type SignupAction = { kind: 'reject'; row: Row } | { kind: 'process'; row: Row };
+
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+	if (value == null) return null;
+	return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function statusBadgeVariant(status: Row['status']): 'default' | 'secondary' | 'outline' {
+	if (status === 'pending') return 'default';
+	if (status === 'approved' || status === 'trial_scheduled') return 'secondary';
+	return 'outline';
+}
+
+function buildSignupColumns(
+	busyId: string | null,
+	runAction: (action: SignupAction) => void,
+	setTrialFor: (row: Row) => void,
+): DataTableColumn<Row>[] {
+	return [
+		{
+			key: 'created_at',
+			label: 'Ontvangen',
+			render: (r) => <span className="text-sm">{formatDbDateLong(r.created_at)}</span>,
+		},
+		{
+			key: 'name',
+			label: 'Aanmelder',
+			render: (r) => (
+				<div>
+					<div className="font-medium">
+						{r.first_name} {r.last_name}
+					</div>
+					<div className="text-xs text-muted-foreground">{r.email}</div>
+				</div>
+			),
+		},
+		{
+			key: 'type',
+			label: 'Lessoort',
+			render: (r) => (
+				<div>
+					<div>{r.lesson_type_name}</div>
+					{r.lesson_group_name ? (
+						<div className="text-xs text-muted-foreground">Groep: {r.lesson_group_name}</div>
+					) : r.is_group_lesson ? (
+						<Badge variant="outline">Wachtlijst</Badge>
+					) : null}
+					{r.option_label && <div className="text-xs text-muted-foreground">{r.option_label}</div>}
+				</div>
+			),
+		},
+		{
+			key: 'status',
+			label: 'Status',
+			render: (r) => (
+				<div className="space-y-1">
+					<Badge variant={statusBadgeVariant(r.status)}>
+						{r.status === 'trial_scheduled' ? 'proefles ingepland' : r.status}
+					</Badge>
+					{r.status === 'trial_scheduled' && r.trial_scheduled_date && (
+						<div className="text-xs text-muted-foreground">
+							{formatDbDateLong(r.trial_scheduled_date)}
+							{r.trial_scheduled_time ? ` · ${r.trial_scheduled_time.slice(0, 5)}` : ''}
+							{r.trial_teacher_name ? ` · ${r.trial_teacher_name}` : ''}
+						</div>
+					)}
+				</div>
+			),
+		},
+		{
+			key: 'actions',
+			label: '',
+			render: (r) =>
+				r.status === 'pending' || r.status === 'trial_scheduled' ? (
+					<div className="flex gap-2 justify-end">
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => runAction({ kind: 'reject', row: r })}
+							disabled={busyId === r.id}
+						>
+							<LuX className="h-4 w-4" />
+						</Button>
+						{r.status === 'pending' && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => setTrialFor(r)}
+								disabled={busyId === r.id}
+							>
+								<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
+							</Button>
+						)}
+						<Button
+							size="sm"
+							onClick={() => runAction({ kind: 'process', row: r })}
+							disabled={busyId === r.id}
+						>
+							<LuCheck className="h-4 w-4 mr-1" /> Verwerken
+						</Button>
+					</div>
+				) : null,
+		},
+	];
+}
+
 export default function SignupRequests() {
 	const { isPrivileged, isLoading } = useAuth();
 	const navigate = useNavigate();
@@ -31,95 +137,110 @@ export default function SignupRequests() {
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const [trialFor, setTrialFor] = useState<Row | null>(null);
 
-	const load = useCallback(async () => {
+	const loadSignupRequests = useCallback(() => {
+		if (!isPrivileged) return;
+
 		setLoading(true);
 		let q = supabase
 			.from('lesson_signup_requests')
 			.select('*, lesson_types(id, name, is_group_lesson), lesson_groups(id, name)')
 			.order('created_at', { ascending: false });
 		if (statusFilter === 'pending') q = q.in('status', ['pending', 'trial_scheduled']);
-		const { data, error } = await q;
-		if (error) {
-			setLoading(false);
-			toast.error('Fout bij laden aanmeldingen');
-			return;
-		}
-		const baseRows = (data ?? []).map((r) => {
-			const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
-			const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
-			return {
-				...(r as Tables<'lesson_signup_requests'>),
-				lesson_type_name: lt?.name ?? null,
-				lesson_group_name: lg?.name ?? null,
-				is_group_lesson: lt?.is_group_lesson ?? false,
-			};
-		});
 
-		const optionIds = Array.from(
-			new Set(baseRows.map((r) => r.lesson_type_option_id).filter((v): v is string => Boolean(v))),
-		);
-		const optionMap = new Map<string, string>();
-		if (optionIds.length > 0) {
-			const { data: opts } = await supabase
-				.from('lesson_type_options')
-				.select('id, duration_minutes, frequency, price_per_lesson')
-				.in('id', optionIds);
-			for (const o of opts ?? []) {
-				optionMap.set(o.id, `${o.duration_minutes} min · ${o.frequency} · €${o.price_per_lesson}`);
+		void q.then(async ({ data, error }) => {
+			if (error) {
+				setLoading(false);
+				toast.error('Fout bij laden aanmeldingen');
+				return;
 			}
-		}
 
-		// Fetch scheduled trial lessons for visible signup requests
-		const requestIds = baseRows.map((r) => r.id);
-		const trialMap = new Map<string, { date: string; time: string; teacher_user_id: string }>();
-		const teacherNames = new Map<string, string>();
-		if (requestIds.length > 0) {
-			const { data: trials } = await supabase
-				.from('trial_lessons')
-				.select('signup_request_id, scheduled_date, scheduled_start_time, teacher_user_id, status')
-				.in('signup_request_id', requestIds)
-				.eq('status', 'scheduled');
-			for (const t of trials ?? []) {
-				if (!t.signup_request_id) continue;
-				trialMap.set(t.signup_request_id, {
-					date: t.scheduled_date,
-					time: t.scheduled_start_time,
-					teacher_user_id: t.teacher_user_id,
-				});
-			}
-			const teacherIds = Array.from(new Set(Array.from(trialMap.values()).map((v) => v.teacher_user_id)));
-			if (teacherIds.length > 0) {
-				const { data: profs } = await supabase
-					.from('profiles')
-					.select('user_id, first_name, last_name')
-					.in('user_id', teacherIds);
-				for (const p of profs ?? []) {
-					teacherNames.set(p.user_id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent');
+			const baseRows = (data ?? []).map((r) => {
+				const lt = unwrapRelation(r.lesson_types);
+				const lg = unwrapRelation(r.lesson_groups);
+				return {
+					...(r as Tables<'lesson_signup_requests'>),
+					lesson_type_name: lt?.name ?? null,
+					lesson_group_name: lg?.name ?? null,
+					is_group_lesson: lt?.is_group_lesson ?? false,
+					option_label: null as string | null,
+					trial_scheduled_date: null as string | null,
+					trial_scheduled_time: null as string | null,
+					trial_teacher_name: null as string | null,
+				};
+			});
+
+			const optionIds = [
+				...new Set(baseRows.map((r) => r.lesson_type_option_id).filter((v): v is string => Boolean(v))),
+			];
+			const optionMap = new Map<string, string>();
+			if (optionIds.length > 0) {
+				const { data: opts } = await supabase
+					.from('lesson_type_options')
+					.select('id, duration_minutes, frequency, price_per_lesson')
+					.in('id', optionIds);
+				for (const o of opts ?? []) {
+					optionMap.set(o.id, `${o.duration_minutes} min · ${o.frequency} · €${o.price_per_lesson}`);
 				}
 			}
-		}
 
-		setLoading(false);
-		setRows(
-			baseRows.map((r) => {
-				const trial = trialMap.get(r.id);
-				return {
-					...r,
-					option_label: r.lesson_type_option_id ? (optionMap.get(r.lesson_type_option_id) ?? null) : null,
-					trial_scheduled_date: trial?.date ?? null,
-					trial_scheduled_time: trial?.time ?? null,
-					trial_teacher_name: trial ? (teacherNames.get(trial.teacher_user_id) ?? null) : null,
-				};
-			}),
-		);
-	}, [statusFilter]);
+			const requestIds = baseRows.map((r) => r.id);
+			const trialMap = new Map<string, { date: string; time: string; teacher_user_id: string }>();
+			const teacherNames = new Map<string, string>();
+			if (requestIds.length > 0) {
+				const { data: trials } = await supabase
+					.from('trial_lessons')
+					.select('signup_request_id, scheduled_date, scheduled_start_time, teacher_user_id, status')
+					.in('signup_request_id', requestIds)
+					.eq('status', 'scheduled');
+				for (const t of trials ?? []) {
+					if (!t.signup_request_id) continue;
+					trialMap.set(t.signup_request_id, {
+						date: t.scheduled_date,
+						time: t.scheduled_start_time,
+						teacher_user_id: t.teacher_user_id,
+					});
+				}
+				const teacherIds = [...new Set([...trialMap.values()].map((v) => v.teacher_user_id))];
+				if (teacherIds.length > 0) {
+					const { data: profs } = await supabase
+						.from('profiles')
+						.select('user_id, first_name, last_name')
+						.in('user_id', teacherIds);
+					for (const p of profs ?? []) {
+						teacherNames.set(p.user_id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Docent');
+					}
+				}
+			}
+
+			setRows(
+				baseRows.map((r) => {
+					const trial = trialMap.get(r.id);
+					const optionLabel = r.lesson_type_option_id
+						? (optionMap.get(r.lesson_type_option_id) ?? null)
+						: null;
+					const trialTeacherName = trial ? (teacherNames.get(trial.teacher_user_id) ?? null) : null;
+					return {
+						...r,
+						option_label: optionLabel,
+						trial_scheduled_date: trial?.date ?? null,
+						trial_scheduled_time: trial?.time ?? null,
+						trial_teacher_name: trialTeacherName,
+					};
+				}),
+			);
+			setLoading(false);
+		});
+	}, [isPrivileged, statusFilter]);
 
 	useEffect(() => {
-		if (isPrivileged) load();
-	}, [isPrivileged, load]);
+		loadSignupRequests();
+	}, [loadSignupRequests]);
 
-	const reject = useCallback(
-		async (row: Row) => {
+	const reload = loadSignupRequests;
+
+	const runAction = async (action: SignupAction) => {
+		const row = action.row;
+		if (action.kind === 'reject') {
 			if (!confirm('Aanmelding afwijzen?')) return;
 			setBusyId(row.id);
 			const { error } = await supabase
@@ -132,129 +253,32 @@ export default function SignupRequests() {
 				return;
 			}
 			toast.success('Aanmelding afgewezen');
-			load();
-		},
-		[load],
-	);
+			reload();
+			return;
+		}
 
-	const process = useCallback(
-		async (row: Row) => {
-			setBusyId(row.id);
-			// Approve via edge function: creates user/student (and group membership directly for group signups)
-			const { data, error } = await supabase.functions.invoke('approve-signup-request', {
-				body: { request_id: row.id },
-			});
-			setBusyId(null);
-			if (error || (data as { error?: string })?.error) {
-				toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
-				return;
-			}
-			// Group signup is fully handled by the edge function
-			if (row.is_group_lesson && row.lesson_group_id) {
-				toast.success('Aanmelding verwerkt');
-				load();
-				return;
-			}
-			// Individual / waitlist: open AgreementWizard with prefill
-			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
-			const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
-			navigate(
-				`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}${optionParam}`,
-			);
-		},
-		[load, navigate],
-	);
+		setBusyId(row.id);
+		const { data, error } = await supabase.functions.invoke('approve-signup-request', {
+			body: { request_id: row.id },
+		});
+		setBusyId(null);
+		if (error || (data as { error?: string })?.error) {
+			toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
+			return;
+		}
+		if (row.is_group_lesson && row.lesson_group_id) {
+			toast.success('Aanmelding verwerkt');
+			reload();
+			return;
+		}
+		const studentUserId = (data as { student_user_id?: string })?.student_user_id;
+		const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
+		navigate(
+			`/agreements/new?fromRequest=${row.id}&studentUserId=${studentUserId}&lessonTypeId=${row.lesson_type_id}${optionParam}`,
+		);
+	};
 
-	const columns: DataTableColumn<Row>[] = useMemo(
-		() => [
-			{
-				key: 'created_at',
-				label: 'Ontvangen',
-				render: (r) => <span className="text-sm">{formatDbDateLong(r.created_at)}</span>,
-			},
-			{
-				key: 'name',
-				label: 'Aanmelder',
-				render: (r) => (
-					<div>
-						<div className="font-medium">
-							{r.first_name} {r.last_name}
-						</div>
-						<div className="text-xs text-muted-foreground">{r.email}</div>
-					</div>
-				),
-			},
-			{
-				key: 'type',
-				label: 'Lessoort',
-				render: (r) => (
-					<div>
-						<div>{r.lesson_type_name}</div>
-						{r.lesson_group_name ? (
-							<div className="text-xs text-muted-foreground">Groep: {r.lesson_group_name}</div>
-						) : r.is_group_lesson ? (
-							<Badge variant="outline">Wachtlijst</Badge>
-						) : null}
-						{r.option_label && <div className="text-xs text-muted-foreground">{r.option_label}</div>}
-					</div>
-				),
-			},
-			{
-				key: 'status',
-				label: 'Status',
-				render: (r) => (
-					<div className="space-y-1">
-						<Badge
-							variant={
-								r.status === 'pending'
-									? 'default'
-									: r.status === 'approved'
-										? 'secondary'
-										: r.status === 'trial_scheduled'
-											? 'secondary'
-											: 'outline'
-							}
-						>
-							{r.status === 'trial_scheduled' ? 'proefles ingepland' : r.status}
-						</Badge>
-						{r.status === 'trial_scheduled' && r.trial_scheduled_date && (
-							<div className="text-xs text-muted-foreground">
-								{formatDbDateLong(r.trial_scheduled_date)}
-								{r.trial_scheduled_time ? ` · ${r.trial_scheduled_time.slice(0, 5)}` : ''}
-								{r.trial_teacher_name ? ` · ${r.trial_teacher_name}` : ''}
-							</div>
-						)}
-					</div>
-				),
-			},
-			{
-				key: 'actions',
-				label: '',
-				render: (r) =>
-					r.status === 'pending' || r.status === 'trial_scheduled' ? (
-						<div className="flex gap-2 justify-end">
-							<Button size="sm" variant="outline" onClick={() => reject(r)} disabled={busyId === r.id}>
-								<LuX className="h-4 w-4" />
-							</Button>
-							{r.status === 'pending' && (
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => setTrialFor(r)}
-									disabled={busyId === r.id}
-								>
-									<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
-								</Button>
-							)}
-							<Button size="sm" onClick={() => process(r)} disabled={busyId === r.id}>
-								<LuCheck className="h-4 w-4 mr-1" /> Verwerken
-							</Button>
-						</div>
-					) : null,
-			},
-		],
-		[busyId, process, reject],
-	);
+	const columns = buildSignupColumns(busyId, runAction, setTrialFor);
 
 	if (isLoading) return null;
 	if (!isPrivileged) return <Navigate to="/" replace />;
@@ -300,7 +324,7 @@ export default function SignupRequests() {
 				}
 				onScheduled={() => {
 					setTrialFor(null);
-					load();
+					reload();
 				}}
 			/>
 		</>

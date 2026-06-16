@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
 import { PeriodStepContent } from '@/components/agreements/PeriodStepContent';
 import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepContent';
@@ -15,9 +14,16 @@ import { PageHeader } from '@/components/ui/page-header';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { supabase } from '@/integrations/supabase/client';
-import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
+import type { SlotWithStatus } from '@/lib/agreementSlots';
 import { addDaysFromNow, addYearsFromNow, formatDateToDb } from '@/lib/date/date-format';
 import { formatTime } from '@/lib/time/time-format';
+import {
+	agreementBreadcrumbItems,
+	runWizardLoad,
+	shouldLoadTeacherSlots,
+	shouldLoadTeachers,
+	wizardInitFromAgreement,
+} from '@/pages/agreementWizardLoaders';
 import type {
 	AgreementTableRow,
 	LessonFrequency,
@@ -27,8 +33,6 @@ import type {
 } from '@/types/lesson-agreements';
 import type { User } from '@/types/users';
 
-// ============ Helpers ============
-
 function tomorrow(): string {
 	return formatDateToDb(addDaysFromNow(1));
 }
@@ -36,8 +40,6 @@ function tomorrow(): string {
 function oneYearFromToday(): string {
 	return formatDateToDb(addYearsFromNow(1));
 }
-
-// ============ Custom Hooks ============
 
 function useAgreement(id: string | undefined, isEditMode: boolean) {
 	const [agreement, setAgreement] = useState<AgreementTableRow | null>(null);
@@ -50,84 +52,12 @@ function useAgreement(id: string | undefined, isEditMode: boolean) {
 			setLoading(false);
 			return;
 		}
-
-		const load = async () => {
-			const { data, error } = await supabase
-				.from('lesson_agreements')
-				.select(
-					`id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, 
-					student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson,
-					lesson_types(id, name, icon, color), 
-					teachers(user_id)`,
-				)
-				.eq('id', id)
-				.single();
-
-			if (error || !data) {
-				toast.error('Overeenkomst niet gevonden');
-				navigate('/agreements');
-				return;
-			}
-
-			loadedPeriodRef.current = { start_date: data.start_date, end_date: data.end_date ?? null };
-
-			const teacher = Array.isArray(data.teachers) ? data.teachers[0] : data.teachers;
-			const teacherUserId = teacher?.user_id;
-			const lessonType = Array.isArray(data.lesson_types) ? data.lesson_types[0] : data.lesson_types;
-
-			const [teacherProfile, studentProfile] = await Promise.all([
-				teacherUserId
-					? supabase
-							.from('profiles')
-							.select('first_name, last_name, email, avatar_url')
-							.eq('user_id', teacherUserId)
-							.single()
-					: { data: null },
-				supabase
-					.from('profiles')
-					.select('first_name, last_name, email, avatar_url')
-					.eq('user_id', data.student_user_id)
-					.single(),
-			]);
-
-			setAgreement({
-				id: data.id,
-				created_at: data.created_at,
-				day_of_week: data.day_of_week,
-				start_time: data.start_time,
-				start_date: data.start_date,
-				end_date: data.end_date,
-				is_active: data.is_active,
-				notes: data.notes,
-				student_user_id: data.student_user_id,
-				teacher_user_id: data.teacher_user_id,
-				lesson_type_id: data.lesson_type_id,
-				duration_minutes: data.duration_minutes,
-				frequency: data.frequency,
-				price_per_lesson: data.price_per_lesson,
-				student: {
-					first_name: studentProfile.data?.first_name ?? null,
-					last_name: studentProfile.data?.last_name ?? null,
-					avatar_url: studentProfile.data?.avatar_url ?? null,
-					email: studentProfile.data?.email ?? '',
-				},
-				teacher: {
-					email: teacherProfile.data?.email ?? null,
-					first_name: teacherProfile.data?.first_name ?? null,
-					last_name: teacherProfile.data?.last_name ?? null,
-					avatar_url: teacherProfile.data?.avatar_url ?? null,
-				},
-				lesson_type: {
-					id: lessonType.id,
-					name: lessonType.name,
-					icon: lessonType.icon,
-					color: lessonType.color,
-				},
-			});
+		void runWizardLoad('agreement', { id, navigate }).then((result) => {
+			if (!result) return;
+			loadedPeriodRef.current = result.loadedPeriod;
+			setAgreement(result.agreement);
 			setLoading(false);
-		};
-
-		load();
+		});
 	}, [id, isEditMode, navigate]);
 
 	return { agreement, loading, loadedPeriod: loadedPeriodRef };
@@ -139,7 +69,7 @@ function useLessonTypes() {
 	>([]);
 
 	useEffect(() => {
-		supabase
+		void supabase
 			.from('lesson_types')
 			.select('id, name, icon, color, is_duo_lesson')
 			.eq('is_active', true)
@@ -158,7 +88,7 @@ function useLessonTypeOptions(lessonTypeId: string | null) {
 			setOptions([]);
 			return;
 		}
-		supabase
+		void supabase
 			.from('lesson_type_options')
 			.select('id, duration_minutes, frequency, price_per_lesson')
 			.eq('lesson_type_id', lessonTypeId)
@@ -183,83 +113,21 @@ function useTeacherSlots(
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		if (step !== WizardStep.TeacherSlot || !teacherUserId || !lessonTypeId || !startDate || !endDate) {
+		if (!shouldLoadTeacherSlots(step, teacherUserId, lessonTypeId, startDate, endDate, selectedLessonType)) {
 			setSlots([]);
 			return;
 		}
-
-		const load = async () => {
-			setLoading(true);
-			// Load ALL agreements for this teacher (all lesson types) so slot status reflects
-			// whether the teacher is free/partially/fully occupied in that slot (e.g. drums + gitaar).
-			const [avail, agreements] = await Promise.all([
-				supabase
-					.from('teacher_availability')
-					.select('day_of_week, start_time, end_time')
-					.eq('teacher_user_id', teacherUserId),
-				supabase
-					.from('lesson_agreements')
-					.select('id, day_of_week, start_time, start_date, end_date, duration_minutes, frequency')
-					.eq('teacher_user_id', teacherUserId)
-					.lte('start_date', endDate),
-			]);
-
-			if (avail.error) {
-				toast.error('Fout bij laden beschikbaarheid');
-				setLoading(false);
-				return;
-			}
-
-			const filteredAgreements = (agreements.data ?? [])
-				.filter((a) => a.start_date <= endDate && (a.end_date === null || a.end_date >= startDate))
-				.filter((a) => !initialAgreement || a.id !== initialAgreement.id)
-				.map((a) => ({
-					day_of_week: a.day_of_week,
-					start_time: a.start_time,
-					start_date: a.start_date,
-					end_date: a.end_date,
-					frequency: a.frequency,
-					duration_minutes: a.duration_minutes,
-				}));
-
-			if (!selectedLessonType) {
-				setSlots([]);
-				setLoading(false);
-				return;
-			}
-			const duration = selectedLessonType.duration_minutes;
-			const frequency = selectedLessonType.frequency;
-			const statuses = getSlotStatuses(
-				new Date(startDate),
-				new Date(endDate),
-				avail.data ?? [],
-				filteredAgreements,
-				duration,
-				frequency,
-			);
-
-			// Auto-select existing slot in edit mode
-			if (initialAgreement) {
-				const existing = statuses.find(
-					(s) =>
-						s.day_of_week === initialAgreement.day_of_week &&
-						formatTime(s.start_time) === formatTime(initialAgreement.start_time),
-				);
-				if (existing) {
-					setSlots(statuses);
-					// Need to communicate selected slot back - handled via parent
-					setSlots(statuses);
-				} else {
-					setSlots(statuses);
-				}
-			} else {
-				setSlots(statuses);
-			}
-
+		setLoading(true);
+		void runWizardLoad('teacherSlots', {
+			teacherUserId,
+			startDate,
+			endDate,
+			initialAgreement,
+			selectedLessonType,
+		}).then((statuses) => {
+			setSlots(statuses ?? []);
 			setLoading(false);
-		};
-
-		load();
+		});
 	}, [step, teacherUserId, lessonTypeId, startDate, endDate, initialAgreement, selectedLessonType]);
 
 	return { slots, loading };
@@ -269,58 +137,15 @@ function useTeachers(step: WizardStep, lessonTypeId: string | null) {
 	const [teachers, setTeachers] = useState<WizardTeacherInfo[]>([]);
 
 	useEffect(() => {
-		if (step === WizardStep.User || step === WizardStep.Period || !lessonTypeId) {
+		if (!shouldLoadTeachers(step, lessonTypeId)) {
 			setTeachers([]);
 			return;
 		}
-
-		const load = async () => {
-			const { data: tltData } = await supabase
-				.from('teacher_lesson_types')
-				.select('teacher_user_id')
-				.eq('lesson_type_id', lessonTypeId);
-
-			if (!tltData?.length) return;
-
-			const teacherUserIds = tltData.map((r) => r.teacher_user_id);
-			const { data: teachersData } = await supabase
-				.from('teachers')
-				.select('user_id')
-				.in('user_id', teacherUserIds)
-				.eq('is_active', true);
-
-			if (!teachersData?.length) return;
-
-			const userIds = teachersData.map((t) => t.user_id);
-			const { data: profiles } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name, email, avatar_url')
-				.in('user_id', userIds);
-
-			const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
-
-			setTeachers(
-				teachersData.map((t) => {
-					const p = profileMap.get(t.user_id);
-					return {
-						id: t.user_id,
-						userId: t.user_id,
-						firstName: p?.first_name ?? null,
-						lastName: p?.last_name ?? null,
-						email: p?.email ?? null,
-						avatarUrl: p?.avatar_url ?? null,
-					};
-				}),
-			);
-		};
-
-		load();
+		void runWizardLoad('teachers', { lessonTypeId }).then(setTeachers);
 	}, [step, lessonTypeId]);
 
 	return teachers;
 }
-
-// ============ Main Component ============
 
 export default function AgreementWizard() {
 	const { id } = useParams<{ id: string }>();
@@ -335,17 +160,14 @@ export default function AgreementWizard() {
 
 	const isEditMode = id !== undefined && id !== 'new';
 
-	// Data loading
 	const { agreement, loading: loadingAgreement, loadedPeriod } = useAgreement(id, isEditMode);
 	const lessonTypes = useLessonTypes();
 
-	// Form state
 	const [step, setStep] = useState<WizardStep>(WizardStep.User);
 	const [form, setForm] = useState({
 		studentUserId: null as string | null,
 		user: null as User | null,
 		lessonTypeId: null as string | null,
-		/** Snapshot from chosen option (for new agreement); in edit mode comes from agreement */
 		selectedOptionSnapshot: null as {
 			duration_minutes: number;
 			frequency: LessonFrequency;
@@ -355,7 +177,6 @@ export default function AgreementWizard() {
 		endDate: oneYearFromToday(),
 		teacherUserId: null as string | null,
 		slot: null as SlotWithStatus | null,
-		/** Duo partner student (only set when selected lesson type is_duo_lesson and in create mode). */
 		partnerStudentUserId: null as string | null,
 		partnerUser: null as User | null,
 	});
@@ -365,38 +186,35 @@ export default function AgreementWizard() {
 	const [saving, setSaving] = useState(false);
 	const startDatePickerRef = useAutofocus<HTMLButtonElement>(step === WizardStep.Period);
 
-	// Prefill from public signup request (after staff clicked "Verwerken")
 	useEffect(() => {
 		if (isEditMode || !prefillStudentUserId) return;
-		(async () => {
-			const { data: profile } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name, email, avatar_url, phone_number')
-				.eq('user_id', prefillStudentUserId)
-				.maybeSingle();
-			setForm((f) => ({
-				...f,
-				studentUserId: prefillStudentUserId,
-				lessonTypeId: prefillLessonTypeId ?? f.lessonTypeId,
-				user: profile
-					? {
-							user_id: profile.user_id,
-							first_name: profile.first_name,
-							last_name: profile.last_name,
-							email: profile.email,
-							avatar_url: profile.avatar_url,
-							phone_number: profile.phone_number,
-						}
-					: f.user,
-			}));
-		})();
+		void supabase
+			.from('profiles')
+			.select('user_id, first_name, last_name, email, avatar_url, phone_number')
+			.eq('user_id', prefillStudentUserId)
+			.maybeSingle()
+			.then(({ data: profile }) => {
+				setForm((f) => ({
+					...f,
+					studentUserId: prefillStudentUserId,
+					lessonTypeId: prefillLessonTypeId ?? f.lessonTypeId,
+					user: profile
+						? {
+								user_id: profile.user_id,
+								first_name: profile.first_name,
+								last_name: profile.last_name,
+								email: profile.email,
+								avatar_url: profile.avatar_url,
+								phone_number: profile.phone_number,
+							}
+						: f.user,
+				}));
+			});
 	}, [isEditMode, prefillStudentUserId, prefillLessonTypeId]);
 
-	// Derived state
 	const teachers = useTeachers(step, form.lessonTypeId);
 	const lessonTypeOptions = useLessonTypeOptions(form.lessonTypeId);
 
-	// Prefill option snapshot when staff opens wizard from a public signup request
 	useEffect(() => {
 		if (isEditMode || !prefillOptionId || lessonTypeOptions.length === 0) return;
 		setForm((f) => {
@@ -414,9 +232,9 @@ export default function AgreementWizard() {
 		});
 	}, [isEditMode, prefillOptionId, lessonTypeOptions]);
 
-	const selectedLessonType = useMemo((): WizardLessonTypeInfo | undefined => {
-		if (agreement) {
-			return {
+	const matchedLessonType = agreement ? null : lessonTypes.find((lt) => lt.id === form.lessonTypeId);
+	const selectedLessonType: WizardLessonTypeInfo | undefined = agreement
+		? {
 				id: agreement.lesson_type_id,
 				name: agreement.lesson_type.name,
 				icon: agreement.lesson_type.icon,
@@ -424,21 +242,18 @@ export default function AgreementWizard() {
 				duration_minutes: agreement.duration_minutes,
 				frequency: agreement.frequency,
 				price_per_lesson: agreement.price_per_lesson,
-			};
-		}
-		const type = lessonTypes.find((lt) => lt.id === form.lessonTypeId);
-		const snap = form.selectedOptionSnapshot;
-		if (!type || !snap) return undefined;
-		return {
-			id: type.id,
-			name: type.name,
-			icon: type.icon,
-			color: type.color,
-			duration_minutes: snap.duration_minutes,
-			frequency: snap.frequency,
-			price_per_lesson: snap.price_per_lesson,
-		};
-	}, [agreement, lessonTypes, form.lessonTypeId, form.selectedOptionSnapshot]);
+			}
+		: matchedLessonType && form.selectedOptionSnapshot
+			? {
+					id: matchedLessonType.id,
+					name: matchedLessonType.name,
+					icon: matchedLessonType.icon,
+					color: matchedLessonType.color,
+					duration_minutes: form.selectedOptionSnapshot.duration_minutes,
+					frequency: form.selectedOptionSnapshot.frequency,
+					price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
+				}
+			: undefined;
 
 	const { slots: slotsWithStatus, loading: loadingSlots } = useTeacherSlots(
 		step,
@@ -450,292 +265,99 @@ export default function AgreementWizard() {
 		selectedLessonType,
 	);
 
-	const selectedTeacher = useMemo(() => {
-		if (teachers.length > 0) return teachers.find((t) => t.id === form.teacherUserId);
-		if (agreement?.teacher) {
-			return {
-				id: agreement.teacher_user_id,
-				userId: '',
-				firstName: agreement.teacher.first_name,
-				lastName: agreement.teacher.last_name,
-				email: agreement.teacher.email ?? '',
-				avatarUrl: agreement.teacher.avatar_url,
-			};
-		}
-		return undefined;
-	}, [teachers, form.teacherUserId, agreement]);
+	const selectedTeacher =
+		teachers.length > 0
+			? teachers.find((t) => t.id === form.teacherUserId)
+			: agreement?.teacher
+				? {
+						id: agreement.teacher_user_id,
+						userId: '',
+						firstName: agreement.teacher.first_name,
+						lastName: agreement.teacher.last_name,
+						email: agreement.teacher.email ?? '',
+						avatarUrl: agreement.teacher.avatar_url,
+					}
+				: undefined;
 
-	const effectiveSlot = useMemo(() => {
-		if (form.slot) return form.slot;
-		if (agreement?.day_of_week) {
-			return {
-				day_of_week: agreement.day_of_week,
-				start_time: agreement.start_time,
-				end_time: agreement.start_time,
-				status: 'free' as const,
-				occupiedOccurrences: 0,
-				totalOccurrences: 0,
-			};
-		}
-		return null;
-	}, [form.slot, agreement]);
+	const effectiveSlot = form.slot
+		? form.slot
+		: agreement?.day_of_week
+			? {
+					day_of_week: agreement.day_of_week,
+					start_time: agreement.start_time,
+					end_time: agreement.start_time,
+					status: 'free' as const,
+					occupiedOccurrences: 0,
+					totalOccurrences: 0,
+				}
+			: null;
 
-	// Check for changes
-	const hasChanges = useMemo(() => {
-		if (!agreement) return false;
-		const periodChanged = agreement.start_date !== form.startDate;
-		const endChanged = (agreement.end_date ?? '') !== form.endDate;
-		const teacherChanged = agreement.teacher_user_id !== form.teacherUserId;
-		const slotChanged =
+	const hasChanges = agreement
+		? agreement.start_date !== form.startDate ||
+			(agreement.end_date ?? '') !== form.endDate ||
+			agreement.teacher_user_id !== form.teacherUserId ||
 			agreement.day_of_week !== effectiveSlot?.day_of_week ||
-			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '');
-		return periodChanged || endChanged || teacherChanged || slotChanged;
-	}, [agreement, form.startDate, form.endDate, form.teacherUserId, effectiveSlot]);
+			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '')
+		: false;
 
 	const isTeacherOwnStudent = selectedTeacher && form.studentUserId && selectedTeacher.userId === form.studentUserId;
 
-	// Initialize form from loaded agreement
 	useEffect(() => {
-		if (loadingAgreement) return;
-		setStep(isEditMode ? WizardStep.Confirm : WizardStep.User);
-		setHighestStep(isEditMode ? STEP_ORDER.length - 1 : 0);
-
-		if (agreement) {
-			const slotFromAgreement: SlotWithStatus = {
-				day_of_week: agreement.day_of_week,
-				start_time: agreement.start_time,
-				end_time: agreement.start_time,
-				status: 'free',
-				totalOccurrences: 0,
-				occupiedOccurrences: 0,
-			};
-			setForm((f) => ({
-				...f,
-				studentUserId: agreement.student_user_id,
-				user: {
-					user_id: agreement.student_user_id,
-					first_name: agreement.student.first_name,
-					last_name: agreement.student.last_name,
-					email: agreement.student.email,
-					avatar_url: agreement.student.avatar_url,
-					phone_number: null,
-				},
-				lessonTypeId: agreement.lesson_type_id,
-				selectedOptionSnapshot: {
-					duration_minutes: agreement.duration_minutes,
-					frequency: agreement.frequency,
-					price_per_lesson: agreement.price_per_lesson,
-				},
-				startDate: agreement.start_date,
-				endDate: agreement.end_date?.trim() ? agreement.end_date : oneYearFromToday(),
-				teacherUserId: agreement.teacher_user_id,
-				slot: slotFromAgreement,
-			}));
-		}
+		const init = wizardInitFromAgreement(loadingAgreement, isEditMode, agreement, oneYearFromToday());
+		if (!init) return;
+		setStep(init.step);
+		setHighestStep(init.highestStep);
+		if (init.formPatch) setForm((f) => ({ ...f, ...init.formPatch }));
 	}, [loadingAgreement, isEditMode, agreement]);
 
-	// Breadcrumbs
 	useEffect(() => {
-		if (loadingAgreement || !isEditMode || !agreement) return;
-		const studentName = [agreement.student.first_name, agreement.student.last_name].filter(Boolean).join(' ');
-		const label = studentName ? `${studentName} (${agreement.lesson_type.name})` : agreement.lesson_type.name;
-		setBreadcrumbSuffix([{ label, href: `/agreements/${id}` }]);
+		const suffix = agreementBreadcrumbItems(loadingAgreement, isEditMode, agreement, id);
+		if (!suffix) return;
+		setBreadcrumbSuffix(suffix);
 		return () => setBreadcrumbSuffix([]);
 	}, [loadingAgreement, isEditMode, agreement, id, setBreadcrumbSuffix]);
 
-	// Navigation
 	const stepIndex = STEP_ORDER.indexOf(step);
 	const isFirstStep = stepIndex === 0;
 	const isLastStep = stepIndex === STEP_ORDER.length - 1;
+	const isDuoLesson = !isEditMode && Boolean(lessonTypes.find((t) => t.id === form.lessonTypeId)?.is_duo_lesson);
 
-	const isDuoLesson = useMemo(() => {
-		if (isEditMode) return false;
-		const lt = lessonTypes.find((t) => t.id === form.lessonTypeId);
-		return Boolean(lt?.is_duo_lesson);
-	}, [isEditMode, lessonTypes, form.lessonTypeId]);
-
-	const canProceed = useCallback(
-		(s: WizardStep) => {
-			switch (s) {
-				case WizardStep.User:
-					return Boolean(
-						form.studentUserId &&
-							form.lessonTypeId &&
-							(isEditMode || form.selectedOptionSnapshot) &&
-							(!isDuoLesson ||
-								(form.partnerStudentUserId && form.partnerStudentUserId !== form.studentUserId)),
-					);
-				case WizardStep.Period:
-					return Boolean(
-						form.startDate && form.endDate && new Date(form.endDate) >= new Date(form.startDate),
-					);
-				case WizardStep.TeacherSlot:
-					return Boolean(form.slot && form.slot.status !== 'occupied' && !isTeacherOwnStudent);
-				case WizardStep.Confirm:
-					return true;
-				default:
-					return false;
-			}
-		},
-		[form, isTeacherOwnStudent, isEditMode, isDuoLesson],
-	);
+	const stepCanProceed =
+		step === WizardStep.User
+			? Boolean(
+					form.studentUserId &&
+						form.lessonTypeId &&
+						(isEditMode || form.selectedOptionSnapshot) &&
+						(!isDuoLesson ||
+							(form.partnerStudentUserId && form.partnerStudentUserId !== form.studentUserId)),
+				)
+			: step === WizardStep.Period
+				? Boolean(form.startDate && form.endDate && new Date(form.endDate) >= new Date(form.startDate))
+				: step === WizardStep.TeacherSlot
+					? Boolean(form.slot && form.slot.status !== 'occupied' && !isTeacherOwnStudent)
+					: step === WizardStep.Confirm;
 
 	const nextStep = () => {
-		if (!isLastStep) {
-			const next = stepIndex + 1;
-			setStep(STEP_ORDER[next]);
-			if (next > highestStep) setHighestStep(next);
-		}
+		if (isLastStep) return;
+		const next = stepIndex + 1;
+		setStep(STEP_ORDER[next]);
+		if (next > highestStep) setHighestStep(next);
 	};
 
 	const prevStep = () => {
 		if (!isFirstStep) setStep(STEP_ORDER[stepIndex - 1]);
 	};
 
-	// Save
-	const handleSave = async () => {
-		if (
-			!form.studentUserId ||
-			!form.lessonTypeId ||
-			!form.teacherUserId ||
-			!form.slot ||
-			form.slot.status === 'occupied'
-		) {
-			toast.error('Selecteer alle verplichte velden');
-			return;
-		}
+	const handleSave = () => {
 		setSaving(true);
-		const timeValue = form.slot.start_time.includes(':') ? form.slot.start_time : form.slot.start_time + ':00';
-
-		// Duo branch: create both agreements via edge function in a single transaction.
-		if (!agreement && isDuoLesson) {
-			if (!form.partnerStudentUserId || form.partnerStudentUserId === form.studentUserId) {
-				setSaving(false);
-				toast.error('Kies een duo-partner (verschillende leerling)');
-				return;
-			}
-			if (!form.selectedOptionSnapshot) {
-				setSaving(false);
-				toast.error('Selecteer een lesoptie');
-				return;
-			}
-			const { data: duoData, error: duoErr } = await supabase.functions.invoke<{
-				agreement_ids: string[];
-				duo_pair_id: string;
-			}>('create-duo-agreements', {
-				body: {
-					student_user_id_a: form.studentUserId,
-					student_user_id_b: form.partnerStudentUserId,
-					teacher_user_id: form.teacherUserId,
-					lesson_type_id: form.lessonTypeId,
-					day_of_week: form.slot.day_of_week,
-					start_time: timeValue,
-					duration_minutes: form.selectedOptionSnapshot.duration_minutes,
-					frequency: form.selectedOptionSnapshot.frequency,
-					price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
-					start_date: form.startDate,
-					end_date: form.endDate || null,
-					signup_source: fromRequestId ? 'public_form' : 'staff_duo',
-				},
-			});
-			setSaving(false);
-			if (duoErr || !duoData?.agreement_ids?.length) {
-				toast.error(duoErr?.message ?? 'Fout bij aanmaken duo-overeenkomsten');
-				return;
-			}
-			// Send a payment invitation per student.
-			const inviteResults = await Promise.all(
-				duoData.agreement_ids.map((aid) =>
-					supabase.functions.invoke('send-incasso-invite', { body: { lesson_agreement_id: aid } }),
-				),
-			);
-			const failedInvites = inviteResults.filter((r) => r.error).length;
-			if (failedInvites > 0) {
-				toast.warning(
-					`Duo-overeenkomsten opgeslagen, maar ${failedInvites} betaaluitnodiging(en) konden niet worden verstuurd`,
-				);
-			} else {
-				toast.success('Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd');
-			}
-			navigate('/agreements');
-			return;
-		}
-
-		const payload = {
-			teacher_user_id: form.teacherUserId,
-			day_of_week: form.slot.day_of_week,
-			start_time: timeValue,
-			start_date: form.startDate,
-			end_date: form.endDate || null,
-		};
-
-		const insertResult = agreement
-			? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id).select('id').maybeSingle()
-			: await supabase
-					.from('lesson_agreements')
-					.insert({
-						...payload,
-						student_user_id: form.studentUserId,
-						lesson_type_id: form.lessonTypeId,
-						duration_minutes: form.selectedOptionSnapshot
-							? form.selectedOptionSnapshot.duration_minutes
-							: 30,
-						frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
-						price_per_lesson: form.selectedOptionSnapshot
-							? form.selectedOptionSnapshot.price_per_lesson
-							: 30,
-						is_active: true,
-						signup_source: fromRequestId ? 'public_form' : 'staff',
-					})
-					.select('id')
-					.single();
-
-		setSaving(false);
-		if (insertResult.error) {
-			toast.error(
-				insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen',
-			);
-			return;
-		}
-
-		// If coming from a public signup request, mark it approved
-		if (fromRequestId && !agreement && insertResult.data?.id) {
-			await supabase
-				.from('lesson_signup_requests')
-				.update({
-					status: 'approved',
-					processed_at: new Date().toISOString(),
-					created_agreement_id: insertResult.data.id,
-				})
-				.eq('id', fromRequestId);
-		}
-
-		// If coming from a trial lesson, mark it as converted and link agreement
-		if (fromTrialId && !agreement && insertResult.data?.id) {
-			await supabase
-				.from('trial_lessons')
-				.update({
-					status: 'converted',
-					admin_processed_at: new Date().toISOString(),
-					created_agreement_id: insertResult.data.id,
-				})
-				.eq('id', fromTrialId);
-		}
-
-		// For a new agreement: send a payment invitation immediately (Magic Link → Stripe)
-		if (!agreement && insertResult.data?.id) {
-			const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
-				body: { lesson_agreement_id: insertResult.data.id },
-			});
-			if (inviteErr) {
-				toast.warning('Overeenkomst opgeslagen, maar betaaluitnodiging kon niet worden verstuurd');
-			} else {
-				toast.success('Overeenkomst toegevoegd — betaaluitnodiging verstuurd naar de leerling');
-			}
-		} else {
-			toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
-		}
-		navigate(fromRequestId ? '/aanmeldingen' : fromTrialId ? '/trial-lessons' : '/agreements');
+		void runWizardLoad('save', {
+			form,
+			agreement,
+			isDuoLesson,
+			fromRequestId,
+			fromTrialId,
+			navigate,
+		}).finally(() => setSaving(false));
 	};
 
 	if (loadingAgreement) {
@@ -762,7 +384,6 @@ export default function AgreementWizard() {
 
 	return (
 		<>
-			{/* Header */}
 			<div className="mb-6">
 				<PageHeader
 					icon={
@@ -792,7 +413,6 @@ export default function AgreementWizard() {
 				/>
 			</div>
 
-			{/* Steps */}
 			<WizardStepIndicator<WizardStep>
 				step={step}
 				stepIndex={stepIndex}
@@ -800,7 +420,6 @@ export default function AgreementWizard() {
 				onStepChange={setStep}
 			/>
 
-			{/* Content */}
 			<div className="mt-6 max-w-2xl rounded-lg border bg-card p-6">
 				{step === WizardStep.User && (
 					<UserStepContent
@@ -907,7 +526,6 @@ export default function AgreementWizard() {
 				)}
 			</div>
 
-			{/* Navigation */}
 			<div className="mt-6 max-w-2xl flex justify-between gap-2">
 				{!isFirstStep && (
 					<Button variant="outline" onClick={prevStep}>
@@ -916,7 +534,7 @@ export default function AgreementWizard() {
 				)}
 				<div className="flex-1" />
 				{!isLastStep ? (
-					<Button onClick={nextStep} disabled={stepIndex < highestStep ? false : !canProceed(step)}>
+					<Button onClick={nextStep} disabled={stepIndex < highestStep ? false : !stepCanProceed}>
 						Volgende
 					</Button>
 				) : (
@@ -935,7 +553,6 @@ export default function AgreementWizard() {
 				)}
 			</div>
 
-			{/* Partial slot dialog */}
 			{partialConfirmOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 					<div className="w-full max-w-md rounded-lg bg-background p-6 shadow-lg">

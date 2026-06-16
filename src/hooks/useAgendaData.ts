@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
+import { enrichAgendaEvent, type LessonGroupInfo } from '@/lib/agenda/enrichAgendaEvent';
 import { generateAgendaEvents, type NoLessonPeriod } from '@/lib/agenda/eventGenerators';
-import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
 import { pushToMapArray } from '@/lib/collections';
 import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
@@ -11,14 +11,7 @@ import type { AgendaLessonAgreement, LessonAgreementQuery } from '@/types/lesson
 import type { ProjectInfo } from '@/types/projects';
 import type { User } from '@/types/users';
 
-export interface LessonGroupInfo {
-	id: string;
-	name: string;
-	lessonTypeName: string | null;
-	lessonTypeIcon: string | null;
-	lessonTypeColor: string | null;
-	memberUserIds: string[];
-}
+export type { LessonGroupInfo } from '@/lib/agenda/enrichAgendaEvent';
 
 export interface UseAgendaDataResult {
 	agendaEvents: AgendaEventRow[];
@@ -207,25 +200,21 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			setProjectsMap(newProjectsMap);
 
 			// Build lesson groups map
-			const newLessonGroupsMap = new Map<string, LessonGroupInfo>(
-				(lessonGroupsResult.data ?? []).map((g) => {
-					const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
-					const members = (g.lesson_group_members ?? [])
-						.filter((m) => m.left_date === null)
-						.map((m) => m.student_user_id);
-					return [
-						g.id,
-						{
-							id: g.id,
-							name: g.name,
-							lessonTypeName: lt?.name ?? null,
-							lessonTypeIcon: lt?.icon ?? null,
-							lessonTypeColor: lt?.color ?? null,
-							memberUserIds: members,
-						},
-					] as const;
-				}),
-			);
+			const newLessonGroupsMap = new Map<string, LessonGroupInfo>();
+			for (const g of lessonGroupsResult.data ?? []) {
+				const lt = Array.isArray(g.lesson_types) ? g.lesson_types[0] : g.lesson_types;
+				const members = (g.lesson_group_members ?? [])
+					.filter((m) => m.left_date === null)
+					.map((m) => m.student_user_id);
+				newLessonGroupsMap.set(g.id, {
+					id: g.id,
+					name: g.name,
+					lessonTypeName: lt?.name ?? null,
+					lessonTypeIcon: lt?.icon ?? null,
+					lessonTypeColor: lt?.color ?? null,
+					memberUserIds: members,
+				});
+			}
 			setLessonGroupsMap(newLessonGroupsMap);
 
 			const studentUserIds =
@@ -286,27 +275,27 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			setParticipantCountByDeviationId(countByDeviation);
 			setParticipantNamesByDeviationId(namesByDeviation);
 
-			const withProfiles: AgendaLessonAgreement[] =
-				agreementsError || agreementsData.length === 0
-					? []
-					: agreementsData.map((a) => {
-							const teacherUserId = getTeacherUserId(a.teachers);
-							const lessonType = normalizeLessonType(a.lesson_types);
-							return {
-								...a,
-								profiles: profileMap.get(a.student_user_id) ?? null,
-								lesson_types: lessonType ?? {
-									id: '',
-									name: '',
-									icon: null,
-									color: null,
-									is_group_lesson: false,
-								},
-								teacherUserId,
-								teacherProfile: teacherUserId ? (profileMap.get(teacherUserId) ?? null) : null,
-							} satisfies AgendaLessonAgreement;
-						});
-			setAgreements(withProfiles);
+			const agreementsWithProfiles: AgendaLessonAgreement[] = [];
+			if (!agreementsError && agreementsData.length > 0) {
+				for (const a of agreementsData) {
+					const teacherUserId = getTeacherUserId(a.teachers);
+					const lessonType = normalizeLessonType(a.lesson_types);
+					agreementsWithProfiles.push({
+						...a,
+						profiles: profileMap.get(a.student_user_id) ?? null,
+						lesson_types: lessonType ?? {
+							id: '',
+							name: '',
+							icon: null,
+							color: null,
+							is_group_lesson: false,
+						},
+						teacherUserId,
+						teacherProfile: teacherUserId ? (profileMap.get(teacherUserId) ?? null) : null,
+					} satisfies AgendaLessonAgreement);
+				}
+			}
+			setAgreements(agreementsWithProfiles);
 			setLoading(false);
 		},
 		[effectiveUserId],
@@ -316,37 +305,28 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 		loadData();
 	}, [loadData]);
 
-	const deviationsByEventId = useMemo(() => {
-		const outer = new Map<string, Map<string, AgendaEventDeviationRow>>();
-		for (const d of deviations) {
-			let inner = outer.get(d.event_id);
-			if (!inner) {
-				inner = new Map();
-				outer.set(d.event_id, inner);
-			}
-			inner.set(d.original_date, d);
+	const deviationsByEventId = new Map<string, Map<string, AgendaEventDeviationRow>>();
+	for (const d of deviations) {
+		let inner = deviationsByEventId.get(d.event_id);
+		if (!inner) {
+			inner = new Map();
+			deviationsByEventId.set(d.event_id, inner);
 		}
-		return outer;
-	}, [deviations]);
+		inner.set(d.original_date, d);
+	}
 
-	const recurringByEventId = useMemo(() => {
-		const map = new Map<string, AgendaEventDeviationRow[]>();
-		for (const d of deviations) {
-			if (!d.spans_future_occurrences) continue;
-			const list = map.get(d.event_id) ?? [];
-			list.push(d);
-			map.set(d.event_id, list);
-		}
-		for (const list of map.values()) {
-			list.sort((a, b) => b.original_date.localeCompare(a.original_date));
-		}
-		return map;
-	}, [deviations]);
+	const recurringByEventId = new Map<string, AgendaEventDeviationRow[]>();
+	for (const d of deviations) {
+		if (!d.spans_future_occurrences) continue;
+		const list = recurringByEventId.get(d.event_id) ?? [];
+		list.push(d);
+		recurringByEventId.set(d.event_id, list);
+	}
+	for (const list of recurringByEventId.values()) {
+		list.sort((a, b) => b.original_date.localeCompare(a.original_date));
+	}
 
-	const agreementsMap = useMemo(
-		() => new Map<string, AgendaLessonAgreement>(agreements.map((a) => [a.id, a])),
-		[agreements],
-	);
+	const agreementsMap = new Map<string, AgendaLessonAgreement>(agreements.map((a) => [a.id, a]));
 
 	const getEnrichedEvents = useCallback(
 		(currentDate: Date, viewerUserId: string | undefined): CalendarEvent[] => {
@@ -365,133 +345,21 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				noLessonPeriods,
 			);
 
-			return baseEvents.map((ev) => {
-				const deviationId = ev.resource.deviationId;
-				const hasDeviationParticipants =
-					deviationId &&
-					(participantCountByDeviationId.has(deviationId) || participantNamesByDeviationId.has(deviationId));
-				const participantCount =
-					hasDeviationParticipants && deviationId
-						? participantCountByDeviationId.get(deviationId)
-						: ev.resource.eventId
-							? participantCountByEventId.get(ev.resource.eventId)
-							: undefined;
-				const participantNames =
-					hasDeviationParticipants && deviationId
-						? participantNamesByDeviationId.get(deviationId)
-						: ev.resource.eventId
-							? participantNamesByEventId.get(ev.resource.eventId)
-							: undefined;
-				const enriched = {
-					...ev,
-					resource: {
-						...ev.resource,
-						participantCount,
-						participantNames,
-					},
-				};
-
-				if (ev.resource.sourceType === 'project' && ev.resource.agreementId) {
-					const project = projectsMap.get(ev.resource.agreementId);
-					if (project) {
-						const appointmentTitle = (typeof ev.title === 'string' ? ev.title : '').trim();
-						const displayTitle = appointmentTitle ? `${project.name} - ${appointmentTitle}` : project.name;
-						return {
-							...enriched,
-							title: displayTitle,
-							resource: {
-								...enriched.resource,
-								projectId: project.id,
-								projectName: project.name,
-								lessonTypeName: project.name,
-								studentName: project.name,
-							},
-						};
-					}
-				}
-
-				if (ev.resource.sourceType === 'lesson_group' && ev.resource.agreementId) {
-					const group = lessonGroupsMap.get(ev.resource.agreementId);
-					if (group) {
-						const users = group.memberUserIds
-							.map((uid) => profileMap.get(uid))
-							.filter((p): p is User => !!p);
-						const count = users.length || (participantCount ?? 0);
-						const title = count > 0 ? `${group.name} (${count})` : group.name;
-						const deviation =
-							ev.resource.eventId && ev.resource.originalDate
-								? deviationsByEventId.get(ev.resource.eventId)?.get(ev.resource.originalDate)
-								: undefined;
-						const cancelledParticipantIds = deviation?.cancelled_participant_ids ?? undefined;
-						return {
-							...enriched,
-							title,
-							resource: {
-								...enriched.resource,
-								lessonGroupId: group.id,
-								lessonGroupName: group.name,
-								lessonTypeName: group.lessonTypeName ?? group.name,
-								lessonTypeColor: enriched.resource.color ?? group.lessonTypeColor,
-								lessonTypeIcon: group.lessonTypeIcon,
-								studentName: users.map((u) => getDisplayName(u)).join(', ') || group.name,
-								isGroupLesson: true,
-								studentCount: count,
-								users,
-								isLesson: true,
-								cancelledParticipantIds,
-							},
-						};
-					}
-				}
-
-				if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return enriched;
-				const agreement = agreementsMap.get(ev.resource.agreementId);
-				if (!agreement) return enriched;
-				const teacherUid = agreement.teacherUserId;
-				const eventId = ev.resource.eventId;
-				const allParticipantIds = eventId ? (participantUserIdsByEventId.get(eventId) ?? []) : [];
-				const studentParticipantIds = allParticipantIds.filter((uid) => uid !== teacherUid);
-				const isDuo = studentParticipantIds.length > 1;
-				const studentUsers = isDuo
-					? studentParticipantIds
-							.map((uid) => buildParticipantInfo(profileMap.get(uid) ?? null, uid))
-							.filter((u): u is NonNullable<typeof u> => !!u)
-					: [];
-				const studentName = isDuo
-					? studentParticipantIds
-							.map((uid) => getDisplayName(profileMap.get(uid) ?? null))
-							.sort()
-							.join(' & ')
-					: getDisplayName(agreement.profiles);
-				const user = isDuo ? undefined : buildParticipantInfo(agreement.profiles, agreement.student_user_id);
-				const teacherName = agreement.teacherProfile
-					? getDisplayName(agreement.teacherProfile)
-					: 'Docent onbekend';
-				const viewerIsTeacher = viewerUserId === agreement.teacherUserId;
-				return {
-					...enriched,
-					title: `${studentName} - ${agreement.lesson_types.name}`,
-					resource: {
-						...enriched.resource,
-						studentName,
-						teacherName,
-						viewerIsTeacher,
-						lessonTypeName: agreement.lesson_types.name,
-						lessonTypeColor: agreement.lesson_types.color,
-						lessonTypeIcon: agreement.lesson_types.icon,
-						isGroupLesson: agreement.lesson_types.is_group_lesson ?? false,
-						isDuoLesson: isDuo,
-						studentCount: isDuo
-							? studentUsers.length
-							: agreement.lesson_types.is_group_lesson
-								? 1
-								: undefined,
-						user: user ?? undefined,
-						users: isDuo ? studentUsers : user ? [user] : undefined,
-						isLesson: true,
-					},
-				};
-			});
+			return baseEvents.map((ev) =>
+				enrichAgendaEvent(ev, {
+					participantCountByEventId,
+					participantNamesByEventId,
+					participantUserIdsByEventId,
+					participantCountByDeviationId,
+					participantNamesByDeviationId,
+					projectsMap,
+					lessonGroupsMap,
+					agreementsMap,
+					deviationsByEventId,
+					profileMap,
+					viewerUserId,
+				}),
+			);
 		},
 		[
 			agendaEvents,

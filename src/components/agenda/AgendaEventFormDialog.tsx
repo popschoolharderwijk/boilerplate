@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { LuBan, LuCalendarCheck, LuTrash2, LuX } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -108,11 +108,12 @@ export function AgendaEventFormDialog({
 	// Load project options when dialog opens for privileged users
 	useEffect(() => {
 		if (!open || !isPrivileged) return;
-		async function loadProjects() {
-			const { data } = await supabase.from('projects').select('id, name').eq('is_active', true).order('name');
-			setProjectOptions(data ?? []);
-		}
-		loadProjects();
+		void supabase
+			.from('projects')
+			.select('id, name')
+			.eq('is_active', true)
+			.order('name')
+			.then(({ data }) => setProjectOptions(data ?? []));
 	}, [open, isPrivileged]);
 
 	// Initialize source type from event or initialProjectId
@@ -166,53 +167,61 @@ export function AgendaEventFormDialog({
 	const canCancelLesson =
 		(isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!user || !formState.startDate || !formState.startTime) return;
-		if (isProjectEvent && !selectedProjectId && !event) {
-			toast.error('Selecteer een project');
-			return;
-		}
-		if (event?.id && isRecurringEvent) {
-			setEditRecurrenceOpen(true);
-		} else {
-			await handlers.performSave('all');
-		}
-	};
+	type FormAction =
+		| { kind: 'submit'; e: FormEvent }
+		| { kind: 'deleteClick' }
+		| { kind: 'deleteConfirm' }
+		| { kind: 'deleteRecurrence'; scope: RecurrenceScope }
+		| { kind: 'revert' };
 
-	const handleDeleteClick = () => {
-		if (!canDelete || !event?.id) return;
-		if (isRecurringEvent) {
-			setDeleteRecurrenceOpen(true);
-		} else {
-			setDeleteConfirmOpen(true);
-		}
-	};
-
-	const handleDeleteConfirm = async () => {
-		if (!canDelete || !event?.id) return;
-		await onDelete(event.id, 'all');
-		onOpenChange(false);
-		onSuccess?.();
-	};
-
-	const handleDeleteRecurrenceChoice = async (scope: RecurrenceScope) => {
-		if (!canDelete || !event?.id) return;
-		await onDelete(event.id, scope, occurrenceDate ?? undefined);
-		onOpenChange(false);
-		onSuccess?.();
-	};
-
-	const handleRevert = async () => {
-		if (!canRevert || !onRevert) return;
-		setReverting(true);
-		try {
-			await onRevert();
-			onOpenChange(false);
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Terugzetten mislukt');
-		} finally {
-			setReverting(false);
+	const runFormAction = async (action: FormAction) => {
+		switch (action.kind) {
+			case 'submit': {
+				action.e.preventDefault();
+				if (!user || !formState.startDate || !formState.startTime) return;
+				if (isProjectEvent && !selectedProjectId && !event) {
+					toast.error('Selecteer een project');
+					return;
+				}
+				if (event?.id && isRecurringEvent) {
+					setEditRecurrenceOpen(true);
+				} else {
+					await handlers.performSave('all');
+				}
+				break;
+			}
+			case 'deleteClick':
+				if (!canDelete || !event?.id) return;
+				if (isRecurringEvent) {
+					setDeleteRecurrenceOpen(true);
+				} else {
+					setDeleteConfirmOpen(true);
+				}
+				break;
+			case 'deleteConfirm':
+				if (!canDelete || !event?.id || !onDelete) return;
+				await onDelete(event.id, 'all');
+				onOpenChange(false);
+				onSuccess?.();
+				break;
+			case 'deleteRecurrence':
+				if (!canDelete || !event?.id || !onDelete) return;
+				await onDelete(event.id, action.scope, occurrenceDate ?? undefined);
+				onOpenChange(false);
+				onSuccess?.();
+				break;
+			case 'revert':
+				if (!canRevert || !onRevert) return;
+				setReverting(true);
+				try {
+					await onRevert();
+					onOpenChange(false);
+				} catch (err) {
+					toast.error(err instanceof Error ? err.message : 'Terugzetten mislukt');
+				} finally {
+					setReverting(false);
+				}
+				break;
 		}
 	};
 
@@ -249,7 +258,7 @@ export function AgendaEventFormDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
+				<form onSubmit={(e) => runFormAction({ kind: 'submit', e })} className="space-y-4 pt-2">
 					<div className="flex items-center gap-3">
 						{isLessonEvent || isLessonGroupEvent ? (
 							<LessonTypeBadge
@@ -459,7 +468,7 @@ export function AgendaEventFormDialog({
 					{canRevert && deviationInfo && deviationInfo.hasTimeOrDateChange && (
 						<DeviationInfoBanner
 							deviationInfo={deviationInfo}
-							onRevert={handleRevert}
+							onRevert={() => runFormAction({ kind: 'revert' })}
 							disabled={saving}
 							reverting={reverting}
 						/>
@@ -501,7 +510,7 @@ export function AgendaEventFormDialog({
 									type="button"
 									variant="outline"
 									className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-									onClick={handleDeleteClick}
+									onClick={() => runFormAction({ kind: 'deleteClick' })}
 									disabled={saving || reverting || isCancelling}
 								>
 									<LuTrash2 className="h-4 w-4 mr-2" />
@@ -557,13 +566,13 @@ export function AgendaEventFormDialog({
 							<p className="mt-2 text-muted-foreground">Deze actie kan niet ongedaan worden gemaakt.</p>
 						</>
 					}
-					onConfirm={handleDeleteConfirm}
+					onConfirm={() => runFormAction({ kind: 'deleteConfirm' })}
 				/>
 				<RecurrenceChoiceDialog
 					open={deleteRecurrenceOpen}
 					onOpenChange={setDeleteRecurrenceOpen}
 					action="delete"
-					onChoose={handleDeleteRecurrenceChoice}
+					onChoose={(scope) => runFormAction({ kind: 'deleteRecurrence', scope })}
 				/>
 				<RecurrenceChoiceDialog
 					open={editRecurrenceOpen}

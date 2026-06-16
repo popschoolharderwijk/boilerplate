@@ -54,45 +54,66 @@ const emptyForm: FormState = {
 	role: null,
 };
 
+function assignableRoles(isSiteAdmin: boolean): AppRole[] {
+	return allRoles.filter((role) => isSiteAdmin || role !== 'site_admin');
+}
+
+async function updateUserRole(userId: string, newRole: AppRole | null, currentRole: AppRole | null): Promise<boolean> {
+	if (newRole === currentRole) return true;
+
+	if (newRole === null) {
+		const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
+		if (error) {
+			toast.error('Fout bij bijwerken rol', { description: error.message });
+			return false;
+		}
+		return true;
+	}
+
+	if (currentRole === null) {
+		const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: newRole });
+		if (error) {
+			toast.error('Fout bij toewijzen rol', { description: error.message });
+			return false;
+		}
+		return true;
+	}
+
+	const { error } = await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId);
+	if (error) {
+		toast.error('Fout bij bijwerken rol', { description: error.message });
+		return false;
+	}
+	return true;
+}
+
 export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserFormDialogProps) {
 	const { isAdmin, isSiteAdmin } = useAuth();
 	const isEditMode = !!user;
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [saving, setSaving] = useState(false);
 
-	// Initialize form when dialog opens or user changes
 	useEffect(() => {
-		if (open) {
-			if (user) {
-				setForm({
-					email: user.email,
-					first_name: user.first_name ?? '',
-					last_name: user.last_name ?? '',
-					phone_number: user.phone_number ?? '',
-					role: user.role,
-				});
-			} else {
-				setForm(emptyForm);
-			}
+		if (!open) return;
+		if (user) {
+			setForm({
+				email: user.email,
+				first_name: user.first_name ?? '',
+				last_name: user.last_name ?? '',
+				phone_number: user.phone_number ?? '',
+				role: user.role,
+			});
+			return;
 		}
+		setForm(emptyForm);
 	}, [open, user]);
 
-	const handleOpenChange = (newOpen: boolean) => {
-		if (!saving) {
-			if (!newOpen) {
-				setForm(emptyForm);
-			}
-			onOpenChange(newOpen);
-		}
-	};
-
-	const handleSubmit = async () => {
+	const runFormAction = async (action: 'submit') => {
+		if (action !== 'submit') return;
 		if (!form.email) {
 			toast.error('Email is verplicht');
 			return;
 		}
-
-		// Defense-in-depth: prevent non-site_admins from assigning site_admin role
 		if (form.role === 'site_admin' && !isSiteAdmin) {
 			toast.error('Geen toegang', {
 				description: 'Admins kunnen geen site_admin rollen toewijzen.',
@@ -101,133 +122,76 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 		}
 
 		setSaving(true);
-
 		try {
-			if (isEditMode) {
-				await handleEdit();
-			} else {
-				await handleCreate();
+			if (isEditMode && user) {
+				const { error: profileError } = await supabase
+					.from('profiles')
+					.update({
+						email: form.email,
+						first_name: form.first_name || null,
+						last_name: form.last_name || null,
+						phone_number: form.phone_number || null,
+					})
+					.eq('user_id', user.user_id);
+
+				if (profileError) {
+					toast.error('Fout bij bijwerken gebruiker', { description: profileError.message });
+					return;
+				}
+
+				const roleOk = await updateUserRole(user.user_id, form.role, user.role);
+				if (!roleOk) return;
+
+				toast.success('Gebruiker bijgewerkt');
+				setForm(emptyForm);
+				onOpenChange(false);
+				onSuccess();
+				return;
 			}
+
+			const { data, error: invokeError } = await supabase.functions.invoke('create-user', {
+				body: {
+					email: form.email,
+					first_name: form.first_name || undefined,
+					last_name: form.last_name || undefined,
+					phone_number: form.phone_number || undefined,
+					role: form.role || undefined,
+				},
+			});
+
+			if (invokeError) {
+				const errorMessage = await getInvokeErrorMessage(invokeError, { isSiteAdmin });
+				toast.error('Fout bij aanmaken gebruiker', { description: errorMessage });
+				return;
+			}
+
+			if (data?.error) {
+				toast.error('Fout bij aanmaken gebruiker', { description: data.error });
+				return;
+			}
+
+			if (data?.warning) {
+				toast.warning('Gebruiker aangemaakt', { description: data.warning });
+			} else {
+				toast.success('Gebruiker aangemaakt', {
+					description: `Gebruiker ${form.email} is succesvol aangemaakt.`,
+				});
+			}
+
+			const createdUserInfo: User = {
+				user_id: data.user_id,
+				email: data.email ?? form.email,
+				first_name: form.first_name || null,
+				last_name: form.last_name || null,
+				avatar_url: null,
+				phone_number: form.phone_number || null,
+			};
+			setForm(emptyForm);
+			onOpenChange(false);
+			onSuccess(createdUserInfo);
 		} finally {
 			setSaving(false);
 		}
-	};
-
-	const handleCreate = async () => {
-		const { data, error: invokeError } = await supabase.functions.invoke('create-user', {
-			body: {
-				email: form.email,
-				first_name: form.first_name || undefined,
-				last_name: form.last_name || undefined,
-				phone_number: form.phone_number || undefined,
-				role: form.role || undefined,
-			},
-		});
-
-		if (invokeError) {
-			const errorMessage = await getInvokeErrorMessage(invokeError, { isSiteAdmin });
-
-			toast.error('Fout bij aanmaken gebruiker', {
-				description: errorMessage,
-			});
-			return;
-		}
-
-		if (data?.error) {
-			toast.error('Fout bij aanmaken gebruiker', {
-				description: data.error,
-			});
-			return;
-		}
-
-		if (data?.warning) {
-			toast.warning('Gebruiker aangemaakt', {
-				description: data.warning,
-			});
-		} else {
-			toast.success('Gebruiker aangemaakt', {
-				description: `Gebruiker ${form.email} is succesvol aangemaakt.`,
-			});
-		}
-
-		const createdUserInfo: User = {
-			user_id: data.user_id,
-			email: data.email ?? form.email,
-			first_name: form.first_name || null,
-			last_name: form.last_name || null,
-			avatar_url: null,
-			phone_number: form.phone_number || null,
-		};
-		setForm(emptyForm);
-		onOpenChange(false);
-		onSuccess(createdUserInfo);
-	};
-
-	const handleEdit = async () => {
-		if (!user) return;
-
-		// Update profile
-		const { error: profileError } = await supabase
-			.from('profiles')
-			.update({
-				email: form.email,
-				first_name: form.first_name || null,
-				last_name: form.last_name || null,
-				phone_number: form.phone_number || null,
-			})
-			.eq('user_id', user.user_id);
-
-		if (profileError) {
-			toast.error('Fout bij bijwerken gebruiker', {
-				description: profileError.message,
-			});
-			return;
-		}
-
-		// Update role if changed
-		if (form.role !== user.role) {
-			if (form.role === null) {
-				// Delete role
-				const { error: deleteError } = await supabase.from('user_roles').delete().eq('user_id', user.user_id);
-
-				if (deleteError) {
-					toast.error('Fout bij bijwerken rol', {
-						description: deleteError.message,
-					});
-					return;
-				}
-			} else if (user.role === null) {
-				// Insert new role
-				const { error: insertError } = await supabase
-					.from('user_roles')
-					.insert({ user_id: user.user_id, role: form.role });
-
-				if (insertError) {
-					toast.error('Fout bij toewijzen rol', {
-						description: insertError.message,
-					});
-					return;
-				}
-			} else {
-				// Update existing role
-				const { error: updateError } = await supabase
-					.from('user_roles')
-					.update({ role: form.role })
-					.eq('user_id', user.user_id);
-
-				if (updateError) {
-					toast.error('Fout bij bijwerken rol', {
-						description: updateError.message,
-					});
-					return;
-				}
-			}
-		}
-
-		toast.success('Gebruiker bijgewerkt');
-		setForm(emptyForm);
-		onOpenChange(false);
-		onSuccess();
 	};
 
 	const dialogTitle = isEditMode ? 'Gebruiker bewerken' : 'Nieuwe gebruiker toevoegen';
@@ -236,9 +200,18 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 		: 'Voeg een nieuwe gebruiker toe aan het systeem.';
 	const submitLabel = isEditMode ? 'Opslaan' : 'Toevoegen';
 	const savingLabel = isEditMode ? 'Opslaan...' : 'Toevoegen...';
+	const roleLocked = isEditMode && isAdmin && !isSiteAdmin && user?.role === 'site_admin';
+	const roles = assignableRoles(isSiteAdmin);
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog
+			open={open}
+			onOpenChange={(newOpen) => {
+				if (saving) return;
+				if (!newOpen) setForm(emptyForm);
+				onOpenChange(newOpen);
+			}}
+		>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{dialogTitle}</DialogTitle>
@@ -295,39 +268,28 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 							onValueChange={(value) =>
 								setForm({ ...form, role: value === 'none' ? null : (value as AppRole) })
 							}
-							disabled={
-								// Admins cannot modify site_admin roles
-								isEditMode && isAdmin && !isSiteAdmin && user?.role === 'site_admin'
-							}
+							disabled={roleLocked}
 						>
 							<SelectTrigger id="user-role">
 								<SelectValue placeholder="Geen rol" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="none">Geen rol</SelectItem>
-								{allRoles
-									.filter((role) => {
-										// Admins cannot assign site_admin role
-										if (role === 'site_admin' && !isSiteAdmin) {
-											return false;
-										}
-										return true;
-									})
-									.map((role) => {
-										const config = roleLabels[role];
-										const Icon = config.icon;
-										return (
-											<SelectItem key={role} value={role}>
-												<span className="flex items-center gap-2">
-													<Icon className="h-4 w-4" />
-													{config.label}
-												</span>
-											</SelectItem>
-										);
-									})}
+								{roles.map((role) => {
+									const config = roleLabels[role];
+									const Icon = config.icon;
+									return (
+										<SelectItem key={role} value={role}>
+											<span className="flex items-center gap-2">
+												<Icon className="h-4 w-4" />
+												{config.label}
+											</span>
+										</SelectItem>
+									);
+								})}
 							</SelectContent>
 						</Select>
-						{isEditMode && isAdmin && !isSiteAdmin && user?.role === 'site_admin' && (
+						{roleLocked && (
 							<p className="text-xs text-muted-foreground">
 								Je kunt de rol van een site_admin niet wijzigen.
 							</p>
@@ -335,12 +297,20 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 					</div>
 				</div>
 				<DialogFooter>
-					<Button variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
+					<Button
+						variant="outline"
+						onClick={() => {
+							if (saving) return;
+							setForm(emptyForm);
+							onOpenChange(false);
+						}}
+						disabled={saving}
+					>
 						Annuleren
 					</Button>
 					<SubmitButton
 						variant="default"
-						onClick={handleSubmit}
+						onClick={() => runFormAction('submit')}
 						loading={saving}
 						loadingLabel={savingLabel}
 						disabled={!form.email}

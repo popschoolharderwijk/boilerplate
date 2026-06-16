@@ -31,15 +31,13 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 	const lookup = lookupAgendaEvent(event.resource.eventId, agendaEvents);
 	if ('ok' in lookup) return lookup;
 	const agendaEvent = lookup.event;
-	const eventId = agendaEvent.id;
 
 	const actualDateStr = formatDateToDb(start);
 	const actualStartTime = normalizeTimeFromDate(start);
 	const actualEndDate = formatDateToDb(end);
 	const actualEndTime = normalizeTimeFromDate(end);
-	const isRecurring = agendaEvent.recurring;
 
-	if (!isRecurring) {
+	if (!agendaEvent.recurring) {
 		const { error } = await supabase
 			.from('agenda_events')
 			.update({
@@ -48,14 +46,15 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 				end_date: actualEndDate,
 				end_time: actualEndTime,
 			})
-			.eq('id', eventId);
+			.eq('id', agendaEvent.id);
 
 		if (error) return { ok: false, message: 'Afspraak verplaatsen mislukt' };
 		return { ok: true, message: 'Afspraak verplaatst' };
 	}
 
+	const eventId = agendaEvent.id;
 	const recurring = scope === 'thisAndFuture';
-	const { baseStartTime } = getAgendaLessonContext(agendaEvent, agreementsMap);
+	const baseStartTime = getAgendaLessonContext(agendaEvent, agreementsMap).baseStartTime;
 
 	let originalDateStr: string;
 	let originalStartTime: string;
@@ -73,12 +72,12 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 	const existingDeviation =
 		deviationById?.original_date === originalDateStr
 			? deviationById
-			: deviations.find((d) => d.event_id === eventId && d.original_date === originalDateStr);
+			: (deviations.find((d) => d.event_id === eventId && d.original_date === originalDateStr) ?? null);
 
 	const droppedOnSameSlot = existingDeviation
 		? actualDateStr === existingDeviation.actual_date &&
 			normalizeTime(actualStartTime) === normalizeTime(existingDeviation.actual_start_time)
-		: event.start &&
+		: !!event.start &&
 			actualDateStr === formatDateToDb(event.start) &&
 			normalizeTime(actualStartTime) === normalizeTimeFromDate(event.start);
 
@@ -97,6 +96,7 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 			}
 			return { ok: true, message: '' };
 		}
+
 		const offsetDays = differenceInDays(parseISO(originalDateStr), parseISO(agendaEvent.start_date));
 		const newStartDate = addDaysToDateStr(actualDateStr, -offsetDays);
 		const newEndDate = addDaysToDateStr(actualEndDate, -offsetDays);
@@ -183,23 +183,23 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 		actual_start_time: actualStartTime,
 		spans_future_occurrences: recurring,
 	};
-	const { error } = await supabase
+	const { error: createError } = await supabase
 		.from('agenda_event_deviations')
 		.upsert(payload, { onConflict: 'event_id,original_date' });
-	if (error) {
+	if (createError) {
 		const isDateCheck =
-			error.code === PostgresErrorCodes.CHECK_VIOLATION ||
-			(error.message ?? '').toLowerCase().includes('deviation_date_check');
+			createError.code === PostgresErrorCodes.CHECK_VIOLATION ||
+			(createError.message ?? '').toLowerCase().includes('deviation_date_check');
 		const isUnique =
-			error.code === PostgresErrorCodes.UNIQUE_VIOLATION ||
-			(error.message ?? '').toLowerCase().includes('unique');
+			createError.code === PostgresErrorCodes.UNIQUE_VIOLATION ||
+			(createError.message ?? '').toLowerCase().includes('unique');
 		return {
 			ok: false,
 			message: isDateCheck
 				? 'Afspraak kan niet in het verleden worden geplaatst.'
 				: isUnique
 					? 'Deze afwijking bestaat al.'
-					: `Fout bij aanmaken afwijking: ${error.message}`,
+					: `Fout bij aanmaken afwijking: ${createError.message}`,
 		};
 	}
 	return { ok: true, message: 'Afspraak verplaatst' };
