@@ -15,5 +15,3 @@ export const PostgresErrorCodes = {
 	NOT_NULL_VIOLATION: '23502',
 	CHECK_VIOLATION: '23514',
 } as const;
-
-export type PostgresErrorCode = (typeof PostgresErrorCodes)[keyof typeof PostgresErrorCodes];

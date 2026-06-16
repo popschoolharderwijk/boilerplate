@@ -33,7 +33,7 @@ export interface UseAgendaEventFormOptions {
 	onOpenChange: (open: boolean) => void;
 }
 
-export interface ParticipantProfile {
+interface ParticipantProfile {
 	first_name: string | null;
 	last_name: string | null;
 	email: string | null;

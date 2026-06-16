@@ -23,24 +23,10 @@ export type TeacherWithLessonTypesRaw = TeacherRow & {
 	lesson_types: LessonTypeDisplayFields[];
 };
 
-/** Flatten nested profile into Teacher. */
-export function flattenTeacher(t: TeacherRow & { profile: User }): Teacher {
-	const { profile, ...rest } = t;
-	return { ...rest, ...profile };
-}
-
 /** Flatten raw paginated response to TeacherWithLessonTypes. */
 export function flattenTeacherWithLessonTypes(t: TeacherWithLessonTypesRaw): TeacherWithLessonTypes {
 	const { profile, lesson_types, ...rest } = t;
 	return { ...rest, ...profile, lesson_types };
-}
-
-/** Paginated response for teacher list endpoints (flat, after flattening). */
-export interface PaginatedTeachersResponse {
-	data: TeacherWithLessonTypes[];
-	total_count: number;
-	limit: number;
-	offset: number;
 }
 
 /** Raw paginated response from get_teachers_paginated RPC. */

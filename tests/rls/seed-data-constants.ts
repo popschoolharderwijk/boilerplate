@@ -160,24 +160,3 @@ export const USERS = {
 	/** Profiles matching user-*.test.nl (no teacher/student row, no user_roles) */
 	PLAIN_USERS: 10,
 } as const;
-
-/**
- * Project domains counts
- */
-export const PROJECT_DOMAINS = {
-	TOTAL: 3,
-} as const;
-
-/**
- * Project labels counts
- */
-export const PROJECT_LABELS = {
-	TOTAL: 6,
-} as const;
-
-/**
- * Projects counts
- */
-export const PROJECTS = {
-	TOTAL: 4,
-} as const;

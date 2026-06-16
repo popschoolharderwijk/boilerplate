@@ -12,7 +12,7 @@ export interface EmailEventDefinition {
 	previewData: Record<string, string>;
 }
 
-export const EMAIL_EVENTS = {
+const EMAIL_EVENTS = {
 	signup_received: {
 		key: 'signup_received',
 		label: 'Bevestiging aanmelding',
@@ -53,12 +53,6 @@ export const EMAIL_EVENTS = {
 		},
 	},
 } as const satisfies Record<string, EmailEventDefinition>;
-
-export type EmailEventKey = keyof typeof EMAIL_EVENTS;
-
-export function getEmailEvent(key: string): EmailEventDefinition | null {
-	return (EMAIL_EVENTS as Record<string, EmailEventDefinition>)[key] ?? null;
-}
 
 export function listEmailEvents(): EmailEventDefinition[] {
 	return Object.values(EMAIL_EVENTS);

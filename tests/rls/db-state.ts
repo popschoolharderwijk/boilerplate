@@ -18,7 +18,7 @@ export type DatabaseState = Record<string, unknown[]>;
  * Uses the get_public_table_names() function to dynamically discover tables.
  * Bypasses RLS to get complete data for verification.
  */
-export async function captureDatabaseState(): Promise<DatabaseState> {
+async function captureDatabaseState(): Promise<DatabaseState> {
 	const db = createClientBypassRLS();
 
 	// Get all public table names dynamically
@@ -70,7 +70,7 @@ export async function captureDatabaseState(): Promise<DatabaseState> {
  * - Handles timestamps and other fields that might vary between captures
  * - Returns a normalized state that can be compared with deep equality
  */
-export function normalizeDatabaseState(state: DatabaseState): DatabaseState {
+function normalizeDatabaseState(state: DatabaseState): DatabaseState {
 	const normalized: DatabaseState = {};
 
 	for (const [tableName, rows] of Object.entries(state)) {
@@ -105,10 +105,7 @@ export function normalizeDatabaseState(state: DatabaseState): DatabaseState {
  * - `equal`: boolean indicating if states are identical
  * - `differences`: array of difference descriptions
  */
-export function compareDatabaseStates(
-	before: DatabaseState,
-	after: DatabaseState,
-): { equal: boolean; differences: string[] } {
+function compareDatabaseStates(before: DatabaseState, after: DatabaseState): { equal: boolean; differences: string[] } {
 	const differences: string[] = [];
 
 	// Get all table names from both states

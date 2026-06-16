@@ -1,4 +1,4 @@
-import type { AccountingInvoice, AccountingReport, AccountingSettings } from './types';
+import type { AccountingReport, AccountingSettings } from './types';
 import { centsToAmount } from './types';
 
 // ============================================================
@@ -247,6 +247,3 @@ ${transactions.join('\n')}
 </eExact>
 `;
 }
-
-// Re-export for invoice list reference
-export type { AccountingInvoice };

@@ -10,7 +10,7 @@ import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
 
 /** Slot of the existing agreement when editing (for clear visual marking) */
-export interface CurrentAgreementSlot {
+interface CurrentAgreementSlot {
 	day_of_week: number;
 	start_time: string;
 }

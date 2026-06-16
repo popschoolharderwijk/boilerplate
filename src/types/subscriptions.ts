@@ -2,7 +2,6 @@ import type { Tables } from '@/integrations/supabase/types';
 
 export type SubscriptionRow = Tables<'subscriptions'>;
 export type SubscriptionInvoiceRow = Tables<'subscription_invoices'>;
-export type StripeCustomerRow = Tables<'stripe_customers'>;
 
 export type SubscriptionStatus =
 	| 'scheduled'

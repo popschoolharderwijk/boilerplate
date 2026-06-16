@@ -3,7 +3,6 @@ import { nl } from 'date-fns/locale';
 
 const DATE_FORMAT_UI = 'dd-MM-yyyy' as const;
 const DATE_FORMAT_DB = 'yyyy-MM-dd' as const;
-export const DATE_INPUT_PLACEHOLDER = 'dd-mm-jjjj' as const;
 
 export function now() {
 	return new Date();
@@ -24,11 +23,6 @@ export function formatDbDateLong(dateStr: string) {
 	const parsed = parseISO(dateStr);
 	if (Number.isNaN(parsed.getTime())) return '-';
 	return format(parsed, 'EEEE d MMMM', { locale: nl });
-}
-
-export function formatDateLong(date: Date) {
-	if (Number.isNaN(date.getTime())) return '-';
-	return format(date, 'EEEE d MMMM', { locale: nl });
 }
 
 /** Short date + time for tables/lists (nl-NL style: dd-MM-yyyy HH:mm). */
@@ -58,7 +52,7 @@ export function addDaysFromNow(days: number) {
 	return addDaysToDate(now(), days);
 }
 
-export function addYearsToDate(date: Date, years: number) {
+function addYearsToDate(date: Date, years: number) {
 	const d = new Date(date);
 	d.setFullYear(d.getFullYear() + years);
 	return d;

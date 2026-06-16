@@ -6,7 +6,7 @@
  */
 
 /** Maand-index (0-based) waarin geen incasso plaatsvindt. */
-export const NON_BILLING_MONTH_INDEX = 7; // augustus
+const NON_BILLING_MONTH_INDEX = 7; // augustus
 
 /** Aantal incassomaanden per schooljaar. */
 export const BILLING_MONTHS_PER_YEAR = 11;
@@ -30,7 +30,7 @@ function pad(n: number): string {
  * - Datums in aug-dec horen bij schooljaar dat in dit jaar start.
  *   (Augustus zelf is technisch geen lesmaand, maar valt onder het komende schooljaar.)
  */
-export function getSchoolYearForDate(date: Date): SchoolYearWindow {
+function getSchoolYearForDate(date: Date): SchoolYearWindow {
 	const year = date.getFullYear();
 	const month = date.getMonth();
 	const startYear = month >= 8 || month === NON_BILLING_MONTH_INDEX ? year : year - 1;
@@ -61,11 +61,6 @@ export function clampToSchoolYear(
 	const end = agreementEndDate && agreementEndDate < schoolYear.end ? agreementEndDate : schoolYear.end;
 	if (start > end) return null;
 	return { start, end };
-}
-
-/** True als de datum in augustus valt (geen incassomaand). */
-export function isNonBillingMonth(date: Date): boolean {
-	return date.getMonth() === NON_BILLING_MONTH_INDEX;
 }
 
 /** True als YYYY-MM-DD in augustus valt. */

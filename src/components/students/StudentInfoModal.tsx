@@ -12,8 +12,6 @@ import { cn } from '@/lib/utils';
 import type { Student } from '@/types/students';
 import type { User } from '@/types/users';
 
-export type { Student };
-
 interface StudentInfoModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;

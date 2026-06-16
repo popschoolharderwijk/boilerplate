@@ -27,7 +27,7 @@ interface AgreementInput {
 	end_date: string | null;
 }
 
-export interface AgreementBillingPreview extends CalculateYearlyAmountResult {
+interface AgreementBillingPreview extends CalculateYearlyAmountResult {
 	tariff: 'under_21' | 'adult';
 	pricePerLessonCents: number;
 	schoolYearLabel: string;
