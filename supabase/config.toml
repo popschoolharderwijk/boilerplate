@@ -5,18 +5,21 @@ project_id = "jserlqacarlgtdzrblic"
 
 [remotes.test.db.seed]
 enabled = true
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]
 
 [remotes.dev]
 project_id = "zdvscmogkfyddnnxzkdu"
 
 [remotes.dev.db.seed]
 enabled = true
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]
 
 [remotes.prod]
 project_id = "bnagepkxryauifzyoxgo"
 
 [remotes.prod.db.seed]
 enabled = false
+sql_paths = ["./seeds/bootstrap.sql"]
 
 [storage]
 enabled = true

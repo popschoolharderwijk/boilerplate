@@ -127,7 +127,7 @@ ALTER TABLE public.subscriptions
 ALTER TABLE public.lesson_agreements
   ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
 
--- (Backfill of weekly/biweekly rates moved to supabase/seed.sql)
+-- (Backfill of weekly/biweekly rates in supabase/seeds/bootstrap.sql)
 -- ============================================================
 -- Part 3: subscriptions adjustments (nullable stripe_subscription_id, status set, unique index)
 -- ============================================================

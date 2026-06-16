@@ -54,7 +54,7 @@ CREATE TRIGGER trg_audit_accounting_settings
   BEFORE INSERT OR UPDATE ON public.accounting_settings
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
--- (Singleton row is seeded in supabase/seed.sql)
+-- (Singleton row is seeded in supabase/seeds/bootstrap.sql)
 
 -- ============================================================
 -- get_accounting_report: compute journal entries per Stripe invoice
