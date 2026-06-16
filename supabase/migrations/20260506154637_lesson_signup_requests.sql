@@ -1,4 +1,4 @@
--- 1. Uitbreiding lesson_agreements
+-- 1. Extend lesson_agreements
 ALTER TABLE public.lesson_agreements
   ADD COLUMN IF NOT EXISTS lesson_group_id uuid NULL REFERENCES public.lesson_groups(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS signup_source text NULL;
@@ -7,7 +7,7 @@ CREATE INDEX IF NOT EXISTS idx_lesson_agreements_lesson_group_id
   ON public.lesson_agreements(lesson_group_id)
   WHERE lesson_group_id IS NOT NULL;
 
--- 2. Enum + tabel lesson_signup_requests
+-- 2. Enum + table lesson_signup_requests
 DO $$ BEGIN
   CREATE TYPE public.signup_request_status AS ENUM ('pending', 'approved', 'rejected');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -141,7 +141,7 @@ CREATE TRIGGER trg_sync_group_member_to_agreement
   AFTER INSERT OR UPDATE OR DELETE ON public.lesson_group_members
   FOR EACH ROW EXECUTE FUNCTION public.sync_group_member_to_agreement();
 
--- 5. Sync wijzigingen lesson_groups -> agreements
+-- 5. Sync changes lesson_groups -> agreements
 CREATE OR REPLACE FUNCTION public.sync_group_to_agreements()
 RETURNS TRIGGER
 LANGUAGE plpgsql

@@ -34,4 +34,4 @@ CREATE TRIGGER email_templates_set_audit_fields
 	BEFORE INSERT OR UPDATE ON public.email_templates
 	FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
--- (Standaard e-mailtemplate-rijen zijn verplaatst naar supabase/seed.sql)
+-- (Default email template rows moved to supabase/seed.sql)
