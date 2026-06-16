@@ -105,8 +105,20 @@ Deno.serve(async (req) => {
 		.single();
 
 	if (error) {
-		console.error('signup insert error', error);
-		return bad('Kon aanmelding niet opslaan', 500);
+		console.error('signup insert error', {
+			message: error.message,
+			code: error.code,
+			details: error.details,
+			hint: error.hint,
+		});
+		return new Response(
+			JSON.stringify({
+				error: 'Kon aanmelding niet opslaan',
+				detail: error.message,
+				code: error.code,
+			}),
+			{ status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+		);
 	}
 
 	// Verstuur bevestigingsmail (best-effort: faal niet de signup als mail mislukt).
