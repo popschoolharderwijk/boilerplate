@@ -68,7 +68,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			if (!effectiveUserId) return;
 			if (showLoading) setLoading(true);
 
-			// Lesvrije periodes (vakanties) — leesbaar voor alle ingelogde gebruikers via RLS
+			// No-lesson periods (holidays) — readable by all logged-in users via RLS
 			const { data: noLessonData } = await supabase
 				.from('no_lesson_periods')
 				.select('start_date, end_date, name');

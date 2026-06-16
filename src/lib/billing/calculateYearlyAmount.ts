@@ -1,9 +1,9 @@
 /**
- * Bereken het jaarbedrag en maandbedrag voor een lesovereenkomst,
- * op basis van het aantal lessen in een (school)jaar-venster, rekening
- * houdend met lesvrije periodes en de augustus-pauze.
+ * Calculate the yearly and monthly amounts for a lesson agreement,
+ * based on the number of lessons in a (school) year window, accounting
+ * for no-lesson periods and the August break.
  *
- * Pure functie, geen IO. Hergebruikt bestaande `getOccurrenceDatesInRange`.
+ * Pure function, no IO. Reuses existing `getOccurrenceDatesInRange`.
  */
 
 import { getOccurrenceDatesInRange } from '@/lib/lessonHelpers';
@@ -18,31 +18,31 @@ export interface NoLessonPeriod {
 }
 
 export interface CalculateYearlyAmountInput {
-	/** YYYY-MM-DD: begin van het venster (b.v. 1 september of agreement start_date). */
+	/** YYYY-MM-DD: start of the window (e.g. 1 September or agreement start_date). */
 	periodStart: string;
-	/** YYYY-MM-DD: eind van het venster (b.v. 31 juli of agreement end_date). */
+	/** YYYY-MM-DD: end of the window (e.g. 31 July or agreement end_date). */
 	periodEnd: string;
-	/** 0 = zondag … 6 = zaterdag (komt overeen met JS getDay()). */
+	/** 0 = Sunday … 6 = Saturday (matches JS getDay()). */
 	dayOfWeek: number;
 	frequency: LessonFrequency;
-	/** Prijs per les in centen. */
+	/** Price per lesson in cents. */
 	pricePerLessonCents: number;
-	/** Lesvrije periodes (b.v. schoolvakanties). */
+	/** No-lesson periods (e.g. school holidays). */
 	noLessonPeriods?: ReadonlyArray<NoLessonPeriod>;
-	/** Aantal incassomaanden waarover het jaarbedrag verdeeld wordt. Default 11. */
+	/** Number of billing months over which the yearly amount is spread. Default 11. */
 	billingMonths?: number;
 }
 
 export interface CalculateYearlyAmountResult {
-	/** Aantal lessen dat in het venster valt (na aftrek lesvrij + augustus). */
+	/** Number of lessons within the window (after excluding no-lesson periods + August). */
 	lessonsCount: number;
-	/** Jaarbedrag in centen (= lessonsCount × pricePerLessonCents). */
+	/** Yearly amount in cents (= lessonsCount × pricePerLessonCents). */
 	yearlyCents: number;
-	/** Standaard-maandbedrag in centen (= floor(yearlyCents / billingMonths)). */
+	/** Standard monthly amount in cents (= floor(yearlyCents / billingMonths)). */
 	monthlyCents: number;
-	/** Restbedrag in centen (komt op de laatste incassomaand). */
+	/** Remainder in cents (applied to the last billing month). */
 	leftoverCents: number;
-	/** De daadwerkelijke lesdatums (YYYY-MM-DD), na filteren. */
+	/** Actual lesson dates (YYYY-MM-DD), after filtering. */
 	lessonDates: string[];
 }
 
@@ -77,14 +77,14 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 		return { lessonsCount: 0, yearlyCents: 0, monthlyCents: 0, leftoverCents: 0, lessonDates: [] };
 	}
 
-	// Genereer alle theoretische lesdatums in het venster.
+	// Generate all theoretical lesson dates in the window.
 	const start = new Date(`${periodStart}T12:00:00`);
 	const end = new Date(`${periodEnd}T12:00:00`);
 	const allDates = getOccurrenceDatesInRange(dayOfWeek, start, end, frequency);
 
-	// Pas verschuif-logica toe: een lesvrije periode duwt alle volgende lessen door
-	// met exact de lengte van de periode. Lessen die voorbij `periodEnd` schuiven
-	// vervallen. Augustus blijft puur skip (geen shift, geen les).
+	// Apply shift logic: a no-lesson period pushes all subsequent lessons forward
+	// by exactly the length of the period. Lessons that shift past `periodEnd`
+	// are dropped. August remains a pure skip (no shift, no lesson).
 	const lessonDates: string[] = [];
 	let shiftDays = 0;
 	for (const original of allDates) {
@@ -96,8 +96,8 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 			shiftDays += len;
 			actual = shiftDateStr(actual, len);
 		}
-		if (actual > periodEnd) continue; // valt voorbij harde einddatum
-		if (isNonBillingMonthString(actual)) continue; // augustus blijft skip
+		if (actual > periodEnd) continue; // falls past hard end date
+		if (isNonBillingMonthString(actual)) continue; // August remains skipped
 		lessonDates.push(actual);
 	}
 

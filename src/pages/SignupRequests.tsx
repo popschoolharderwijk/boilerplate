@@ -69,7 +69,7 @@ export default function SignupRequests() {
 			}
 		}
 
-		// Ingeplande proeflessen ophalen voor zichtbare aanmeldingen
+		// Fetch scheduled trial lessons for visible signup requests
 		const requestIds = baseRows.map((r) => r.id);
 		const trialMap = new Map<string, { date: string; time: string; teacher_user_id: string }>();
 		const teacherNames = new Map<string, string>();
@@ -140,7 +140,7 @@ export default function SignupRequests() {
 	const process = useCallback(
 		async (row: Row) => {
 			setBusyId(row.id);
-			// Approve via edge function: maakt user/student aan (en bij groep direct membership)
+			// Approve via edge function: creates user/student (and group membership directly for group signups)
 			const { data, error } = await supabase.functions.invoke('approve-signup-request', {
 				body: { request_id: row.id },
 			});
@@ -149,13 +149,13 @@ export default function SignupRequests() {
 				toast.error((data as { error?: string })?.error ?? error?.message ?? 'Fout bij verwerken');
 				return;
 			}
-			// Groepsaanmelding is volledig afgehandeld door edge function
+			// Group signup is fully handled by the edge function
 			if (row.is_group_lesson && row.lesson_group_id) {
 				toast.success('Aanmelding verwerkt');
 				load();
 				return;
 			}
-			// Individueel / wachtlijst: open AgreementWizard met prefill
+			// Individual / waitlist: open AgreementWizard with prefill
 			const studentUserId = (data as { student_user_id?: string })?.student_user_id;
 			const optionParam = row.lesson_type_option_id ? `&optionId=${row.lesson_type_option_id}` : '';
 			navigate(

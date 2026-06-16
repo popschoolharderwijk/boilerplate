@@ -1,5 +1,5 @@
-// Edge function spiegel van src/lib/email/events.ts.
-// Houd beide bestanden gelijk wanneer je een event toevoegt.
+// Edge function mirror of src/lib/email/events.ts.
+// Keep both files in sync when adding an event.
 
 export interface EmailEventDefinition {
 	key: string;

@@ -5,8 +5,8 @@ import { centsToAmount } from './types';
 // Journal entry generation
 // ============================================================
 // Per Stripe invoice we generate:
-//   1) Memoriaal-mutatie op period_start: Debiteuren -> Omzet + BTW
-//   2) Bank-mutatie op paid_at (alleen als status = 'paid'): Bank -> Debiteuren
+//   1) Journal entry on period_start: Accounts receivable -> Revenue + VAT
+//   2) Bank entry on paid_at (only when status = 'paid'): Bank -> Accounts receivable
 // ============================================================
 
 export interface JournalLine {
@@ -35,7 +35,7 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 		const desc = `Factuur ${inv.stripe_invoice_id} - ${inv.student_name}`;
 		const factuurEntryId = `FACT-${inv.invoice_id}`;
 
-		// 1) Debiteuren (Debet) — bruto bedrag
+		// 1) Accounts receivable (debit) — gross amount
 		lines.push({
 			entryId: factuurEntryId,
 			date: factuurDatum,
@@ -50,7 +50,7 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 			studentName: inv.student_name,
 		});
 
-		// 2) Omzet onder 21 (vrijgesteld) of 21+ (excl. BTW)
+		// 2) Revenue under 21 (exempt) or 21+ (excl. VAT)
 		if (inv.age_category === '21_plus') {
 			lines.push({
 				entryId: factuurEntryId,
@@ -65,7 +65,7 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 				invoiceReference: inv.stripe_invoice_id,
 				studentName: inv.student_name,
 			});
-			// 3) BTW af te dragen
+			// 3) VAT payable
 			if (inv.btw_amount_cents > 0) {
 				lines.push({
 					entryId: factuurEntryId,
@@ -82,7 +82,7 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 				});
 			}
 		} else {
-			// under_21 of unknown -> volledig op omzet vrijgesteld
+			// under_21 or unknown -> fully on exempt revenue
 			lines.push({
 				entryId: factuurEntryId,
 				date: factuurDatum,
@@ -98,7 +98,7 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 			});
 		}
 
-		// Bank-mutatie als betaald
+		// Bank entry when paid
 		if (inv.status === 'paid' && inv.paid_at && inv.amount_paid_cents > 0) {
 			const bankDatum = isoDate(inv.paid_at);
 			const bankEntryId = `PAY-${inv.invoice_id}`;

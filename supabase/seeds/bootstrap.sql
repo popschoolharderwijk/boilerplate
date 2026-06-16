@@ -116,7 +116,7 @@ WHERE lt.name = 'DJ / Beats'
       AND lto.price_per_lesson = opt.price_per_lesson
   );
 
--- Standaardtarieven voor weekly/biweekly lesson_type_options (uit stripe_billing migratie).
+-- Default rates for weekly/biweekly lesson_type_options (from stripe_billing migration).
 UPDATE public.lesson_type_options
 SET price_per_lesson_under_21_cents = 1950,
     price_per_lesson_adult_cents = 2360
@@ -129,10 +129,10 @@ SET price_per_lesson_under_21_cents = 2055,
 WHERE frequency = 'biweekly'
   AND price_per_lesson_under_21_cents IS NULL;
 
--- Singleton boekhoudinstellingen (uit accounting_settings migratie).
+-- Singleton accounting settings (from accounting_settings migration).
 INSERT INTO public.accounting_settings (id) VALUES (true) ON CONFLICT DO NOTHING;
 
--- Standaard e-mailtemplates (uit email_templates migratie).
+-- Default email templates (from email_templates migration).
 INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
 	'signup_received',
 	'Bevestiging van je aanmelding bij Popschool Harderwijk',

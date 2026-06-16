@@ -46,8 +46,8 @@ interface ReportRow {
 	age_category: 'under_21' | '21_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
-	/** For duo-lestype rijen: 'teacher_block' = 1 blok per duo-occurrence (BTW gesplitst per leerling),
-	 *  'student_lesson' = 2 leerling-lessen per duo-occurrence. NULL voor niet-duo en projecten. */
+	/** For duo lesson type rows: 'teacher_block' = 1 block per duo occurrence (VAT split per student),
+	 *  'student_lesson' = 2 student lessons per duo occurrence. NULL for non-duo and projects. */
 	duo_perspective: 'teacher_block' | 'student_lesson' | null;
 	project_id: string | null;
 	project_name: string | null;
@@ -431,8 +431,8 @@ export default function Reports() {
 	}, [data]);
 
 	// Summary stats: based on rows currently visible in table (quick filter + search).
-	// Voor duo-lessen tellen we alleen de 'teacher_block' weergave mee om dubbeltelling te voorkomen
-	// (student_lesson rijen geven dezelfde uren nog eens vanuit per-leerling perspectief).
+	// For duo lessons, only count the 'teacher_block' view to avoid double-counting
+	// (student_lesson rows repeat the same hours from a per-student perspective).
 	const summary = useMemo(() => {
 		const canonical = dataVisibleInTable.filter((r) => r.duo_perspective !== 'student_lesson');
 		const totalMinutes = canonical.reduce((sum, r) => sum + r.total_minutes, 0);

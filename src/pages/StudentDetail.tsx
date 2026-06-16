@@ -50,7 +50,7 @@ export default function StudentDetail() {
 			}
 			setProfile(profileData);
 
-			// Load agreements (multi-step om RLS-joins te vermijden)
+			// Load agreements (multi-step to avoid RLS join issues)
 			const { data: agreementsData, error: agreementsError } = await supabase
 				.from('lesson_agreements')
 				.select(

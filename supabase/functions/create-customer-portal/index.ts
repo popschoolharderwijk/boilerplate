@@ -1,5 +1,5 @@
 // Create a Stripe Billing Portal session for the calling user.
-// Privileged staff may pass user_id to open portal on behalf of a leerling.
+// Privileged staff may pass user_id to open portal on behalf of a student.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';

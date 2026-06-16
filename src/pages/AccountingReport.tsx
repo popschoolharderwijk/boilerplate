@@ -53,7 +53,7 @@ const PRESET_LABELS: Record<PeriodPreset, string> = {
 };
 
 function schoolYearRange(now: Date, startMonth: number): { start: Date; end: Date } {
-	// Schooljaar loopt van startMonth (jaar X) t/m startMonth-1 (jaar X+1)
+	// School year runs from startMonth (year X) through startMonth-1 (year X+1)
 	const month = now.getMonth() + 1;
 	const year = now.getFullYear();
 	const startYear = month >= startMonth ? year : year - 1;

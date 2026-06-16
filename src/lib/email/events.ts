@@ -1,8 +1,8 @@
-// Centrale registry van alle event-gestuurde mail-types.
-// Voor elk type definiëren we de label, beschrijving en beschikbare variabelen
-// die in onderwerp en body kunnen worden gebruikt via {{variabele}}-notatie.
+// Central registry of all event-driven email types.
+// For each type we define the label, description, and available variables
+// that can be used in subject and body via {{variable}} notation.
 //
-// Wijzigingen hier moeten ook in `supabase/functions/_shared/email-events.ts` worden gespiegeld.
+// Changes here must also be mirrored in `supabase/functions/_shared/email-events.ts`.
 
 export interface EmailEventDefinition {
 	key: string;

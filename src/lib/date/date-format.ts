@@ -1,7 +1,7 @@
 import { format, parse, parseISO } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
-const DATE_FORMAT_UI = 'dd-MM-yyyy' as const;
+export const DATE_FORMAT_UI = 'dd-MM-yyyy' as const;
 const DATE_FORMAT_DB = 'yyyy-MM-dd' as const;
 
 export function now() {

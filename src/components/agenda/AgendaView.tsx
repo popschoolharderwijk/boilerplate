@@ -40,8 +40,8 @@ export interface AgendaViewProps {
 export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaViewProps = {}) {
 	const { user, isPrivileged, isTeacher } = useAuth();
 	const effectiveUserId = viewUserId ?? user?.id;
-	// Standaard mogen alleen docenten en staff/admins lessen wijzigen of annuleren.
-	// Leerlingen krijgen een read-only agenda — zij kunnen niet annuleren, verplaatsen of editen.
+	// By default, only teachers and staff/admins may change or cancel lessons.
+	// Students get a read-only agenda — they cannot cancel, reschedule, or edit.
 	const canEdit = canEditProp ?? (!!user && (isPrivileged || isTeacher));
 	const isOwnAgenda = !viewUserId;
 

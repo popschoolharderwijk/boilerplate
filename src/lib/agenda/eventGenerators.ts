@@ -422,12 +422,12 @@ export function generateAgendaEvents(
 					addDays(shiftedDate, len);
 					isShifted = true;
 				}
-				// Hard end-date: shifted past the agreement end → lesson vervalt.
+				// Hard end-date: shifted past the agreement end → lesson is dropped.
 				if (periodEnd && shiftedDate > periodEnd) {
 					addIntervalHelper(current, frequency);
 					continue;
 				}
-				// Augustus wordt overgeslagen (zomerpauze, geen shift-mutatie).
+				// August is skipped (summer break, no shift mutation).
 				if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
 					addIntervalHelper(current, frequency);
 					continue;

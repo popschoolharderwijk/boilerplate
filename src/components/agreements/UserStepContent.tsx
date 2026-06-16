@@ -23,7 +23,7 @@ interface UserStepContentProps {
 	onUserChange: (user: User | null) => void;
 	onLessonTypeChange: (lessonTypeId: string | null) => void;
 	onOptionSnapshotChange: (snap: OptionSnapshot | null) => void;
-	/** True wanneer geselecteerde lessoort een duo-les is — toont partner-selector. */
+	/** True when the selected lesson type is a duo lesson — shows partner selector. */
 	isDuoLesson?: boolean;
 	partnerStudentUserId?: string | null;
 	partnerUser?: User | null;

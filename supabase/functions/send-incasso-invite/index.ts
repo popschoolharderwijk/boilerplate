@@ -1,10 +1,10 @@
-// Verstuurt een Magic Link naar de leerling (of diens vertegenwoordiger)
-// met daarin een redirect naar /incasso/start?agreement=<id>. Na inloggen
-// kan de gebruiker direct de Stripe checkout doorlopen.
+// Sends a Magic Link to the student (or their representative)
+// with a redirect to /incasso/start?agreement=<id>. After logging in,
+// the user can proceed directly to Stripe checkout.
 //
-// Auth required. Toegestaan: privileged staff (admin/teacher) of de leerling zelf.
-// Bij een minderjarige leerling (date_of_birth -> <18 nu) wordt de mail naar
-// `parent_email` gestuurd indien aanwezig, anders naar het student-account.
+// Auth required. Allowed: privileged staff (admin/teacher) or the student themselves.
+// For a minor student (date_of_birth -> <18 now), the email is sent to
+// `parent_email` if present, otherwise to the student account.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
 import { getSafeErrorMessage } from '../_shared/stripe.ts';
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 	} = await userClient.auth.getUser();
 	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
-	// Authz: privileged of de leerling zelf
+	// Authz: privileged or the student themselves
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
 	const isPrivileged = role === 'admin' || role === 'site_admin' || role === 'teacher';
@@ -94,10 +94,10 @@ Deno.serve(async (req) => {
 		return jsonResponse(403, { error: 'Geen rechten' });
 	}
 
-	// Mailadres = het account-emailadres van de leerling. Dit is gegarandeerd
-	// een bestaand Supabase-auth-account (anders kan de Magic Link niet werken).
-	// Voor minderjarige leerlingen hebben ouders de aanmelding doorgaans op
-	// hun eigen e-mailadres gedaan, dus dit adres komt al bij de vertegenwoordiger uit.
+	// Email address = the student's account email. This is guaranteed to be
+	// an existing Supabase auth account (otherwise the Magic Link cannot work).
+	// For minor students, parents typically completed signup using
+	// their own email address, so this address already reaches the representative.
 	const { data: profile } = await admin
 		.from('profiles')
 		.select('email')
@@ -108,9 +108,9 @@ Deno.serve(async (req) => {
 
 	const redirectTo = `${siteUrl}/incasso/start?agreement=${agreement.id}`;
 
-	// Stuur magic link via Supabase Auth (gebruikt ingestelde SMTP).
-	// shouldCreateUser=false: alleen de bestaande student kan inloggen via deze link;
-	// een ouder ontvangt de mail maar logt in als de student-account-eigenaar.
+	// Send magic link via Supabase Auth (uses configured SMTP).
+	// shouldCreateUser=false: only the existing student can log in via this link;
+	// a parent receives the email but logs in as the student account owner.
 	const otpClient = createClient(supabaseUrl, anonKey, {
 		auth: { autoRefreshToken: false, persistSession: false },
 	});

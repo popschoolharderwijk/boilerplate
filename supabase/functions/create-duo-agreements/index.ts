@@ -1,7 +1,7 @@
-// Maakt twee gekoppelde duo-overeenkomsten (lesson_agreements) aan in één transactie.
-// Beide overeenkomsten krijgen dezelfde duo_pair_id, hetzelfde tijdslot bij dezelfde docent
-// en dezelfde lessoort (die de is_duo_lesson vlag moet hebben). Bij faal wordt de eerste
-// rij weer verwijderd zodat we niet in een halve-staat eindigen.
+// Creates two linked duo agreements (lesson_agreements) in a single transaction.
+// Both agreements share the same duo_pair_id, the same time slot with the same teacher,
+// and the same lesson type (which must have the is_duo_lesson flag). On failure, the first
+// row is deleted so we do not end up in a half-finished state.
 //
 // Auth required. Toegestaan: admin, site_admin, teacher (staff).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -136,14 +136,14 @@ Deno.serve(async (req) => {
 	} = await userClient.auth.getUser();
 	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
 
-	// Authz: alleen staff (admin/site_admin/teacher) mag duo-overeenkomsten aanmaken.
+	// Authz: only staff (admin/site_admin/teacher) may create duo agreements.
 	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
 	const role = roleRow?.role;
 	if (role !== 'admin' && role !== 'site_admin' && role !== 'teacher') {
 		return jsonResponse(403, { error: 'Geen rechten' });
 	}
 
-	// Controleer dat lessoort daadwerkelijk een duo-lestype is.
+	// Verify that the lesson type is actually a duo lesson type.
 	const { data: lessonType, error: ltErr } = await admin
 		.from('lesson_types')
 		.select('id, is_duo_lesson, is_group_lesson, is_active')
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
 	if (lessonType.is_group_lesson) return jsonResponse(422, { error: 'Lessoort is een groepsles, niet duo' });
 	if (!lessonType.is_active) return jsonResponse(422, { error: 'Lessoort is niet actief' });
 
-	// Genereer duo_pair_id en maak beide overeenkomsten aan.
+	// Generate duo_pair_id and create both agreements.
 	const duoPairId = crypto.randomUUID();
 	const basePayload = {
 		teacher_user_id: body.teacher_user_id,
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
 		signup_source: body.signup_source ?? 'staff_duo',
 	};
 
-	// Insert overeenkomst A (eerst, valideert dat slot/lestype OK is).
+	// Insert agreement A first (validates that slot/lesson type are OK).
 	const { data: rowA, error: errA } = await admin
 		.from('lesson_agreements')
 		.insert({ ...basePayload, student_user_id: body.student_user_id_a })
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: getSafeErrorMessage(errA ?? new Error('Aanmaken overeenkomst A mislukt')) });
 	}
 
-	// Insert overeenkomst B. Trigger valideert slot-match en max-2-leden.
+	// Insert agreement B. Trigger validates slot match and max 2 members.
 	const { data: rowB, error: errB } = await admin
 		.from('lesson_agreements')
 		.insert({ ...basePayload, student_user_id: body.student_user_id_b })
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
 		.single();
 	if (errB || !rowB) {
 		console.error('Duo create B failed, rolling back A', errB);
-		// Rollback: verwijder eerste rij zodat we geen halve duo achterlaten.
+		// Rollback: delete first row so we do not leave a half-finished duo behind.
 		await admin.from('lesson_agreements').delete().eq('id', rowA.id);
 		return jsonResponse(400, { error: getSafeErrorMessage(errB ?? new Error('Aanmaken overeenkomst B mislukt')) });
 	}

@@ -30,8 +30,8 @@ export default function Login() {
 		setState('sent');
 	};
 
-	// Automatisch versturen wanneer de portal-link in een mail wordt gevolgd.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: sendMagicLink is stable in deze scope
+	// Automatically send when the portal link in an email is followed.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: sendMagicLink is stable in this scope
 	useEffect(() => {
 		if (autoSentRef.current) return;
 		if (isLoading || user) return;

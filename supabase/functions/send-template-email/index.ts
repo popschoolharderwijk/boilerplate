@@ -1,11 +1,11 @@
-// Generieke transactionele mail-verzender. Laadt template uit `email_templates`
-// op basis van event_key, vervangt {{variabele}}-placeholders, en stuurt via Resend.
+// Generic transactional email sender. Loads template from `email_templates`
+// by event_key, replaces {{variable}} placeholders, and sends via Resend.
 //
-// Auth: vereist JWT (van een ingelogde gebruiker) OF service-role (voor server-side triggers
-// vanuit andere edge functions). Anonymous calls worden geweigerd.
+// Auth: requires JWT (from a logged-in user) OR service-role (for server-side triggers
+// from other edge functions). Anonymous calls are rejected.
 //
-// Bij is_enabled=false: stilletjes overslaan met { skipped: true } — geen fout.
-// Bij ontbrekende template: 404. Bij Resend-fout: 502 met bericht.
+// When is_enabled=false: silently skip with { skipped: true } — no error.
+// When template is missing: 404. On Resend error: 502 with message.
 //
 // Body: { event_key: string, to: string, vars?: Record<string, string> }
 
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
 		return jsonResponse(500, { error: 'Mail-configuratie ontbreekt' });
 	}
 
-	// Authz: token kan een gebruiker-JWT zijn of de service-role key (server-to-server).
+	// Authz: token may be a user JWT or the service-role key (server-to-server).
 	const token = authHeader.replace(/^Bearer\s+/i, '');
 	const isServiceRole = token === serviceKey;
 

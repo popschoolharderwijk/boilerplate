@@ -16,7 +16,7 @@ interface LessonAgreementItemProps {
 	agreement: LessonAgreement;
 	className?: string;
 	readOnly?: boolean;
-	/** Optioneel: nodig om incasso-preview te tonen in de detail-dialog. */
+	/** Optional: required to show billing preview in the detail dialog. */
 	studentUserId?: string;
 	lessonTypeId?: string;
 }

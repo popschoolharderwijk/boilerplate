@@ -1,22 +1,22 @@
 /**
- * Schooljaar-helpers voor lesgeld-incasso.
+ * School year helpers for lesson fee billing.
  *
- * Een schooljaar loopt van **1 september** t/m **31 juli** van het volgende
- * kalenderjaar (11 incassomaanden, augustus is altijd pauze).
+ * A school year runs from **1 September** through **31 July** of the following
+ * calendar year (11 billing months; August is always a break).
  */
 
-/** Maand-index (0-based) waarin geen incasso plaatsvindt. */
-const NON_BILLING_MONTH_INDEX = 7; // augustus
+/** Month index (0-based) in which no billing takes place. */
+const NON_BILLING_MONTH_INDEX = 7; // August
 
-/** Aantal incassomaanden per schooljaar. */
+/** Number of billing months per school year. */
 export const BILLING_MONTHS_PER_YEAR = 11;
 
 export interface SchoolYearWindow {
-	/** YYYY-MM-DD, 1 september. */
+	/** YYYY-MM-DD, 1 September. */
 	start: string;
-	/** YYYY-MM-DD, 31 juli van het volgende kalenderjaar. */
+	/** YYYY-MM-DD, 31 July of the following calendar year. */
 	end: string;
-	/** Het kalenderjaar van de september-start. */
+	/** Calendar year of the September start. */
 	startYear: number;
 }
 
@@ -25,10 +25,10 @@ function pad(n: number): string {
 }
 
 /**
- * Bepaal het schooljaar waarin een datum valt.
- * - Datums in jan-juli horen bij schooljaar dat startte in het voorgaande jaar.
- * - Datums in aug-dec horen bij schooljaar dat in dit jaar start.
- *   (Augustus zelf is technisch geen lesmaand, maar valt onder het komende schooljaar.)
+ * Determine the school year a date falls in.
+ * - Dates in Jan–Jul belong to the school year that started in the previous year.
+ * - Dates in Aug–Dec belong to the school year starting in that year.
+ *   (August itself is technically not a lesson month, but belongs to the upcoming school year.)
  */
 function getSchoolYearForDate(date: Date): SchoolYearWindow {
 	const year = date.getFullYear();
@@ -41,16 +41,16 @@ function getSchoolYearForDate(date: Date): SchoolYearWindow {
 	};
 }
 
-/** Schooljaar waarin een YYYY-MM-DD string valt. */
+/** School year a YYYY-MM-DD string falls in. */
 export function getSchoolYearForDateString(dateStr: string): SchoolYearWindow {
 	return getSchoolYearForDate(new Date(`${dateStr}T12:00:00`));
 }
 
 /**
- * Effectief venster voor incasso-berekening in een gegeven schooljaar,
- * begrensd door de overeenkomst (start_date / end_date).
+ * Effective billing window within a given school year,
+ * bounded by the agreement (start_date / end_date).
  *
- * @returns null als de overeenkomst geen overlap heeft met het schooljaar.
+ * @returns null if the agreement has no overlap with the school year.
  */
 export function clampToSchoolYear(
 	schoolYear: SchoolYearWindow,
@@ -63,8 +63,8 @@ export function clampToSchoolYear(
 	return { start, end };
 }
 
-/** True als YYYY-MM-DD in augustus valt. */
+/** True if YYYY-MM-DD falls in August. */
 export function isNonBillingMonthString(dateStr: string): boolean {
-	// dateStr = "YYYY-MM-DD"; maand-segment is positie 5-7 (1-based).
+	// dateStr = "YYYY-MM-DD"; month segment is position 5-7 (1-based).
 	return dateStr.slice(5, 7) === pad(NON_BILLING_MONTH_INDEX + 1);
 }

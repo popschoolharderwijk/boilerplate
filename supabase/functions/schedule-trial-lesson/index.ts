@@ -288,10 +288,10 @@ Deno.serve(async (req) => {
 			}
 		};
 
-		// Mail naar leerling (of ouder)
+		// Email to student (or parent)
 		await sendMail('trial_scheduled', (parentEmail || studentEmail).toLowerCase(), sharedVars);
 
-		// Mail naar docent
+		// Email to teacher
 		if (teacherProfile?.email) {
 			const docentNaam =
 				`${teacherProfile.first_name ?? ''} ${teacherProfile.last_name ?? ''}`.trim() || 'docent';

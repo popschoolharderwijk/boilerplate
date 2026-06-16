@@ -362,9 +362,9 @@ export async function createScheduleForAgreement(
 
 	await admin.from('lesson_agreements').update({ stripe_schedule_id: schedule.id }).eq('id', ctx.lessonAgreementId);
 
-	// Insert/refresh een 'scheduled' rij in subscriptions zodat het abonnement direct
-	// zichtbaar is, ook al heeft Stripe nog geen echte subscription aangemaakt
-	// (dat gebeurt pas op de start_date van het schedule).
+	// Insert/refresh a 'scheduled' row in subscriptions so the subscription is immediately
+	// visible, even if Stripe has not yet created the actual subscription
+	// (that happens only on the schedule's start_date).
 	const firstPriceId = (stripePhases[0]?.items?.[0] as { price?: string } | undefined)?.price ?? '';
 	const periodStartIso = new Date(phases[0].startUnix * 1000).toISOString();
 	const periodEndIso = new Date(phases[0].endUnix * 1000).toISOString();

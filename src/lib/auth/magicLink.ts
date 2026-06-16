@@ -1,8 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Helpers voor het verwerken van magic-link landings (PKCE en token_hash).
- * Gebruikt vanuit IncassoStart en eventuele andere magic-link landingspagina's.
+ * Helpers for processing magic-link landings (PKCE and token_hash).
+ * Used from IncassoStart and any other magic-link landing pages.
  */
 
 export type MagicLinkResult = { ok: true } | { ok: false; error: string };
@@ -11,7 +11,7 @@ function getHashParams(): URLSearchParams {
 	return new URLSearchParams(window.location.hash.slice(1));
 }
 
-/** Leest een Supabase auth-fout uit de URL hash, indien aanwezig. */
+/** Reads a Supabase auth error from the URL hash, if present. */
 export function readMagicLinkUrlError(): string | null {
 	if (!window.location.hash.includes('error=')) return null;
 	const hashParams = getHashParams();
@@ -23,11 +23,11 @@ export function readMagicLinkUrlError(): string | null {
 }
 
 /**
- * Wisselt een magic-link uit de URL in voor een actieve sessie.
- * Ondersteunt PKCE (?code=...) en custom token_hash-flow (#token_hash=...&type=email).
+ * Exchanges a magic link from the URL for an active session.
+ * Supports PKCE (?code=...) and custom token_hash flow (#token_hash=...&type=email).
  */
 export async function consumeMagicLinkFromUrl(): Promise<MagicLinkResult> {
-	// PKCE flow: ?code=... in querystring (Supabase default sinds v2).
+	// PKCE flow: ?code=... in querystring (Supabase default since v2).
 	if (window.location.search.includes('code=')) {
 		const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
 		if (error) {
@@ -37,7 +37,7 @@ export async function consumeMagicLinkFromUrl(): Promise<MagicLinkResult> {
 	}
 
 	// Custom email-template flow: #token_hash=...&type=email.
-	// Voorkomt dat mail-scanners de Supabase ConfirmationURL alvast consumeren.
+	// Prevents mail scanners from consuming the Supabase ConfirmationURL prematurely.
 	if (window.location.hash.includes('token_hash=')) {
 		const hashParams = getHashParams();
 		const tokenHash = hashParams.get('token_hash');
@@ -49,16 +49,16 @@ export async function consumeMagicLinkFromUrl(): Promise<MagicLinkResult> {
 		if (error) {
 			return { ok: false, error: `Inloggen mislukt: ${error.message}. De link is mogelijk verlopen.` };
 		}
-		// Ruim hash op zodat tokens niet in browser-history blijven staan.
+		// Clear hash so tokens are not left in browser history.
 		window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 		return { ok: true };
 	}
 
-	// Geen magic-link parameters in URL: bestaande sessie wordt elders gecontroleerd.
+	// No magic-link parameters in URL: existing session is checked elsewhere.
 	return { ok: true };
 }
 
-/** Leest een fout-veld uit een edge-function respons of Response-object. */
+/** Reads an error field from an edge-function response or Response object. */
 export async function getFunctionErrorMessage(data: unknown, error: unknown, fallback: string): Promise<string> {
 	const dataError = typeof data === 'object' && data !== null && 'error' in data ? data.error : null;
 	if (typeof dataError === 'string') return dataError;

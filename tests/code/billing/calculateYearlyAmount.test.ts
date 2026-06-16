@@ -1,5 +1,5 @@
 /**
- * Unit tests voor billing-helpers (Stap 3 van Stripe lesgeld-incasso).
+ * Unit tests for billing helpers (step 3 of Stripe lesson fee billing).
  */
 import { describe, expect, it } from 'bun:test';
 import { pickAgeTariff, pickPriceCents } from '../../../src/lib/billing/ageTariff';
@@ -71,15 +71,15 @@ describe('pickAgeTariff', () => {
 
 describe('calculateYearlyAmount', () => {
 	it('telt wekelijkse lessen in een vol schooljaar exclusief augustus', () => {
-		// Maandagen tussen 1 sept 2026 en 31 jul 2027, augustus telt niet.
+		// Mondays between 1 Sept 2026 and 31 Jul 2027; August does not count.
 		const result = calculateYearlyAmount({
 			periodStart: '2026-09-01',
 			periodEnd: '2027-07-31',
-			dayOfWeek: 1, // maandag
+			dayOfWeek: 1, // Monday
 			frequency: 'weekly',
 			pricePerLessonCents: 1950,
 		});
-		// Sanity: in een schooljaar zonder vakantieaftrek zo'n 47-48 maandagen.
+		// Sanity: roughly 47-48 Mondays in a school year without holiday deductions.
 		expect(result.lessonsCount).toBeGreaterThan(40);
 		expect(result.lessonsCount).toBeLessThan(50);
 		expect(result.yearlyCents).toBe(result.lessonsCount * 1950);

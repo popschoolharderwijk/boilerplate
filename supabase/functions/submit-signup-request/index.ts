@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
 		);
 	}
 
-	// Verstuur bevestigingsmail (best-effort: faal niet de signup als mail mislukt).
+	// Send confirmation email (best-effort: do not fail signup if email fails).
 	try {
 		const { data: ltName } = await supabase
 			.from('lesson_types')

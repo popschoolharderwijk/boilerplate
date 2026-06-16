@@ -355,7 +355,7 @@ export default function AgreementWizard() {
 		endDate: oneYearFromToday(),
 		teacherUserId: null as string | null,
 		slot: null as SlotWithStatus | null,
-		/** Duo-partner leerling (alleen ingevuld als gekozen lestype is_duo_lesson is en in create-modus). */
+		/** Duo partner student (only set when selected lesson type is_duo_lesson and in create mode). */
 		partnerStudentUserId: null as string | null,
 		partnerUser: null as User | null,
 	});
@@ -607,7 +607,7 @@ export default function AgreementWizard() {
 		setSaving(true);
 		const timeValue = form.slot.start_time.includes(':') ? form.slot.start_time : form.slot.start_time + ':00';
 
-		// Duo-tak: maak beide overeenkomsten via edge function in één transactie.
+		// Duo branch: create both agreements via edge function in a single transaction.
 		if (!agreement && isDuoLesson) {
 			if (!form.partnerStudentUserId || form.partnerStudentUserId === form.studentUserId) {
 				setSaving(false);
@@ -643,7 +643,7 @@ export default function AgreementWizard() {
 				toast.error(duoErr?.message ?? 'Fout bij aanmaken duo-overeenkomsten');
 				return;
 			}
-			// Stuur per leerling een betaaluitnodiging.
+			// Send a payment invitation per student.
 			const inviteResults = await Promise.all(
 				duoData.agreement_ids.map((aid) =>
 					supabase.functions.invoke('send-incasso-invite', { body: { lesson_agreement_id: aid } }),
@@ -722,7 +722,7 @@ export default function AgreementWizard() {
 				.eq('id', fromTrialId);
 		}
 
-		// Bij een nieuwe overeenkomst: stuur direct een betaaluitnodiging (Magic Link → Stripe)
+		// For a new agreement: send a payment invitation immediately (Magic Link → Stripe)
 		if (!agreement && insertResult.data?.id) {
 			const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
 				body: { lesson_agreement_id: insertResult.data.id },
