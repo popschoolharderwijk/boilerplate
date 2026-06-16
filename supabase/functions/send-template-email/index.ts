@@ -11,7 +11,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getEmailEvent } from '../_shared/email-events.ts';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, getSiteBaseUrl, jsonResponse } from '../_shared/http.ts';
 
 interface SendBody {
 	event_key: string;
@@ -20,27 +20,6 @@ interface SendBody {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FALLBACK_SITE_URL = 'https://mcp.mplifi.nl';
-const ALLOWED_SITE_HOSTS = new Set([
-	'mcp.mplifi.nl',
-	'instant-setup-kit.lovable.app',
-	'id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app',
-	'098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com',
-]);
-
-function getPortalBaseUrl(req: Request): string {
-	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), FALLBACK_SITE_URL];
-	for (const candidate of candidates) {
-		if (!candidate) continue;
-		try {
-			const url = new URL(candidate);
-			if (url.protocol === 'https:' && ALLOWED_SITE_HOSTS.has(url.hostname)) return url.origin;
-		} catch {
-			// negeer ongeldige waarden
-		}
-	}
-	return FALLBACK_SITE_URL;
-}
 
 function appendPortalFooter(html: string, baseUrl: string, recipient: string): string {
 	const loginUrl = `${baseUrl}/login?email=${encodeURIComponent(recipient)}`;
@@ -74,20 +53,9 @@ function normalizeVars(input: SendBody['vars']): Record<string, string> {
 }
 
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
-
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: SendBody;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
+	const begun = await beginAuthenticatedPostRequest<SendBody>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
 	if (!body.event_key || typeof body.event_key !== 'string') return jsonResponse(400, { error: 'event_key vereist' });
 	if (!body.to || !EMAIL_RE.test(body.to)) return jsonResponse(400, { error: 'Ongeldig e-mailadres' });
@@ -142,7 +110,7 @@ Deno.serve(async (req) => {
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
 	const renderedHtml = renderTemplate(template.body_html, vars);
-	const html = appendPortalFooter(renderedHtml, getPortalBaseUrl(req), body.to);
+	const html = appendPortalFooter(renderedHtml, getSiteBaseUrl(req), body.to);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
 		method: 'POST',

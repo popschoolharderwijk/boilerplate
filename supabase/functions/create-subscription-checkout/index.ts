@@ -6,9 +6,8 @@
 //                         customer's existing default payment method.
 //
 // Auth required. Allowed initiators: privileged staff/admin or the student themselves.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createScheduleForAgreement } from '../_shared/billing.ts';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
 import {
 	attachDefaultPaymentMethod,
 	getReusablePaymentMethodIdFromSetupIntent,
@@ -16,6 +15,7 @@ import {
 	getStripe,
 	getStripeId,
 } from '../_shared/stripe.ts';
+import { createSupabaseClients, requireAuthenticatedUser } from '../_shared/supabase.ts';
 
 interface Body {
 	lesson_agreement_id: string;
@@ -25,46 +25,21 @@ interface Body {
 	cancel_url?: string;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
 	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
 		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
 	}
 	const mode: 'checkout' | 'direct' | 'complete' =
 		body.mode === 'direct' || body.mode === 'complete' ? body.mode : 'checkout';
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
+	const authn = await requireAuthenticatedUser(userClient);
+	if (!authn.ok) return authn.response;
 
 	// RLS-checked agreement load (caller must have access)
 	const { data: agreement, error: agreementErr } = await userClient

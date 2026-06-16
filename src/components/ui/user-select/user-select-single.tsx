@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { LuCheck, LuChevronsUpDown, LuLoaderCircle } from 'react-icons/lu';
+import { LuCheck, LuChevronsUpDown } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { UserDisplay } from '@/components/ui/user-display';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/types/users';
 import type { UserSelectSingleProps } from './types';
 import { useUserSelectData } from './use-user-select-data';
+import { UserSelectCommandList } from './user-select-command-list';
 
 /**
  * Searchable dropdown to select a single user. Use for one user (e.g. owner, teacher).
@@ -82,41 +83,24 @@ export function UserSelectSingle({
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-				<Command shouldFilter={false}>
-					<CommandInput placeholder="Zoek gebruiker..." value={searchQuery} onValueChange={setSearchQuery} />
-					<CommandList className="max-h-[350px] overflow-y-auto">
-						{loading ? (
-							<div className="flex items-center justify-center py-6">
-								<LuLoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
-							</div>
-						) : (
-							<>
-								<CommandEmpty>Geen gebruikers gevonden.</CommandEmpty>
-								<CommandGroup>
-									{filteredUsers.map((user) => {
-										const isSelected = user.user_id === value;
-										return (
-											<CommandItem
-												key={user.user_id}
-												value={user.user_id}
-												onSelect={() => handleSelect(user, isSelected)}
-												className="py-2"
-											>
-												<LuCheck
-													className={cn(
-														'mr-2 h-4 w-4 shrink-0',
-														isSelected ? 'opacity-100' : 'opacity-0',
-													)}
-												/>
-												<UserDisplay profile={user} showEmail className="flex-1" />
-											</CommandItem>
-										);
-									})}
-								</CommandGroup>
-							</>
-						)}
-					</CommandList>
-				</Command>
+				<UserSelectCommandList loading={loading} searchQuery={searchQuery} onSearchQueryChange={setSearchQuery}>
+					{filteredUsers.map((user) => {
+						const isSelected = user.user_id === value;
+						return (
+							<CommandItem
+								key={user.user_id}
+								value={user.user_id}
+								onSelect={() => handleSelect(user, isSelected)}
+								className="py-2"
+							>
+								<LuCheck
+									className={cn('mr-2 h-4 w-4 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')}
+								/>
+								<UserDisplay profile={user} showEmail className="flex-1" />
+							</CommandItem>
+						);
+					})}
+				</UserSelectCommandList>
 			</PopoverContent>
 		</Popover>
 	);

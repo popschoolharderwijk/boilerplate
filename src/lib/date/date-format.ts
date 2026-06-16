@@ -31,7 +31,7 @@ export function formatDateTimeShort(date: Date): string {
 	return format(date, 'dd-MM-yyyy HH:mm', { locale: nl });
 }
 
-export function addDaysToDate(date: Date, days: number) {
+function addDaysToDate(date: Date, days: number) {
 	const d = new Date(date);
 	d.setDate(d.getDate() + days);
 	return d;
@@ -68,12 +68,4 @@ export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date) {
 	const diff = dayOfWeek - currentDay;
 	date.setDate(date.getDate() + diff);
 	return date;
-}
-
-/** Date in the same week as originalDateStr with the same weekday as referenceDate (YYYY-MM-DD). */
-export function getActualDateInOriginalWeek(originalDateStr: string, referenceDate: Date): string {
-	const originalDate = parseISO(originalDateStr + 'T12:00:00');
-	const targetDayOfWeek = referenceDate.getDay();
-	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
-	return formatDateToDb(actualDate);
 }

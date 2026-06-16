@@ -3,12 +3,12 @@ import { LuCalendarOff, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CrudFormDialogActions } from '@/components/ui/crud-form-dialog-actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
+import { useFormCrudDialogActions, useFormCrudDialogState } from '@/hooks/useFormCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 
@@ -32,11 +32,24 @@ const EMPTY_FORM: FormState = { name: '', start_date: '', end_date: '', descript
 export function NoLessonPeriodsManager() {
 	const [periods, setPeriods] = useState<NoLessonPeriod[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editing, setEditing] = useState<NoLessonPeriod | null>(null);
-	const [form, setForm] = useState<FormState>(EMPTY_FORM);
-	const [saving, setSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<NoLessonPeriod | null>(null);
+	const crud = useFormCrudDialogState<FormState, NoLessonPeriod>(EMPTY_FORM, (period) => ({
+		name: period.name,
+		start_date: period.start_date,
+		end_date: period.end_date,
+		description: period.description ?? '',
+	}));
+	const {
+		dialogOpen,
+		setDialogOpen,
+		editing,
+		form,
+		setForm,
+		setSaving,
+		deleteTarget,
+		setDeleteTarget,
+		openCreate,
+		openEdit,
+	} = crud;
 
 	const fetchPeriods = useCallback(async () => {
 		const { data, error } = await supabase
@@ -54,23 +67,6 @@ export function NoLessonPeriodsManager() {
 	useEffect(() => {
 		fetchPeriods();
 	}, [fetchPeriods]);
-
-	const openCreate = () => {
-		setEditing(null);
-		setForm(EMPTY_FORM);
-		setDialogOpen(true);
-	};
-
-	const openEdit = (period: NoLessonPeriod) => {
-		setEditing(period);
-		setForm({
-			name: period.name,
-			start_date: period.start_date,
-			end_date: period.end_date,
-			description: period.description ?? '',
-		});
-		setDialogOpen(true);
-	};
 
 	const isFormValid =
 		form.name.trim().length > 0 &&
@@ -127,6 +123,14 @@ export function NoLessonPeriodsManager() {
 		setDeleteTarget(null);
 		await fetchPeriods();
 	};
+
+	const dialogActions = useFormCrudDialogActions(crud, {
+		isFormValid,
+		onSave: handleSave,
+		onDelete: handleDelete,
+		deleteTitle: 'Lesvrije periode verwijderen',
+		getDeleteDescription: (entity) => `Weet je zeker dat je "${entity.name}" wilt verwijderen?`,
+	});
 
 	return (
 		<Card>
@@ -238,24 +242,9 @@ export function NoLessonPeriodsManager() {
 							/>
 						</div>
 					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
-							Annuleren
-						</Button>
-						<SubmitButton onClick={handleSave} loading={saving} disabled={!isFormValid}>
-							{editing ? 'Opslaan' : 'Aanmaken'}
-						</SubmitButton>
-					</DialogFooter>
+					<CrudFormDialogActions {...dialogActions} />
 				</DialogContent>
 			</Dialog>
-
-			<ConfirmDeleteDialog
-				open={!!deleteTarget}
-				onOpenChange={(open) => !open && setDeleteTarget(null)}
-				onConfirm={handleDelete}
-				title="Lesvrije periode verwijderen"
-				description={`Weet je zeker dat je "${deleteTarget?.name}" wilt verwijderen?`}
-			/>
 		</Card>
 	);
 }

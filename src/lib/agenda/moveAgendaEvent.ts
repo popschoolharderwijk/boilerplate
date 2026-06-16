@@ -3,6 +3,7 @@ import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
 import { PostgresErrorCodes } from '@/integrations/supabase/errorcodes';
+import { getAgendaLessonContext, lookupAgendaEvent } from '@/lib/agenda/agendaEventLookup';
 import { addDaysToDateStr, formatDateToDb } from '@/lib/date/date-format';
 import { normalizeTime, normalizeTimeFromDate } from '@/lib/time/time-format';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
@@ -27,11 +28,10 @@ export type MoveAgendaEventResult = { ok: true; message: string } | { ok: false;
 
 export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<MoveAgendaEventResult> {
 	const { event, start, end, scope, agendaEvents, deviations, agreementsMap } = params;
-	const eventId = event.resource.eventId;
-	if (!eventId) return { ok: false, message: 'Geen afspraak' };
-
-	const agendaEvent = agendaEvents.find((e) => e.id === eventId);
-	if (!agendaEvent) return { ok: false, message: 'Afspraak niet gevonden' };
+	const lookup = lookupAgendaEvent(event.resource.eventId, agendaEvents);
+	if ('ok' in lookup) return lookup;
+	const agendaEvent = lookup.event;
+	const eventId = agendaEvent.id;
 
 	const actualDateStr = formatDateToDb(start);
 	const actualStartTime = normalizeTimeFromDate(start);
@@ -55,9 +55,7 @@ export async function moveAgendaEvent(params: MoveAgendaEventParams): Promise<Mo
 	}
 
 	const recurring = scope === 'thisAndFuture';
-	const isLessonEvent = agendaEvent.source_type === 'lesson_agreement' && agendaEvent.source_id;
-	const agreement = isLessonEvent ? agreementsMap.get(agendaEvent.source_id as string) : null;
-	const baseStartTime = agreement ? agreement.start_time : agendaEvent.start_time;
+	const { baseStartTime } = getAgendaLessonContext(agendaEvent, agreementsMap);
 
 	let originalDateStr: string;
 	let originalStartTime: string;

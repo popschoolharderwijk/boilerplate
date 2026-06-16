@@ -7,22 +7,11 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import { formatDbDateLong } from '@/lib/date/date-format';
+import { type EnrichedTrialLessonStudent, enrichTrialLessons } from '@/lib/trial-lessons/enrichTrialLessons';
+import { getTrialStatusLabel } from '@/lib/trial-lessons/statusLabels';
 
-type Trial = Tables<'trial_lessons'> & {
-	teacher_name: string;
-	lesson_type_name: string | null;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-	scheduled: 'Ingepland',
-	completed: 'Gegeven',
-	cancelled: 'Geannuleerd',
-	student_confirmed: 'Doorgegeven: ik wil doorgaan',
-	student_declined: 'Doorgegeven: ik stop',
-	converted: 'Overeenkomst gemaakt',
-};
+type Trial = EnrichedTrialLessonStudent;
 
 export default function MyTrial() {
 	const { user, isLoading } = useAuth();
@@ -40,29 +29,7 @@ export default function MyTrial() {
 				.eq('student_user_id', user.id)
 				.order('scheduled_date', { ascending: false });
 			const list = data ?? [];
-			const teacherIds = Array.from(new Set(list.map((t) => t.teacher_user_id)));
-			const lessonTypeIds = Array.from(new Set(list.map((t) => t.lesson_type_id)));
-			const profsRes = teacherIds.length
-				? await supabase
-						.from('profiles')
-						.select('user_id, first_name, last_name, email')
-						.in('user_id', teacherIds)
-				: { data: [] };
-			const ltsRes = lessonTypeIds.length
-				? await supabase.from('lesson_types').select('id, name').in('id', lessonTypeIds)
-				: { data: [] };
-			const profMap = new Map((profsRes.data ?? []).map((p) => [p.user_id, p] as const));
-			const ltMap = new Map((ltsRes.data ?? []).map((l) => [l.id, l.name] as const));
-			setTrials(
-				list.map((t) => {
-					const tp = profMap.get(t.teacher_user_id);
-					return {
-						...t,
-						teacher_name: tp ? [tp.first_name, tp.last_name].filter(Boolean).join(' ') || tp.email : '—',
-						lesson_type_name: ltMap.get(t.lesson_type_id) ?? null,
-					};
-				}),
-			);
+			setTrials((await enrichTrialLessons(list)) as Trial[]);
 			setLoading(false);
 		})();
 	}, [user]);
@@ -115,7 +82,7 @@ export default function MyTrial() {
 								<div className="text-lg font-semibold">{latest.lesson_type_name ?? 'Proefles'}</div>
 								<div className="text-sm text-muted-foreground">Docent: {latest.teacher_name}</div>
 							</div>
-							<Badge variant="secondary">{STATUS_LABEL[latest.status] ?? latest.status}</Badge>
+							<Badge variant="secondary">{getTrialStatusLabel(latest.status, 'student')}</Badge>
 						</div>
 						<div className="text-sm">
 							<div>

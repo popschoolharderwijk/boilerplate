@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LuPencil } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,12 @@ import {
 import { Label } from '@/components/ui/label';
 import { SectionSkeleton } from '@/components/ui/page-skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTeacherAvailability } from '@/hooks/useTeacherAvailability';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import { AVAILABILITY_CONFIG, DEFAULT_END_TIME, DEFAULT_START_TIME } from '@/lib/availability';
 import { DAY_NAMES_DISPLAY, displayDayToDbDay } from '@/lib/date/day-index';
+import { deleteTeacherAvailability, insertTeacherAvailability } from '@/lib/teachers/teacherAvailabilityApi';
 import { formatTime } from '@/lib/time/time-format';
-
-type Availability = Tables<'teacher_availability'>;
 
 interface AvailabilityBlock {
 	id: string;
@@ -58,8 +57,7 @@ const HOURS = Array.from(
 );
 
 export function TeacherAvailabilitySection({ teacherUserId, canEdit }: TeacherAvailabilitySectionProps) {
-	const [availability, setAvailability] = useState<Availability[]>([]);
-	const [loading, setLoading] = useState(true);
+	const { availability, loading, loadAvailability } = useTeacherAvailability(teacherUserId);
 	const [addDialogOpen, setAddDialogOpen] = useState(false);
 	const [selectedSlot, setSelectedSlot] = useState<{ day: number; time: string } | null>(null);
 	const [editingBlock, setEditingBlock] = useState<AvailabilityBlock | null>(null);
@@ -67,33 +65,6 @@ export function TeacherAvailabilitySection({ teacherUserId, canEdit }: TeacherAv
 		start_time: DEFAULT_START_TIME,
 		end_time: DEFAULT_END_TIME,
 	});
-
-	const loadAvailability = useCallback(async () => {
-		if (!teacherUserId) return;
-
-		setLoading(true);
-
-		const { data, error } = await supabase
-			.from('teacher_availability')
-			.select('*')
-			.eq('teacher_user_id', teacherUserId)
-			.order('day_of_week', { ascending: true })
-			.order('start_time', { ascending: true });
-
-		if (error) {
-			console.error('Error loading availability:', error);
-			toast.error('Fout bij laden beschikbaarheid');
-			setLoading(false);
-			return;
-		}
-
-		setAvailability((data as Availability[]) ?? []);
-		setLoading(false);
-	}, [teacherUserId]);
-
-	useEffect(() => {
-		loadAvailability();
-	}, [loadAvailability]);
 
 	const handleAdd = async () => {
 		if (!teacherUserId || !selectedSlot) return;
@@ -106,22 +77,14 @@ export function TeacherAvailabilitySection({ teacherUserId, canEdit }: TeacherAv
 		// Convert display day to database day
 		const dbDay = displayDayToDbDay(selectedSlot.day);
 
-		const { error } = await supabase
-			.from('teacher_availability')
-			.insert({
-				teacher_user_id: teacherUserId,
-				day_of_week: dbDay,
-				start_time: form.start_time,
-				end_time: form.end_time,
-			})
-			.select()
-			.single();
+		const { error } = await insertTeacherAvailability({
+			teacher_user_id: teacherUserId,
+			day_of_week: dbDay,
+			start_time: form.start_time,
+			end_time: form.end_time,
+		});
 
 		if (error) {
-			console.error('Error adding availability:', error);
-			toast.error('Fout bij toevoegen beschikbaarheid', {
-				description: error.message,
-			});
 			return;
 		}
 
@@ -161,13 +124,9 @@ export function TeacherAvailabilitySection({ teacherUserId, canEdit }: TeacherAv
 	};
 
 	const handleDelete = async (id: string) => {
-		const { error } = await supabase.from('teacher_availability').delete().eq('id', id);
+		const { error } = await deleteTeacherAvailability(id);
 
 		if (error) {
-			console.error('Error deleting availability:', error);
-			toast.error('Fout bij verwijderen beschikbaarheid', {
-				description: error.message,
-			});
 			return;
 		}
 

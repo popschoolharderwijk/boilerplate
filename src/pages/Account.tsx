@@ -19,8 +19,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getUserInitials } from '@/components/ui/user-display';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { removeUserAvatarFiles } from '@/lib/storage/avatars';
 import { cn } from '@/lib/utils';
 
 type AccountTab = 'profile' | 'appearance' | 'danger';
@@ -132,13 +134,7 @@ export default function Account({ defaultTab = 'profile' }: AccountProps) {
 		const filePath = fileName;
 		setSaving(true);
 
-		const { data: existingFiles } = await supabase.storage.from('avatars').list('', { search: user.id });
-		if (existingFiles && existingFiles.length > 0) {
-			const filesToDelete = existingFiles.filter((f) => f.name.startsWith(user.id)).map((f) => f.name);
-			if (filesToDelete.length > 0) {
-				await supabase.storage.from('avatars').remove(filesToDelete);
-			}
-		}
+		await removeUserAvatarFiles(user.id);
 
 		const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
 		if (uploadError) {
@@ -170,17 +166,11 @@ export default function Account({ defaultTab = 'profile' }: AccountProps) {
 	const handleAvatarDelete = async () => {
 		if (!user) return;
 		setSaving(true);
-		const { data: existingFiles } = await supabase.storage.from('avatars').list('', { search: user.id });
-		if (existingFiles && existingFiles.length > 0) {
-			const filesToDelete = existingFiles.filter((f) => f.name.startsWith(user.id)).map((f) => f.name);
-			if (filesToDelete.length > 0) {
-				const { error: deleteError } = await supabase.storage.from('avatars').remove(filesToDelete);
-				if (deleteError) {
-					toast.error('Fout bij verwijderen avatar', { description: deleteError.message });
-					setSaving(false);
-					return;
-				}
-			}
+		const { error: deleteError } = await removeUserAvatarFiles(user.id);
+		if (deleteError) {
+			toast.error('Fout bij verwijderen avatar', { description: deleteError.message });
+			setSaving(false);
+			return;
 		}
 		const { error: updateError } = await supabase
 			.from('profiles')
@@ -234,12 +224,11 @@ export default function Account({ defaultTab = 'profile' }: AccountProps) {
 		}
 	};
 
-	const userInitials =
-		profile?.first_name && profile?.last_name
-			? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-			: profile?.first_name
-				? profile.first_name.slice(0, 2).toUpperCase()
-				: user?.email?.slice(0, 2).toUpperCase() || 'U';
+	const userInitials = getUserInitials({
+		first_name: profile?.first_name ?? null,
+		last_name: profile?.last_name ?? null,
+		email: user?.email ?? null,
+	});
 
 	if (loading) {
 		return (

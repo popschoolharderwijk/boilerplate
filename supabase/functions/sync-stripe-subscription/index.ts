@@ -3,10 +3,10 @@
 // For scheduled rows (no stripe_subscription_id yet) we look up the schedule
 // and use its released_subscription when available.
 // Admin/site_admin only.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
+import { createSupabaseClients, requireAdminUser } from '../_shared/supabase.ts';
 
 interface Body {
 	stripe_subscription_id?: string;
@@ -14,45 +14,18 @@ interface Body {
 }
 
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
 	if (!body.stripe_subscription_id && !body.lesson_agreement_id) {
 		return jsonResponse(400, { error: 'Geef stripe_subscription_id of lesson_agreement_id mee' });
 	}
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-
-	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin') return jsonResponse(403, { error: 'Geen rechten' });
+	const authn = await requireAdminUser(userClient);
+	if (!authn.ok) return authn.response;
 
 	try {
 		const stripe = getStripe();

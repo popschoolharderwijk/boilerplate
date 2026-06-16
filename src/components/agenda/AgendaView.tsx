@@ -27,6 +27,7 @@ import { cancelLesson } from '@/lib/agenda/cancelLesson';
 import { deleteAgendaEvent } from '@/lib/agenda/deleteAgendaEvent';
 import { moveAgendaEvent } from '@/lib/agenda/moveAgendaEvent';
 import { needsRecurrenceChoice } from '@/lib/agenda/needsRecurrenceChoice';
+import { notifyAgendaOpResult } from '@/lib/agenda/notifyAgendaOpResult';
 import { revertDeviation } from '@/lib/agenda/revertDeviation';
 import { AVAILABILITY_CONFIG } from '@/lib/availability';
 
@@ -40,8 +41,6 @@ export interface AgendaViewProps {
 export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaViewProps = {}) {
 	const { user, isPrivileged, isTeacher } = useAuth();
 	const effectiveUserId = viewUserId ?? user?.id;
-	// By default, only teachers and staff/admins may change or cancel lessons.
-	// Students get a read-only agenda — they cannot cancel, reschedule, or edit.
 	const canEdit = canEditProp ?? (!!user && (isPrivileged || isTeacher));
 	const isOwnAgenda = !viewUserId;
 
@@ -57,130 +56,112 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	} = useAgendaData(effectiveUserId);
 
 	const ui = useAgendaUI();
-	const {
-		currentView,
-		setCurrentView,
-		currentDate,
-		setCurrentDate,
-		selectedEvent,
-		setSelectedEvent,
-		formDialogOpen,
-		setFormDialogOpen,
-		editingEvent,
-		setEditingEvent,
-		newEventSlot,
-		setNewEventSlot,
-		openingForEditRef,
-		isCancelling,
-		setIsCancelling,
-		cancelLessonConfirmOpen,
-		setCancelLessonConfirmOpen,
-		recurrenceChoiceOpen,
-		setRecurrenceChoiceOpen,
-		recurrenceChoiceAction,
-		setRecurrenceChoiceAction,
-		pendingDrop,
-		setPendingDrop,
-		pendingCancelScope,
-		setPendingCancelScope,
-		optimisticMove,
-		setOptimisticMove,
-		studentInfoModal,
-		setStudentInfoModal,
-	} = ui;
 
 	useEffect(() => {
-		if (!formDialogOpen) openingForEditRef.current = false;
-	}, [formDialogOpen, openingForEditRef]);
+		if (!ui.formDialogOpen) ui.openingForEditRef.current = false;
+	}, [ui.formDialogOpen, ui.openingForEditRef]);
 
 	const events = useMemo(
-		() => buildCalendarEvents(getEnrichedEvents(currentDate, effectiveUserId), optimisticMove),
-		[getEnrichedEvents, currentDate, effectiveUserId, optimisticMove],
+		() => buildCalendarEvents(getEnrichedEvents(ui.currentDate, effectiveUserId), ui.optimisticMove),
+		[getEnrichedEvents, ui.currentDate, effectiveUserId, ui.optimisticMove],
 	);
 
+	const selectedOccurrenceDeviation = useMemo(() => {
+		if (!ui.selectedEvent?.resource.eventId || !ui.selectedEvent?.resource.originalDate || !ui.editingEvent?.id)
+			return null;
+		return (
+			deviationsByEventId.get(ui.selectedEvent.resource.eventId)?.get(ui.selectedEvent.resource.originalDate) ??
+			null
+		);
+	}, [
+		ui.selectedEvent?.resource.eventId,
+		ui.selectedEvent?.resource.originalDate,
+		ui.editingEvent?.id,
+		deviationsByEventId,
+	]);
+
 	const occurrenceParticipantIds = useMemo(() => {
-		if (!selectedEvent?.resource.eventId || !selectedEvent?.resource.originalDate || !editingEvent?.id) return null;
-		const d = deviationsByEventId.get(selectedEvent.resource.eventId)?.get(selectedEvent.resource.originalDate);
-		const ids = d?.participant_ids;
+		const ids = selectedOccurrenceDeviation?.participant_ids;
 		return ids && ids.length > 0 ? ids : null;
-	}, [selectedEvent?.resource.eventId, selectedEvent?.resource.originalDate, editingEvent?.id, deviationsByEventId]);
+	}, [selectedOccurrenceDeviation]);
 
 	const occurrenceOverrides = useMemo(() => {
-		if (!selectedEvent?.resource.eventId || !selectedEvent?.resource.originalDate || !editingEvent?.id) return null;
-		const d = deviationsByEventId.get(selectedEvent.resource.eventId)?.get(selectedEvent.resource.originalDate);
+		const d = selectedOccurrenceDeviation;
 		return d ? { title: d.title ?? null, description: d.description ?? null, color: d.color ?? null } : null;
-	}, [selectedEvent?.resource.eventId, selectedEvent?.resource.originalDate, editingEvent?.id, deviationsByEventId]);
+	}, [selectedOccurrenceDeviation]);
 
 	const occurrenceTimes = useMemo(() => {
-		if (!selectedEvent?.resource.isDeviation) return { start: null, end: null };
+		if (!ui.selectedEvent?.resource.isDeviation) return { start: null, end: null };
 		return {
-			start: selectedEvent.start ? formatTimeFromDate(selectedEvent.start) : null,
-			end: selectedEvent.end ? formatTimeFromDate(selectedEvent.end) : null,
+			start: ui.selectedEvent.start ? formatTimeFromDate(ui.selectedEvent.start) : null,
+			end: ui.selectedEvent.end ? formatTimeFromDate(ui.selectedEvent.end) : null,
 		};
-	}, [selectedEvent]);
+	}, [ui.selectedEvent]);
 
 	const readonlyParticipantIds = useMemo(() => {
-		if (editingEvent?.source_type !== 'lesson_agreement' || !editingEvent.source_id) return [];
-		const agreement = agreementsMap.get(editingEvent.source_id) as AgendaLessonAgreement | undefined;
+		if (ui.editingEvent?.source_type !== 'lesson_agreement' || !ui.editingEvent.source_id) return [];
+		const agreement = agreementsMap.get(ui.editingEvent.source_id) as AgendaLessonAgreement | undefined;
 		if (!agreement) return [];
 		const ids: string[] = [agreement.student_user_id];
 		if (agreement.teacherUserId) ids.push(agreement.teacherUserId);
 		return ids;
-	}, [editingEvent?.source_type, editingEvent?.source_id, agreementsMap]);
+	}, [ui.editingEvent?.source_type, ui.editingEvent?.source_id, agreementsMap]);
 
 	const canAddParticipants = useMemo(() => {
 		if (!isPrivileged) return false;
-		if (editingEvent?.source_type !== 'lesson_agreement') return true;
-		if (!editingEvent.source_id) return true;
-		const agreement = agreementsMap.get(editingEvent.source_id) as AgendaLessonAgreement | undefined;
+		if (ui.editingEvent?.source_type !== 'lesson_agreement') return true;
+		if (!ui.editingEvent.source_id) return true;
+		const agreement = agreementsMap.get(ui.editingEvent.source_id) as AgendaLessonAgreement | undefined;
 		if (!agreement) return true;
 		return effectiveUserId === agreement.teacherUserId;
-	}, [isPrivileged, editingEvent?.source_type, editingEvent?.source_id, agreementsMap, effectiveUserId]);
+	}, [isPrivileged, ui.editingEvent?.source_type, ui.editingEvent?.source_id, agreementsMap, effectiveUserId]);
 
 	const deviationInfo = useMemo((): DeviationInfo | null => {
 		if (
-			!(selectedEvent?.resource.isDeviation || selectedEvent?.resource.isCancelled) ||
-			!selectedEvent.resource.deviationId ||
-			!selectedEvent.resource.originalDate ||
-			!selectedEvent.resource.originalStartTime
+			!(ui.selectedEvent?.resource.isDeviation || ui.selectedEvent?.resource.isCancelled) ||
+			!ui.selectedEvent.resource.deviationId ||
+			!ui.selectedEvent.resource.originalDate ||
+			!ui.selectedEvent.resource.originalStartTime
 		)
 			return null;
 		return {
-			deviationId: selectedEvent.resource.deviationId,
-			originalDate: selectedEvent.resource.originalDate,
-			originalStartTime: selectedEvent.resource.originalStartTime,
-			isCancelled: selectedEvent.resource.isCancelled,
-			hasTimeOrDateChange: selectedEvent.resource.hasTimeOrDateChange ?? false,
+			deviationId: ui.selectedEvent.resource.deviationId,
+			originalDate: ui.selectedEvent.resource.originalDate,
+			originalStartTime: ui.selectedEvent.resource.originalStartTime,
+			isCancelled: ui.selectedEvent.resource.isCancelled,
+			hasTimeOrDateChange: ui.selectedEvent.resource.hasTimeOrDateChange ?? false,
 		};
 	}, [
-		selectedEvent?.resource.isDeviation,
-		selectedEvent?.resource.isCancelled,
-		selectedEvent?.resource.deviationId,
-		selectedEvent?.resource.originalDate,
-		selectedEvent?.resource.originalStartTime,
-		selectedEvent?.resource.hasTimeOrDateChange,
+		ui.selectedEvent?.resource.isDeviation,
+		ui.selectedEvent?.resource.isCancelled,
+		ui.selectedEvent?.resource.deviationId,
+		ui.selectedEvent?.resource.originalDate,
+		ui.selectedEvent?.resource.originalStartTime,
+		ui.selectedEvent?.resource.hasTimeOrDateChange,
 	]);
 
 	const lessonType = useMemo(
 		() =>
-			selectedEvent?.resource.lessonTypeName
+			ui.selectedEvent?.resource.lessonTypeName
 				? {
-						name: selectedEvent.resource.lessonTypeName,
-						icon: selectedEvent.resource.lessonTypeIcon,
-						color: selectedEvent.resource.lessonTypeColor,
+						name: ui.selectedEvent.resource.lessonTypeName,
+						icon: ui.selectedEvent.resource.lessonTypeIcon,
+						color: ui.selectedEvent.resource.lessonTypeColor,
 					}
 				: null,
 		[
-			selectedEvent?.resource.lessonTypeName,
-			selectedEvent?.resource.lessonTypeIcon,
-			selectedEvent?.resource.lessonTypeColor,
+			ui.selectedEvent?.resource.lessonTypeName,
+			ui.selectedEvent?.resource.lessonTypeIcon,
+			ui.selectedEvent?.resource.lessonTypeColor,
 		],
 	);
+
+	const reloadAgenda = useCallback(() => loadData(false), [loadData]);
 
 	const handleEventDrop = useCallback(
 		async (args: { event: CalendarEvent; start: Date; end: Date }, scope: RecurrenceScope) => {
 			if (!canEdit || !user) return;
-			setOptimisticMove({ originalEvent: args.event, newStart: args.start, newEnd: args.end });
+			ui.setOptimisticMove({ originalEvent: args.event, newStart: args.start, newEnd: args.end });
 			const result = await moveAgendaEvent({
 				event: args.event,
 				start: args.start,
@@ -192,17 +173,16 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				agreementsMap,
 			});
 			if (!result.ok) {
-				setOptimisticMove(null);
+				ui.setOptimisticMove(null);
 				toast.error(result.message);
 				return;
 			}
 			if (result.message) {
-				toast.success(result.message);
-				await loadData(false);
+				await notifyAgendaOpResult(result, reloadAgenda);
 			}
-			setOptimisticMove(null);
+			ui.setOptimisticMove(null);
 		},
-		[canEdit, user, agendaEvents, deviations, agreementsMap, loadData, setOptimisticMove],
+		[canEdit, user, agendaEvents, deviations, agreementsMap, reloadAgenda, ui],
 	);
 
 	const onEventDropWithChoice = useCallback(
@@ -220,11 +200,11 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				handleEventDrop(args, 'single');
 				return;
 			}
-			setPendingDrop(args);
-			setRecurrenceChoiceAction('change');
-			setRecurrenceChoiceOpen(true);
+			ui.setPendingDrop(args);
+			ui.setRecurrenceChoiceAction('change');
+			ui.setRecurrenceChoiceOpen(true);
 		},
-		[handleEventDrop, setPendingDrop, setRecurrenceChoiceAction, setRecurrenceChoiceOpen],
+		[handleEventDrop, ui],
 	);
 
 	const handleCancelLesson = useCallback(
@@ -233,10 +213,10 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 			cancellationType?: CancellationType,
 			cancelledParticipantIds?: string[] | null,
 		) => {
-			if (!selectedEvent || !user) return;
-			setIsCancelling(true);
+			if (!ui.selectedEvent || !user) return;
+			ui.setIsCancelling(true);
 			const result = await cancelLesson({
-				selectedEvent,
+				selectedEvent: ui.selectedEvent,
 				user,
 				agendaEvents,
 				agreementsMap,
@@ -246,51 +226,41 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 			});
 			if (!result.ok) {
 				toast.error(result.message);
-				setIsCancelling(false);
+				ui.setIsCancelling(false);
 				return;
 			}
 			toast.success(result.message);
-			setFormDialogOpen(false);
-			setSelectedEvent(null);
-			setCancelLessonConfirmOpen(false);
-			setIsCancelling(false);
+			ui.setFormDialogOpen(false);
+			ui.setSelectedEvent(null);
+			ui.setCancelLessonConfirmOpen(false);
+			ui.setIsCancelling(false);
 			loadData(false);
 		},
-		[
-			selectedEvent,
-			user,
-			agendaEvents,
-			agreementsMap,
-			loadData,
-			setSelectedEvent,
-			setCancelLessonConfirmOpen,
-			setIsCancelling,
-			setFormDialogOpen,
-		],
+		[ui, user, agendaEvents, agreementsMap, loadData],
 	);
 
 	const handleSelectEvent = useCallback(
 		async (event: CalendarEvent) => {
 			const eventId = event.resource?.eventId;
 			if (!eventId) return;
-			setSelectedEvent(event);
+			ui.setSelectedEvent(event);
 			const { data } = await supabase.from('agenda_events').select('*').eq('id', eventId).single();
 			if (data) {
-				openingForEditRef.current = true;
-				setEditingEvent(data as AgendaEventRow);
-				setFormDialogOpen(true);
+				ui.openingForEditRef.current = true;
+				ui.setEditingEvent(data as AgendaEventRow);
+				ui.setFormDialogOpen(true);
 			}
 		},
-		[setSelectedEvent, setEditingEvent, setFormDialogOpen, openingForEditRef],
+		[ui],
 	);
 
 	const handleSelectSlot = useCallback(
 		(slotInfo: { start: Date; end: Date }) => {
-			setNewEventSlot({ start: slotInfo.start, end: slotInfo.end });
-			setEditingEvent(null);
-			setFormDialogOpen(true);
+			ui.setNewEventSlot({ start: slotInfo.start, end: slotInfo.end });
+			ui.setEditingEvent(null);
+			ui.setFormDialogOpen(true);
 		},
-		[setNewEventSlot, setEditingEvent, setFormDialogOpen],
+		[ui],
 	);
 
 	const scrollToTime = useMemo(() => {
@@ -302,16 +272,16 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 
 	const calendarProps = getCalendarProps({
 		events,
-		currentView,
-		currentDate,
+		currentView: ui.currentView,
+		currentDate: ui.currentDate,
 		canEdit,
 		isOwnAgenda,
 		scrollToTime,
 		onEventDrop: onEventDropWithChoice,
 		onSelectEvent: handleSelectEvent,
 		onSelectSlot: handleSelectSlot,
-		setCurrentView,
-		setCurrentDate,
+		setCurrentView: ui.setCurrentView,
+		setCurrentDate: ui.setCurrentDate,
 		noLessonPeriods,
 	});
 
@@ -321,107 +291,106 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		<div className="flex flex-col gap-4 h-[calc(100vh-112px)] min-h-[640px]">
 			<div className="popschool-calendar rounded-lg border border-border bg-card overflow-hidden flex-1 flex flex-col">
 				<ScrollArea className="flex-1">
-					<CalendarViewProvider value={currentView}>
+					<CalendarViewProvider value={ui.currentView}>
 						<DragAndDropCalendar {...calendarProps} />
 					</CalendarViewProvider>
 				</ScrollArea>
 			</div>
-			<Legend show={currentView !== 'agenda'} />
+			<Legend show={ui.currentView !== 'agenda'} />
 
 			<RecurrenceChoiceDialog
-				open={recurrenceChoiceOpen}
+				open={ui.recurrenceChoiceOpen}
 				onOpenChange={(open) => {
-					setRecurrenceChoiceOpen(open);
-					if (!open) setPendingDrop(null);
+					ui.setRecurrenceChoiceOpen(open);
+					if (!open) ui.setPendingDrop(null);
 				}}
-				action={recurrenceChoiceAction}
+				action={ui.recurrenceChoiceAction}
 				onChoose={(scope) => {
-					if (recurrenceChoiceAction === 'change' && pendingDrop) {
-						handleEventDrop(pendingDrop, scope);
-						setPendingDrop(null);
-					} else if (recurrenceChoiceAction === 'cancel') {
-						setPendingCancelScope(scope);
-						setCancelLessonConfirmOpen(true);
+					if (ui.recurrenceChoiceAction === 'change' && ui.pendingDrop) {
+						handleEventDrop(ui.pendingDrop, scope);
+						ui.setPendingDrop(null);
+					} else if (ui.recurrenceChoiceAction === 'cancel') {
+						ui.setPendingCancelScope(scope);
+						ui.setCancelLessonConfirmOpen(true);
 					}
 				}}
 				hideFutureOption={
-					recurrenceChoiceAction === 'cancel' &&
-					(selectedEvent?.resource.isLesson || selectedEvent?.resource.sourceType === 'lesson_agreement')
+					ui.recurrenceChoiceAction === 'cancel' &&
+					(ui.selectedEvent?.resource.isLesson ||
+						ui.selectedEvent?.resource.sourceType === 'lesson_agreement')
 				}
 			/>
 
 			<ConfirmCancelDialog
-				open={cancelLessonConfirmOpen}
-				onOpenChange={setCancelLessonConfirmOpen}
+				open={ui.cancelLessonConfirmOpen}
+				onOpenChange={ui.setCancelLessonConfirmOpen}
 				onConfirm={(cancellationType, cancelledIds) =>
-					handleCancelLesson(pendingCancelScope, cancellationType, cancelledIds)
+					handleCancelLesson(ui.pendingCancelScope, cancellationType, cancelledIds)
 				}
-				disabled={isCancelling}
-				participants={selectedEvent?.resource.isGroupLesson ? (selectedEvent.resource.users ?? []) : undefined}
-				initialCancelledIds={selectedEvent?.resource.cancelledParticipantIds ?? null}
+				disabled={ui.isCancelling}
+				participants={
+					ui.selectedEvent?.resource.isGroupLesson ? (ui.selectedEvent.resource.users ?? []) : undefined
+				}
+				initialCancelledIds={ui.selectedEvent?.resource.cancelledParticipantIds ?? null}
 			/>
 
 			<StudentInfoModal
-				open={studentInfoModal.open}
-				onOpenChange={(open) => setStudentInfoModal({ ...studentInfoModal, open })}
-				student={studentInfoModal.student}
+				open={ui.studentInfoModal.open}
+				onOpenChange={(open) => ui.setStudentInfoModal({ ...ui.studentInfoModal, open })}
+				student={ui.studentInfoModal.student}
 			/>
 
 			<AgendaEventFormDialog
-				open={formDialogOpen}
+				open={ui.formDialogOpen}
 				onOpenChange={(open) => {
-					setFormDialogOpen(open);
+					ui.setFormDialogOpen(open);
 					if (!open) {
-						setEditingEvent(null);
-						setNewEventSlot(null);
-						setSelectedEvent(null);
+						ui.setEditingEvent(null);
+						ui.setNewEventSlot(null);
+						ui.setSelectedEvent(null);
 					}
 				}}
-				event={editingEvent}
-				initialSlot={newEventSlot}
-				onSuccess={() => loadData(false)}
+				event={ui.editingEvent}
+				initialSlot={ui.newEventSlot}
+				onSuccess={reloadAgenda}
 				onDelete={
 					isOwnAgenda && user
 						? async (eventId: string, scope: DeleteScope, occurrenceDate?: string) => {
-								const result = await deleteAgendaEvent({
-									eventId,
-									scope,
-									occurrenceDate,
-									userId: user.id,
-								});
-								if (!result.ok) {
-									toast.error(result.message);
-									throw new Error(result.message);
-								}
-								toast.success(result.message);
-								await loadData(false);
+								await notifyAgendaOpResult(
+									await deleteAgendaEvent({
+										eventId,
+										scope,
+										occurrenceDate,
+										userId: user.id,
+									}),
+									reloadAgenda,
+									{ throwOnError: true },
+								);
 							}
 						: undefined
 				}
-				occurrenceDate={selectedEvent ? formatDateToDb(selectedEvent.start) : null}
+				occurrenceDate={ui.selectedEvent ? formatDateToDb(ui.selectedEvent.start) : null}
 				occurrenceParticipantIds={occurrenceParticipantIds}
 				occurrenceOverrides={occurrenceOverrides}
 				occurrenceStartTime={occurrenceTimes.start}
 				occurrenceEndTime={occurrenceTimes.end}
 				deviationInfo={deviationInfo}
 				onRevert={
-					(selectedEvent?.resource.isDeviation || selectedEvent?.resource.isCancelled) &&
-					selectedEvent.resource.deviationId &&
-					selectedEvent.resource.eventId &&
-					selectedEvent.resource.originalDate &&
+					(ui.selectedEvent?.resource.isDeviation || ui.selectedEvent?.resource.isCancelled) &&
+					ui.selectedEvent.resource.deviationId &&
+					ui.selectedEvent.resource.eventId &&
+					ui.selectedEvent.resource.originalDate &&
 					isOwnAgenda &&
 					user
 						? async () => {
-								const result = await revertDeviation({
-									eventId: selectedEvent.resource.eventId,
-									originalDate: selectedEvent.resource.originalDate,
-								});
-								if (!result.ok) {
-									toast.error(result.message);
-									throw new Error(result.message);
-								}
-								toast.success(result.message);
-								await loadData(false);
+								await notifyAgendaOpResult(
+									await revertDeviation({
+										eventId: ui.selectedEvent.resource.eventId,
+										originalDate: ui.selectedEvent.resource.originalDate,
+									}),
+									reloadAgenda,
+									{ throwOnError: true },
+								);
 							}
 						: undefined
 				}
@@ -429,38 +398,41 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				canAddParticipants={canAddParticipants}
 				lessonType={lessonType}
 				onCancelLesson={
-					selectedEvent?.resource.isCancelled && canEdit && user
+					ui.selectedEvent?.resource.isCancelled && canEdit && user
 						? () => handleCancelLesson('single')
 						: undefined
 				}
 				onOpenCancelConfirm={
-					selectedEvent && !selectedEvent.resource.isCancelled && canEdit && user
+					ui.selectedEvent && !ui.selectedEvent.resource.isCancelled && canEdit && user
 						? () => {
-								if (needsRecurrenceChoice(selectedEvent)) {
-									setRecurrenceChoiceAction('cancel');
-									setRecurrenceChoiceOpen(true);
+								if (needsRecurrenceChoice(ui.selectedEvent)) {
+									ui.setRecurrenceChoiceAction('cancel');
+									ui.setRecurrenceChoiceOpen(true);
 								} else {
-									setCancelLessonConfirmOpen(true);
+									ui.setCancelLessonConfirmOpen(true);
 								}
 							}
 						: undefined
 				}
-				isCancelling={isCancelling}
-				cancellationType={selectedEvent?.resource.cancellationType}
-				needsReschedule={selectedEvent?.resource.needsReschedule}
+				isCancelling={ui.isCancelling}
+				cancellationType={ui.selectedEvent?.resource.cancellationType}
+				needsReschedule={ui.selectedEvent?.resource.needsReschedule}
 				onMarkRescheduled={
-					selectedEvent?.resource.needsReschedule && selectedEvent?.resource.deviationId && canEdit && user
+					ui.selectedEvent?.resource.needsReschedule &&
+					ui.selectedEvent?.resource.deviationId &&
+					canEdit &&
+					user
 						? async () => {
 								const { error } = await supabase
 									.from('agenda_event_deviations')
 									.update({ needs_reschedule: false })
-									.eq('id', selectedEvent.resource.deviationId as string);
+									.eq('id', ui.selectedEvent.resource.deviationId as string);
 								if (error) {
 									toast.error('Fout bij markeren als ingehaald');
 									return;
 								}
 								toast.success('Les gemarkeerd als ingehaald');
-								await loadData(false);
+								await reloadAgenda();
 							}
 						: undefined
 				}

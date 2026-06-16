@@ -4,9 +4,9 @@
 // row is deleted so we do not end up in a half-finished state.
 //
 // Auth required. Toegestaan: admin, site_admin, teacher (staff).
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
+import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
 
 interface Body {
 	student_user_id_a: string;
@@ -23,7 +23,6 @@ interface Body {
 	signup_source?: string | null;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VALID_FREQUENCIES = new Set(['weekly', 'biweekly', 'monthly']);
@@ -100,48 +99,20 @@ function validate(body: unknown): { ok: true; value: Body } | { ok: false; error
 }
 
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
+	const begun = await beginAuthenticatedPostRequest<unknown>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body: raw } = begun;
 
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let raw: unknown;
-	try {
-		raw = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
 	const parsed = validate(raw);
 	if (!parsed.ok) return jsonResponse(400, { error: parsed.error });
 	const body = parsed.value;
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const auth = await requireAuthenticatedClients(authHeader);
+	if (!auth.ok) return auth.response;
+	const { userClient, admin, user } = auth;
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-
-	// Authz: only staff (admin/site_admin/teacher) may create duo agreements.
-	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin' && role !== 'teacher') {
-		return jsonResponse(403, { error: 'Geen rechten' });
-	}
+	const denied = await requireUserRole(userClient, user.id, ['admin', 'site_admin', 'teacher']);
+	if (denied) return denied;
 
 	// Verify that the lesson type is actually a duo lesson type.
 	const { data: lessonType, error: ltErr } = await admin

@@ -1,3 +1,4 @@
+import { formatDateToDb } from '@/lib/date/date-format';
 import { getOccurrenceDatesInRange } from '@/lib/lessonHelpers';
 import { splitTimeRangeIntoSlots, timeRangesOverlap, timeToMinutes } from '@/lib/time/time-range';
 import type { LessonFrequency } from '@/types/lesson-agreements';
@@ -140,13 +141,6 @@ function* iterateDates(periodStart: Date, periodEnd: Date): Generator<Date> {
 	}
 }
 
-function toDateStr(d: Date): string {
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${y}-${m}-${day}`;
-}
-
 /**
  * Compute free time slots across multiple teachers within a date period.
  * Returns slots sorted chronologically by (date, start_time, teacher_user_id).
@@ -167,7 +161,7 @@ export function getFreeSlotsAcrossTeachers(
 
 	for (const date of iterateDates(periodStart, periodEnd)) {
 		const dow = date.getDay();
-		const dateStr = toDateStr(date);
+		const dateStr = formatDateToDb(date);
 
 		for (const [teacherId, availability] of availabilityByTeacher) {
 			const dayAvail = availability.filter((a) => a.day_of_week === dow);

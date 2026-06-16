@@ -3,10 +3,10 @@
 // with newly computed amounts based on current `lesson_type_options`.
 //
 // Auth required. Privileged staff/admin only — students cannot trigger this.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { rebuildScheduleForAgreement } from '../_shared/billing.ts';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import { createSupabaseClients, requirePrivilegedUser } from '../_shared/supabase.ts';
 
 interface Body {
 	lesson_agreement_id?: string;
@@ -14,23 +14,10 @@ interface Body {
 	lesson_type_id?: string;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
-
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
 	if (body.lesson_agreement_id && !UUID_RE.test(body.lesson_agreement_id)) {
 		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
@@ -42,27 +29,10 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: 'Geef lesson_agreement_id of lesson_type_id mee' });
 	}
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-
-	// Privileged check via DB helper
-	const { data: privileged, error: privErr } = await userClient.rpc('is_privileged');
-	if (privErr || privileged !== true) return jsonResponse(403, { error: 'Onvoldoende rechten' });
+	const authn = await requirePrivilegedUser(userClient);
+	if (!authn.ok) return authn.response;
 
 	try {
 		const stripe = getStripe();

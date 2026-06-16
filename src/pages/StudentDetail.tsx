@@ -2,17 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { LuArrowLeft } from 'react-icons/lu';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { SignupRequestItem } from '@/components/students/SignupRequestItem';
-import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
+import { StudentAgreementsCard, StudentSignupRequestsCard } from '@/components/students/StudentProfileCards';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { getDisplayName } from '@/lib/display-name';
+import { fetchSignupRequestsByEmail } from '@/lib/signup-requests/signupRequestMappers';
+import { fetchStudentAgreementsWithRelations } from '@/lib/students/fetchStudentAgreements';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
 interface ProfileData {
@@ -50,99 +51,12 @@ export default function StudentDetail() {
 			}
 			setProfile(profileData);
 
-			// Load agreements (multi-step to avoid RLS join issues)
-			const { data: agreementsData, error: agreementsError } = await supabase
-				.from('lesson_agreements')
-				.select(
-					'id, day_of_week, start_time, start_date, end_date, is_active, notes, duration_minutes, frequency, price_per_lesson, teacher_user_id, lesson_type_id',
-				)
-				.eq('student_user_id', userId)
-				.order('is_active', { ascending: false })
-				.order('start_date', { ascending: false });
-			if (agreementsError) console.error('agreements error', agreementsError);
-
-			const teacherIds = Array.from(
-				new Set((agreementsData ?? []).map((a) => a.teacher_user_id).filter(Boolean)),
-			);
-			const lessonTypeIds = Array.from(
-				new Set((agreementsData ?? []).map((a) => a.lesson_type_id).filter(Boolean)),
-			);
-
-			const [teacherProfilesRes, lessonTypesRes] = await Promise.all([
-				teacherIds.length > 0
-					? supabase
-							.from('profiles')
-							.select('user_id, first_name, last_name, avatar_url')
-							.in('user_id', teacherIds)
-					: Promise.resolve({ data: [], error: null }),
-				lessonTypeIds.length > 0
-					? supabase.from('lesson_types').select('id, name, icon, color').in('id', lessonTypeIds)
-					: Promise.resolve({ data: [], error: null }),
+			const [agreementsData, signupData] = await Promise.all([
+				fetchStudentAgreementsWithRelations(userId),
+				profileData.email ? fetchSignupRequestsByEmail(profileData.email) : Promise.resolve([]),
 			]);
-
-			const teacherProfileMap = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p]));
-			const lessonTypeMap = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt]));
-
-			const transformed: LessonAgreementWithTeacher[] = (agreementsData ?? []).map((a) => {
-				const p = teacherProfileMap.get(a.teacher_user_id);
-				const lt = lessonTypeMap.get(a.lesson_type_id);
-				return {
-					id: a.id,
-					day_of_week: a.day_of_week,
-					start_time: a.start_time,
-					start_date: a.start_date,
-					end_date: a.end_date,
-					is_active: a.is_active,
-					notes: a.notes,
-					duration_minutes: a.duration_minutes,
-					frequency: a.frequency as LessonAgreementWithTeacher['frequency'],
-					price_per_lesson: a.price_per_lesson,
-					teacher: {
-						first_name: p?.first_name ?? null,
-						last_name: p?.last_name ?? null,
-						avatar_url: p?.avatar_url ?? null,
-					},
-					lesson_type: {
-						id: lt?.id ?? '',
-						name: lt?.name ?? '',
-						icon: lt?.icon ?? null,
-						color: lt?.color ?? null,
-					},
-				};
-			});
-			setAgreements(transformed);
-
-			// Load signup requests by email
-			if (profileData.email) {
-				const { data: reqData } = await supabase
-					.from('lesson_signup_requests')
-					.select('*, lesson_types(name), lesson_groups(name)')
-					.eq('email', profileData.email)
-					.order('created_at', { ascending: false });
-				setSignupRequests(
-					(reqData ?? []).map((r) => {
-						const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
-						const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
-						return {
-							id: r.id,
-							first_name: r.first_name,
-							last_name: r.last_name,
-							email: r.email,
-							phone_number: r.phone_number,
-							parent_name: r.parent_name,
-							parent_email: r.parent_email,
-							parent_phone_number: r.parent_phone_number,
-							date_of_birth: r.date_of_birth,
-							notes: r.notes,
-							status: r.status,
-							created_at: r.created_at,
-							processed_at: r.processed_at,
-							lesson_type_name: lt?.name ?? null,
-							lesson_group_name: lg?.name ?? null,
-						};
-					}),
-				);
-			}
+			setAgreements(agreementsData);
+			setSignupRequests(signupData);
 			setLoading(false);
 		} catch (e) {
 			console.error(e);
@@ -189,48 +103,20 @@ export default function StudentDetail() {
 				</CardHeader>
 			</Card>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Lesovereenkomsten</CardTitle>
-					<CardDescription>Alle overeenkomsten van deze leerling</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{agreements.length === 0 ? (
-						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten</p>
-					) : (
-						<div className="space-y-4">
-							{agreements.map((a) => (
-								<div key={a.id} className="space-y-2">
-									<LessonAgreementItem
-										agreement={a}
-										studentUserId={userId}
-										lessonTypeId={a.lesson_type.id}
-									/>
-									{isPrivileged && <SubscriptionCard lessonAgreementId={a.id} />}
-								</div>
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
+			<StudentAgreementsCard
+				agreements={agreements}
+				description="Alle overeenkomsten van deze leerling"
+				emptyMessage="Geen lesovereenkomsten"
+				studentUserId={userId}
+				showSubscription={isPrivileged}
+			/>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Aanmeldingen</CardTitle>
-					<CardDescription>Aanmeldingen gekoppeld aan dit e-mailadres</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{signupRequests.length === 0 ? (
-						<p className="text-sm text-muted-foreground">Geen aanmeldingen</p>
-					) : (
-						<div className="flex flex-wrap gap-2">
-							{signupRequests.map((r) => (
-								<SignupRequestItem key={r.id} request={r} />
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
+			<StudentSignupRequestsCard
+				requests={signupRequests}
+				description="Aanmeldingen gekoppeld aan dit e-mailadres"
+				emptyMessage="Geen aanmeldingen"
+				renderItem={(request) => <SignupRequestItem key={request.id} request={request} />}
+			/>
 		</div>
 	);
 }

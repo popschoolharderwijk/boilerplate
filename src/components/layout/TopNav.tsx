@@ -21,6 +21,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getUserInitials } from '@/components/ui/user-display';
 import { getBaseBreadcrumb } from '@/config/breadcrumbs';
 import { NAV_LABELS } from '@/config/nav-labels';
 
@@ -102,12 +103,11 @@ export function TopNav() {
 		navigate('/login');
 	};
 
-	const userInitials =
-		profile?.first_name && profile?.last_name
-			? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-			: profile?.first_name
-				? profile.first_name.slice(0, 2).toUpperCase()
-				: user?.email?.slice(0, 2).toUpperCase() || 'U';
+	const userInitials = getUserInitials({
+		first_name: profile?.first_name ?? null,
+		last_name: profile?.last_name ?? null,
+		email: user?.email ?? null,
+	});
 
 	return (
 		<>

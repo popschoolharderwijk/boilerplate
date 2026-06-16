@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-
-function getHashError(): string | null {
-	if (!window.location.hash.includes('error=')) return null;
-	const hashParams = new URLSearchParams(window.location.hash.slice(1));
-	const code = hashParams.get('error_code');
-	if (code === 'otp_expired') return 'Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.';
-	return hashParams.get('error_description') ?? 'Inloggen via deze link is mislukt.';
-}
+import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
 export default function AuthCallback() {
 	const navigate = useNavigate();
@@ -16,7 +9,7 @@ export default function AuthCallback() {
 
 	useEffect(() => {
 		const handleCallback = async () => {
-			const hashError = getHashError();
+			const hashError = readMagicLinkUrlError();
 			if (hashError) {
 				setError(hashError);
 				return;

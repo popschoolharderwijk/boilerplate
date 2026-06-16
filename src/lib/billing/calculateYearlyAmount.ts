@@ -6,6 +6,7 @@
  * Pure function, no IO. Reuses existing `getOccurrenceDatesInRange`.
  */
 
+import { addDaysToDateStr } from '@/lib/date/date-format';
 import { getOccurrenceDatesInRange } from '@/lib/lessonHelpers';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 import { BILLING_MONTHS_PER_YEAR, isNonBillingMonthString } from './schoolYear';
@@ -59,15 +60,6 @@ function periodLengthDays(p: NoLessonPeriod): number {
 	return Math.round((end - start) / 86_400_000) + 1;
 }
 
-function shiftDateStr(dateStr: string, days: number): string {
-	const d = new Date(`${dateStr}T12:00:00`);
-	d.setDate(d.getDate() + days);
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${y}-${m}-${day}`;
-}
-
 export function calculateYearlyAmount(input: CalculateYearlyAmountInput): CalculateYearlyAmountResult {
 	const { periodStart, periodEnd, dayOfWeek, frequency, pricePerLessonCents } = input;
 	const billingMonths = input.billingMonths ?? BILLING_MONTHS_PER_YEAR;
@@ -88,13 +80,13 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 	const lessonDates: string[] = [];
 	let shiftDays = 0;
 	for (const original of allDates) {
-		let actual = shiftDays > 0 ? shiftDateStr(original, shiftDays) : original;
+		let actual = shiftDays > 0 ? addDaysToDateStr(original, shiftDays) : original;
 		while (true) {
 			const period = findNoLessonPeriod(actual, noLessonPeriods);
 			if (!period) break;
 			const len = periodLengthDays(period);
 			shiftDays += len;
-			actual = shiftDateStr(actual, len);
+			actual = addDaysToDateStr(actual, len);
 		}
 		if (actual > periodEnd) continue; // falls past hard end date
 		if (isNonBillingMonthString(actual)) continue; // August remains skipped

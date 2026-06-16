@@ -6,15 +6,15 @@ import type { SignupRequestDetail } from '@/components/students/SignupRequestDia
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { UserDisplay } from '@/components/ui/user-display';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useActiveLessonTypes } from '@/hooks/useActiveLessonTypes';
 import { useAuth } from '@/hooks/useAuth';
-import { useServerTableState } from '@/hooks/useServerTableState';
-import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
+import { useListPageTableState } from '@/hooks/useListPageTableState';
 import { supabase } from '@/integrations/supabase/client';
 import { getDisplayName } from '@/lib/display-name';
+import { fetchSignupRequestsByEmails } from '@/lib/signup-requests/signupRequestMappers';
 import {
 	flattenStudentWithAgreements,
 	type PaginatedStudentsResponseRaw,
@@ -24,14 +24,15 @@ import {
 export default function Students() {
 	const navigate = useNavigate();
 	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
+	const hasAccess = isPrivileged;
+	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [requestsByEmail, setRequestsByEmail] = useState<Map<string, SignupRequestDetail[]>>(new Map());
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
-	const [searchParams, setSearchParams] = useSearchParams();
-
-	// Server-side table state (pagination, sorting, search, filters)
 	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
 		searchQuery,
 		debouncedSearchQuery,
 		handleSearchChange,
@@ -42,14 +43,16 @@ export default function Students() {
 		sortColumn,
 		sortDirection,
 		handleSortChange,
-		filters,
-		setFilters,
-	} = useServerTableState({
+		statusFilter,
+		selectedLessonTypeId,
+		quickFilterGroups,
+	} = useListPageTableState({
 		storageKey: 'students',
 		initialSortColumn: 'student',
 		initialSortDirection: 'asc',
-		initialFilters: { statusFilter: 'all', selectedLessonTypeId: null },
+		lessonTypes,
 	});
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	// Apply ?search= query param once on mount
 	// biome-ignore lint/correctness/useExhaustiveDependencies: only run on mount
@@ -62,9 +65,6 @@ export default function Students() {
 		}
 	}, []);
 
-	const statusFilter = (filters.statusFilter as 'all' | 'active' | 'inactive') ?? 'all';
-	const selectedLessonTypeId = (filters.selectedLessonTypeId as string | null) ?? null;
-
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		student: StudentWithAgreements | null;
@@ -74,10 +74,6 @@ export default function Students() {
 		open: boolean;
 		student: StudentWithAgreements | null;
 	}>({ open: false, student: null });
-
-	// Check access - only admin, site_admin and staff can view this page
-	const hasAccess = isPrivileged;
-	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 
 	// Load paginated students
 	const loadStudents = useCallback(async () => {
@@ -122,40 +118,7 @@ export default function Students() {
 
 			// Load signup requests for the visible students (matched by email)
 			const emails = flat.map((s) => s.email).filter((e): e is string => Boolean(e));
-			if (emails.length) {
-				const { data: reqData } = await supabase
-					.from('lesson_signup_requests')
-					.select('*, lesson_types(name), lesson_groups(name)')
-					.in('email', emails);
-				const map = new Map<string, SignupRequestDetail[]>();
-				for (const r of reqData ?? []) {
-					const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
-					const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
-					const detail: SignupRequestDetail = {
-						id: r.id,
-						first_name: r.first_name,
-						last_name: r.last_name,
-						email: r.email,
-						phone_number: r.phone_number,
-						parent_name: r.parent_name,
-						parent_email: r.parent_email,
-						parent_phone_number: r.parent_phone_number,
-						date_of_birth: r.date_of_birth,
-						notes: r.notes,
-						status: r.status,
-						created_at: r.created_at,
-						processed_at: r.processed_at,
-						lesson_type_name: lt?.name ?? null,
-						lesson_group_name: lg?.name ?? null,
-					};
-					const arr = map.get(r.email) ?? [];
-					arr.push(detail);
-					map.set(r.email, arr);
-				}
-				setRequestsByEmail(map);
-			} else {
-				setRequestsByEmail(new Map());
-			}
+			setRequestsByEmail(await fetchSignupRequestsByEmails(emails));
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading students:', error);
@@ -171,6 +134,8 @@ export default function Students() {
 		selectedLessonTypeId,
 		sortColumn,
 		sortDirection,
+		setLoading,
+		setTotalCount,
 	]);
 
 	// Load students when dependencies change
@@ -179,22 +144,6 @@ export default function Students() {
 			loadStudents();
 		}
 	}, [authLoading, loadStudents]);
-
-	// Quick filter groups configuration
-	const statusFilterGroup = useStatusFilter(statusFilter, (v) =>
-		setFilters((prev) => ({ ...prev, statusFilter: v })),
-	);
-	const lessonTypeFilterGroup = useLessonTypeFilter(lessonTypes, selectedLessonTypeId, (v) =>
-		setFilters((prev) => ({ ...prev, selectedLessonTypeId: v })),
-	);
-
-	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
-		const groups: QuickFilterGroup[] = [statusFilterGroup];
-		if (lessonTypeFilterGroup) {
-			groups.push(lessonTypeFilterGroup);
-		}
-		return groups;
-	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
 	const columns: DataTableColumn<StudentWithAgreements>[] = useMemo(
 		() => [

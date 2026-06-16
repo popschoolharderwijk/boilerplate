@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
@@ -9,6 +9,7 @@ import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
+import { useServerPaginatedListState } from '@/hooks/useServerPaginatedListState';
 import { supabase } from '@/integrations/supabase/client';
 import {
 	flattenStudentWithAgreements,
@@ -19,16 +20,23 @@ import {
 export default function MyStudents() {
 	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
-
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
-	const [rowsPerPage, setRowsPerPage] = useState(20);
-
-	// Filter state
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
+		searchQuery,
+		debouncedSearchQuery,
+		handleSearchChange,
+		currentPage,
+		rowsPerPage,
+		handlePageChange,
+		handleRowsPerPageChange,
+	} = useServerPaginatedListState({
+		storageKey: 'my-students',
+		initialSortColumn: 'student',
+		initialSortDirection: 'asc',
+	});
 
 	const loadStudents = useCallback(async () => {
 		if (!isTeacher || !teacherUserId) return;
@@ -64,7 +72,7 @@ export default function MyStudents() {
 			toast.error('Fout bij laden leerlingen');
 			setLoading(false);
 		}
-	}, [isTeacher, teacherUserId, currentPage, rowsPerPage, debouncedSearchQuery]);
+	}, [isTeacher, teacherUserId, currentPage, rowsPerPage, debouncedSearchQuery, setLoading, setTotalCount]);
 
 	// Load students when dependencies change
 	useEffect(() => {
@@ -72,39 +80,6 @@ export default function MyStudents() {
 			loadStudents();
 		}
 	}, [authLoading, isTeacher, loadStudents]);
-
-	// Reset to page 1 when search changes - use a ref to track previous value
-	const prevSearchRef = React.useRef(debouncedSearchQuery);
-	useEffect(() => {
-		if (prevSearchRef.current !== debouncedSearchQuery) {
-			setCurrentPage(1);
-			prevSearchRef.current = debouncedSearchQuery;
-		}
-	}, [debouncedSearchQuery]);
-
-	// Handle search query change (debounced)
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
 
 	// Helper functions
 	const getUserInitials = useCallback((s: StudentWithAgreements): string => {

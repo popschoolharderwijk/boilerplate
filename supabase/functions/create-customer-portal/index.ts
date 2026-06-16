@@ -1,15 +1,13 @@
 // Create a Stripe Billing Portal session for the calling user.
 // Privileged staff may pass user_id to open portal on behalf of a student.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { handleCorsPreflight, jsonResponse, requireAuthHeader, requirePost, UUID_RE } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe } from '../_shared/stripe.ts';
+import { createSupabaseClients, fetchUserRole, requireAuthenticatedUser } from '../_shared/supabase.ts';
 
 interface Body {
 	user_id?: string; // optional for staff
 	return_url?: string;
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
 	const preflight = handleCorsPreflight(req);
@@ -17,8 +15,8 @@ Deno.serve(async (req) => {
 	const notPost = requirePost(req);
 	if (notPost) return notPost;
 
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
+	const authHeader = requireAuthHeader(req);
+	if (authHeader instanceof Response) return authHeader;
 
 	let body: Body = {};
 	try {
@@ -28,28 +26,15 @@ Deno.serve(async (req) => {
 	}
 	if (body.user_id && !UUID_RE.test(body.user_id)) return jsonResponse(400, { error: 'Ongeldig user_id' });
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
+	const authn = await requireAuthenticatedUser(userClient);
+	if (!authn.ok) return authn.response;
+	const { user } = authn;
 
 	let targetUserId = user.id;
 	if (body.user_id && body.user_id !== user.id) {
-		const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-		const role = roleRow?.role;
+		const role = await fetchUserRole(userClient, user.id);
 		if (role !== 'staff' && role !== 'admin' && role !== 'site_admin') {
 			return jsonResponse(403, { error: 'Geen rechten om portal voor andere gebruiker te openen' });
 		}

@@ -6,14 +6,13 @@ import { TeacherFormDialog } from '@/components/teachers/TeacherFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { UserDisplay } from '@/components/ui/user-display';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useActiveLessonTypes } from '@/hooks/useActiveLessonTypes';
 import { useAuth } from '@/hooks/useAuth';
-import { useServerTableState } from '@/hooks/useServerTableState';
-import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
+import { useListPageTableState } from '@/hooks/useListPageTableState';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateTimeShort } from '@/lib/date/date-format';
 import { getDisplayName } from '@/lib/display-name';
@@ -26,12 +25,14 @@ import {
 export default function Teachers() {
 	const { isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const navigate = useNavigate();
+	const hasAccess = isAdmin || isSiteAdmin;
+	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 	const [teachers, setTeachers] = useState<TeacherWithLessonTypes[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
-
-	// Server-side table state (pagination, sorting, search, filters)
 	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
 		searchQuery,
 		debouncedSearchQuery,
 		handleSearchChange,
@@ -42,17 +43,15 @@ export default function Teachers() {
 		sortColumn,
 		sortDirection,
 		handleSortChange,
-		filters,
-		setFilters,
-	} = useServerTableState({
+		statusFilter,
+		selectedLessonTypeId,
+		quickFilterGroups,
+	} = useListPageTableState({
 		storageKey: 'teachers',
 		initialSortColumn: 'teacher',
 		initialSortDirection: 'asc',
-		initialFilters: { statusFilter: 'all', selectedLessonTypeId: null },
+		lessonTypes,
 	});
-
-	const statusFilter = (filters.statusFilter as 'all' | 'active' | 'inactive') ?? 'all';
-	const selectedLessonTypeId = (filters.selectedLessonTypeId as string | null) ?? null;
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -62,10 +61,6 @@ export default function Teachers() {
 		open: boolean;
 		teacher: TeacherWithLessonTypes | null;
 	}>({ open: false, teacher: null });
-
-	// Check access - only admin and site_admin can view this page
-	const hasAccess = isAdmin || isSiteAdmin;
-	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 
 	// Load paginated teachers
 	const loadTeachers = useCallback(async () => {
@@ -121,6 +116,8 @@ export default function Teachers() {
 		selectedLessonTypeId,
 		sortColumn,
 		sortDirection,
+		setLoading,
+		setTotalCount,
 	]);
 
 	// Load teachers when dependencies change
@@ -129,22 +126,6 @@ export default function Teachers() {
 			loadTeachers();
 		}
 	}, [authLoading, loadTeachers]);
-
-	// Quick filter groups configuration
-	const statusFilterGroup = useStatusFilter(statusFilter, (v) =>
-		setFilters((prev) => ({ ...prev, statusFilter: v })),
-	);
-	const lessonTypeFilterGroup = useLessonTypeFilter(lessonTypes, selectedLessonTypeId, (v) =>
-		setFilters((prev) => ({ ...prev, selectedLessonTypeId: v })),
-	);
-
-	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
-		const groups: QuickFilterGroup[] = [statusFilterGroup];
-		if (lessonTypeFilterGroup) {
-			groups.push(lessonTypeFilterGroup);
-		}
-		return groups;
-	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
 	const columns: DataTableColumn<TeacherWithLessonTypes>[] = useMemo(
 		() => [

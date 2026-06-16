@@ -16,6 +16,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { UserSelectSingle } from '@/components/ui/user-select';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProfileContactByUserId } from '@/lib/profiles/fetchProfileContact';
 import type { Student } from '@/types/students';
 
 interface StudentFormDialogProps {
@@ -98,25 +99,14 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 
 	// Load user data when existing user is selected (only for email, not for form fields)
 	const loadUserData = async (userId: string) => {
-		const { data: profile, error } = await supabase
-			.from('profiles')
-			.select('email, first_name, last_name, phone_number')
-			.eq('user_id', userId)
-			.single();
+		const profile = await fetchProfileContactByUserId(userId);
+		if (!profile) return;
 
-		if (error) {
-			console.error('Error loading user data:', error);
-			toast.error('Fout bij laden gebruikersgegevens');
-			return;
-		}
-
-		if (profile) {
-			// Only set email for validation, keep other fields empty for existing users
-			setForm({
-				...emptyForm,
-				email: profile.email,
-			});
-		}
+		// Only set email for validation, keep other fields empty for existing users
+		setForm({
+			...emptyForm,
+			email: profile.email,
+		});
 	};
 
 	const handleOpenChange = (newOpen: boolean) => {

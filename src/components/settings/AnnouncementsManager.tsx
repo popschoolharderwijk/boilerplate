@@ -4,13 +4,13 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CrudFormDialogActions } from '@/components/ui/crud-form-dialog-actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { type Announcement, type AnnouncementAudience, useAnnouncements } from '@/hooks/useAnnouncements';
+import { useFormCrudDialogActions, useFormCrudDialogState } from '@/hooks/useFormCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 import { renderMarkdown } from '@/lib/markdown/render';
@@ -40,49 +40,48 @@ function audienceLabel(audience: AnnouncementAudience[]): string {
 
 export function AnnouncementsManager() {
 	const { announcements, isLoading, error, isSchemaMissing, refetch } = useAnnouncements();
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editing, setEditing] = useState<Announcement | null>(null);
-	const [form, setForm] = useState<FormState>(EMPTY_FORM);
-	const [saving, setSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
+	const crud = useFormCrudDialogState<FormState, Announcement>(EMPTY_FORM, (a) => ({
+		title: a.title,
+		body: a.body,
+		audienceTeachers: a.audience.includes('teachers'),
+		audienceStudents: a.audience.includes('students'),
+		publish: a.published_at !== null,
+	}));
+	const {
+		dialogOpen,
+		setDialogOpen,
+		editing,
+		form,
+		setForm,
+		setSaving,
+		deleteTarget,
+		setDeleteTarget,
+		openCreate,
+		openEdit,
+	} = crud;
 	const [uploading, setUploading] = useState(false);
 	const bodyRef = useRef<HTMLTextAreaElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const openCreate = () => {
-		setEditing(null);
-		setForm(EMPTY_FORM);
-		setDialogOpen(true);
-	};
-
-	const openEdit = (a: Announcement) => {
-		setEditing(a);
-		setForm({
-			title: a.title,
-			body: a.body,
-			audienceTeachers: a.audience.includes('teachers'),
-			audienceStudents: a.audience.includes('students'),
-			publish: a.published_at !== null,
-		});
-		setDialogOpen(true);
-	};
-
-	const insertAtCursor = useCallback((snippet: string) => {
-		const el = bodyRef.current;
-		if (!el) {
-			setForm((f) => ({ ...f, body: f.body + snippet }));
-			return;
-		}
-		const start = el.selectionStart ?? el.value.length;
-		const end = el.selectionEnd ?? el.value.length;
-		const next = el.value.slice(0, start) + snippet + el.value.slice(end);
-		setForm((f) => ({ ...f, body: next }));
-		requestAnimationFrame(() => {
-			el.focus();
-			const pos = start + snippet.length;
-			el.setSelectionRange(pos, pos);
-		});
-	}, []);
+	const insertAtCursor = useCallback(
+		(snippet: string) => {
+			const el = bodyRef.current;
+			if (!el) {
+				setForm((f) => ({ ...f, body: f.body + snippet }));
+				return;
+			}
+			const start = el.selectionStart ?? el.value.length;
+			const end = el.selectionEnd ?? el.value.length;
+			const next = el.value.slice(0, start) + snippet + el.value.slice(end);
+			setForm((f) => ({ ...f, body: next }));
+			requestAnimationFrame(() => {
+				el.focus();
+				const pos = start + snippet.length;
+				el.setSelectionRange(pos, pos);
+			});
+		},
+		[setForm],
+	);
 
 	const handleInsertLink = () => {
 		const url = window.prompt('URL (https://...)');
@@ -178,6 +177,14 @@ export function AnnouncementsManager() {
 		setDeleteTarget(null);
 		await refetch();
 	};
+
+	const dialogActions = useFormCrudDialogActions(crud, {
+		isFormValid,
+		onSave: handleSave,
+		onDelete: handleDelete,
+		deleteTitle: 'Nieuwsbericht verwijderen',
+		getDeleteDescription: (entity) => `Weet je zeker dat je "${entity.title}" wilt verwijderen?`,
+	});
 
 	return (
 		<Card>
@@ -361,24 +368,9 @@ export function AnnouncementsManager() {
 							</label>
 						</div>
 					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
-							Annuleren
-						</Button>
-						<SubmitButton onClick={handleSave} loading={saving} disabled={!isFormValid}>
-							{editing ? 'Opslaan' : 'Aanmaken'}
-						</SubmitButton>
-					</DialogFooter>
+					<CrudFormDialogActions {...dialogActions} />
 				</DialogContent>
 			</Dialog>
-
-			<ConfirmDeleteDialog
-				open={!!deleteTarget}
-				onOpenChange={(open) => !open && setDeleteTarget(null)}
-				onConfirm={handleDelete}
-				title="Nieuwsbericht verwijderen"
-				description={`Weet je zeker dat je "${deleteTarget?.title}" wilt verwijderen?`}
-			/>
 		</Card>
 	);
 }

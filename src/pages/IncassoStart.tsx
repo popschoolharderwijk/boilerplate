@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+	StandaloneCenteredPage,
+	StandaloneErrorPage,
+	StandaloneLoadingPage,
+} from '@/components/auth/StandalonePageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { consumeMagicLinkFromUrl, getFunctionErrorMessage, readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
@@ -82,47 +87,36 @@ export default function IncassoStart() {
 
 	if (success) {
 		return (
-			<div className="flex min-h-screen items-center justify-center p-4">
-				<div className="max-w-md space-y-4 text-center">
-					<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
-					<p className="text-muted-foreground">
-						De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.
-					</p>
-					<p className="text-muted-foreground text-sm">
-						Via het portaal van de Popschool kun je inloggen om al je gegevens over je lidmaatschap,
-						facturen en lessen in te zien.
-					</p>
-					<a
-						href="/login"
-						className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-					>
-						Naar het Popschool-portaal
-					</a>
-				</div>
-			</div>
+			<StandaloneCenteredPage narrow>
+				<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
+				<p className="text-muted-foreground">
+					De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.
+				</p>
+				<p className="text-muted-foreground text-sm">
+					Via het portaal van de Popschool kun je inloggen om al je gegevens over je lidmaatschap, facturen en
+					lessen in te zien.
+				</p>
+				<a
+					href="/login"
+					className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+				>
+					Naar het Popschool-portaal
+				</a>
+			</StandaloneCenteredPage>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="flex min-h-screen items-center justify-center p-4">
-				<div className="max-w-md space-y-4 text-center">
-					<h1 className="font-bold text-2xl text-destructive">Incasso starten mislukt</h1>
-					<p className="text-muted-foreground">{error}</p>
-					<a
-						href="/login"
-						className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-					>
-						Naar inloggen
-					</a>
-				</div>
-			</div>
+			<StandaloneErrorPage
+				title="Incasso starten mislukt"
+				message={error}
+				actionLabel="Naar inloggen"
+				actionHref="/login"
+				narrow
+			/>
 		);
 	}
 
-	return (
-		<div className="flex min-h-screen items-center justify-center">
-			<p className="text-muted-foreground">Bezig met doorsturen naar de betaalomgeving...</p>
-		</div>
-	);
+	return <StandaloneLoadingPage message="Bezig met doorsturen naar de betaalomgeving..." />;
 }

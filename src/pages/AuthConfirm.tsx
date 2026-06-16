@@ -1,23 +1,15 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { StandaloneErrorPage, StandaloneLoadingPage } from '@/components/auth/StandalonePageLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
 const EMAIL_OTP_TYPES = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email', 'email_change']);
 
 function getSafeNext(value: string | null): string {
 	if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
 	return value;
-}
-
-function getHashError(): string | null {
-	if (!window.location.hash.includes('error=')) return null;
-	const hashParams = new URLSearchParams(window.location.hash.slice(1));
-	const code = hashParams.get('error_code');
-	if (code === 'otp_expired') {
-		return 'Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.';
-	}
-	return hashParams.get('error_description') ?? 'Inloggen via deze link is mislukt.';
 }
 
 export default function AuthConfirm() {
@@ -30,7 +22,7 @@ export default function AuthConfirm() {
 		startedRef.current = true;
 
 		const confirm = async () => {
-			const hashError = getHashError();
+			const hashError = readMagicLinkUrlError();
 			if (hashError) {
 				setError(hashError);
 				return;
@@ -68,24 +60,14 @@ export default function AuthConfirm() {
 
 	if (error) {
 		return (
-			<div className="flex min-h-screen items-center justify-center p-4">
-				<div className="space-y-4 text-center">
-					<h1 className="font-bold text-2xl text-destructive">Inloggen mislukt</h1>
-					<p className="text-muted-foreground">{error}</p>
-					<a
-						href="/login"
-						className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-					>
-						Nieuwe link aanvragen
-					</a>
-				</div>
-			</div>
+			<StandaloneErrorPage
+				title="Inloggen mislukt"
+				message={error}
+				actionLabel="Nieuwe link aanvragen"
+				actionHref="/login"
+			/>
 		);
 	}
 
-	return (
-		<div className="flex min-h-screen items-center justify-center">
-			<p className="text-muted-foreground">Inloggen...</p>
-		</div>
-	);
+	return <StandaloneLoadingPage message="Inloggen..." />;
 }

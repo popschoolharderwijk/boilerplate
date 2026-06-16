@@ -17,11 +17,6 @@ export type AgendaEventSourceType = Enums<'agenda_event_source_type'>;
 /** Cancellation type for deviations (from DB enum). */
 export type CancellationType = 'student' | 'teacher';
 
-/** Deviation with its agenda event (for calendar logic) */
-export interface AgendaEventDeviationWithEvent extends AgendaEventDeviationRow {
-	agenda_event: AgendaEventRow;
-}
-
 /** Info about a deviation (for recurring events that have been moved or cancelled). */
 export interface DeviationInfo {
 	deviationId: string;

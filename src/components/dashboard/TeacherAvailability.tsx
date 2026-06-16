@@ -1,10 +1,10 @@
 import { LuGraduationCap } from 'react-icons/lu';
 import { Link, useNavigate } from 'react-router-dom';
+import { DashboardListCardSkeleton } from '@/components/dashboard/DashboardListCardSkeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardTeacher } from '@/hooks/useDashboardData';
 
 interface TeacherAvailabilityProps {
@@ -17,27 +17,12 @@ export function TeacherAvailability({ teachers, isLoading = false }: TeacherAvai
 
 	if (isLoading) {
 		return (
-			<Card>
-				<CardHeader className="flex flex-row items-center justify-between pb-2">
-					<div className="flex items-center gap-2">
-						<LuGraduationCap className="h-5 w-5 text-primary" />
-						<Skeleton className="h-5 w-40" />
-					</div>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-4">
-						{[1, 2, 3].map((n) => (
-							<div key={`teacher-skeleton-${n}`} className="flex items-center gap-4">
-								<Skeleton className="h-10 w-10 rounded-full" />
-								<div className="flex-1 space-y-1">
-									<Skeleton className="h-4 w-32" />
-									<Skeleton className="h-3 w-48" />
-								</div>
-							</div>
-						))}
-					</div>
-				</CardContent>
-			</Card>
+			<DashboardListCardSkeleton
+				icon={<LuGraduationCap className="h-5 w-5 text-primary" />}
+				titleWidthClass="w-40"
+				itemKeyPrefix="teacher-skeleton"
+				subtitleWidthClass="w-48"
+			/>
 		);
 	}
 

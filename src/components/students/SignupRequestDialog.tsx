@@ -13,7 +13,7 @@ export interface SignupRequestDetail {
 	parent_phone_number: string | null;
 	date_of_birth: string | null;
 	notes: string | null;
-	status: 'pending' | 'approved' | 'rejected';
+	status: 'pending' | 'approved' | 'rejected' | 'trial_scheduled';
 	created_at: string;
 	processed_at: string | null;
 	lesson_type_name: string | null;
@@ -30,6 +30,7 @@ const STATUS_LABEL: Record<SignupRequestDetail['status'], string> = {
 	pending: 'In behandeling',
 	approved: 'Goedgekeurd',
 	rejected: 'Afgewezen',
+	trial_scheduled: 'Proefles ingepland',
 };
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {

@@ -1,4 +1,3 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SubmitButton } from '@/components/ui/submit-button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { getInvokeErrorMessage } from '@/lib/auth/invokeError';
 import { type AppRole, allRoles, roleLabels } from '@/lib/roles';
 import type { User } from '@/types/users';
 
@@ -125,21 +125,7 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 		});
 
 		if (invokeError) {
-			let errorMessage = isSiteAdmin ? invokeError.message : 'Er is een onbekende fout opgetreden.';
-
-			if (invokeError instanceof FunctionsHttpError) {
-				try {
-					const errorBody = await invokeError.context.json();
-					errorMessage = errorBody?.error || errorMessage;
-				} catch {
-					// Could not parse error body - for site_admin show raw message
-					if (isSiteAdmin) {
-						errorMessage = invokeError.message || String(invokeError);
-					}
-				}
-			} else if (isSiteAdmin) {
-				errorMessage = invokeError.message || String(invokeError);
-			}
+			const errorMessage = await getInvokeErrorMessage(invokeError, { isSiteAdmin });
 
 			toast.error('Fout bij aanmaken gebruiker', {
 				description: errorMessage,

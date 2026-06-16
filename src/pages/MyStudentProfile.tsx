@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import type { LessonAgreement } from '@/components/students/LessonAgreementItem';
 import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
 import { SignupRequestItem } from '@/components/students/SignupRequestItem';
-import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
+import { StudentAgreementsCard, StudentSignupRequestsCard } from '@/components/students/StudentProfileCards';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchSignupRequestsByEmail } from '@/lib/signup-requests/signupRequestMappers';
+import { fetchStudentAgreementsForProfile } from '@/lib/students/fetchStudentAgreements';
 
 interface StudentProfile {
 	profile: {
@@ -80,110 +82,12 @@ export default function MyStudentProfile() {
 				student: studentData,
 			});
 
-			// Get lesson agreements (multi-step fetch — explicit joins per project standards)
-			const { data: agreementsData, error: agreementsError } = await supabase
-				.from('lesson_agreements')
-				.select(
-					'id, day_of_week, start_time, start_date, end_date, is_active, notes, duration_minutes, frequency, price_per_lesson, teacher_user_id, lesson_type_id',
-				)
-				.eq('student_user_id', user.id)
-				.order('day_of_week', { ascending: true })
-				.order('start_time', { ascending: true });
-
-			if (agreementsError) {
-				console.error('Error loading agreements:', agreementsError);
-				toast.error('Fout bij laden lesovereenkomsten');
-				setLoading(false);
-				return;
-			}
-
-			const rows = agreementsData ?? [];
-			const teacherIds = Array.from(new Set(rows.map((r) => r.teacher_user_id)));
-			const lessonTypeIds = Array.from(new Set(rows.map((r) => r.lesson_type_id)));
-
-			const [teacherProfilesRes, lessonTypesRes] = await Promise.all([
-				teacherIds.length > 0
-					? supabase
-							.from('profiles')
-							.select('user_id, first_name, last_name, avatar_url')
-							.in('user_id', teacherIds)
-					: Promise.resolve({ data: [], error: null } as const),
-				lessonTypeIds.length > 0
-					? supabase.from('lesson_types').select('id, name, icon, color').in('id', lessonTypeIds)
-					: Promise.resolve({ data: [], error: null } as const),
+			const [agreementsData, signupData] = await Promise.all([
+				fetchStudentAgreementsForProfile(user.id),
+				profileData.email ? fetchSignupRequestsByEmail(profileData.email) : Promise.resolve([]),
 			]);
-
-			if (teacherProfilesRes.error) {
-				console.error('Error loading teacher profiles:', teacherProfilesRes.error);
-			}
-			if (lessonTypesRes.error) {
-				console.error('Error loading lesson types:', lessonTypesRes.error);
-			}
-
-			const teacherById = new Map((teacherProfilesRes.data ?? []).map((p) => [p.user_id, p] as const));
-			const lessonTypeById = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt] as const));
-
-			const transformedAgreements: LessonAgreement[] = rows.map((row) => {
-				const p = teacherById.get(row.teacher_user_id);
-				const lt = lessonTypeById.get(row.lesson_type_id);
-				return {
-					id: row.id,
-					day_of_week: row.day_of_week,
-					start_time: row.start_time,
-					start_date: row.start_date,
-					end_date: row.end_date,
-					is_active: row.is_active,
-					notes: row.notes,
-					duration_minutes: row.duration_minutes,
-					frequency: row.frequency,
-					price_per_lesson: row.price_per_lesson,
-					teacher: {
-						first_name: p?.first_name ?? null,
-						last_name: p?.last_name ?? null,
-						avatar_url: p?.avatar_url ?? null,
-					},
-					lesson_type: {
-						id: lt?.id ?? row.lesson_type_id,
-						name: lt?.name ?? '',
-						icon: lt?.icon ?? null,
-						color: lt?.color ?? null,
-					},
-				};
-			});
-
-			setAgreements(transformedAgreements);
-
-			// Load signup requests for this user (matched by profile email)
-			if (profileData?.email) {
-				const { data: reqData } = await supabase
-					.from('lesson_signup_requests')
-					.select('*, lesson_types(name), lesson_groups(name)')
-					.eq('email', profileData.email)
-					.order('created_at', { ascending: false });
-				setSignupRequests(
-					(reqData ?? []).map((r) => {
-						const lt = Array.isArray(r.lesson_types) ? r.lesson_types[0] : r.lesson_types;
-						const lg = Array.isArray(r.lesson_groups) ? r.lesson_groups[0] : r.lesson_groups;
-						return {
-							id: r.id,
-							first_name: r.first_name,
-							last_name: r.last_name,
-							email: r.email,
-							phone_number: r.phone_number,
-							parent_name: r.parent_name,
-							parent_email: r.parent_email,
-							parent_phone_number: r.parent_phone_number,
-							date_of_birth: r.date_of_birth,
-							notes: r.notes,
-							status: r.status,
-							created_at: r.created_at,
-							processed_at: r.processed_at,
-							lesson_type_name: lt?.name ?? null,
-							lesson_group_name: lg?.name ?? null,
-						};
-					}),
-				);
-			}
+			setAgreements(agreementsData);
+			setSignupRequests(signupData);
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading profile:', error);
@@ -305,46 +209,20 @@ export default function MyStudentProfile() {
 				)}
 			</div>
 
-			{/* Lesson agreements */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Lesovereenkomsten</CardTitle>
-					<CardDescription>Overzicht van je lesovereenkomsten</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{agreements.length === 0 ? (
-						<p className="text-sm text-muted-foreground">Geen lesovereenkomsten gevonden</p>
-					) : (
-						<div className="space-y-4">
-							{agreements.map((agreement) => (
-								<div key={agreement.id} className="space-y-2">
-									<LessonAgreementItem agreement={agreement} />
-									<SubscriptionCard lessonAgreementId={agreement.id} hideStartAction />
-								</div>
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
+			<StudentAgreementsCard
+				agreements={agreements}
+				description="Overzicht van je lesovereenkomsten"
+				emptyMessage="Geen lesovereenkomsten gevonden"
+				showSubscription
+				hideStartAction
+			/>
 
-			{/* Signup requests */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Aanmeldingen</CardTitle>
-					<CardDescription>Jouw aanmeldingen voor lessen</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{signupRequests.length === 0 ? (
-						<p className="text-sm text-muted-foreground">Geen aanmeldingen gevonden</p>
-					) : (
-						<div className="flex flex-wrap gap-2">
-							{signupRequests.map((r) => (
-								<SignupRequestItem key={r.id} request={r} />
-							))}
-						</div>
-					)}
-				</CardContent>
-			</Card>
+			<StudentSignupRequestsCard
+				requests={signupRequests}
+				description="Jouw aanmeldingen voor lessen"
+				emptyMessage="Geen aanmeldingen gevonden"
+				renderItem={(request) => <SignupRequestItem request={request} />}
+			/>
 		</div>
 	);
 }

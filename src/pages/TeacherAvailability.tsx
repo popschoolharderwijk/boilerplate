@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AvailabilityDayGrid } from '@/components/teachers/AvailabilityDayGrid';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,52 +174,23 @@ export default function TeacherAvailability() {
 						))}
 					</div>
 
-					{/* Availability Calendar */}
-					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-						{dayNames.map((dayName, dayIndex) => {
-							const dayAvailability = availabilityByDay[dayIndex] || [];
+					<AvailabilityDayGrid
+						dayNames={dayNames}
+						availabilityByDay={availabilityByDay}
+						renderSlot={(avail) => {
+							const teacher = teachers.find((t) => t.user_id === avail.teacher_user_id);
 							return (
-								<Card key={dayName}>
-									<CardHeader>
-										<CardTitle>{dayName}</CardTitle>
-										<CardDescription>
-											{dayAvailability.length} beschikbaarheidsblok
-											{dayAvailability.length !== 1 ? 'ken' : ''}
-										</CardDescription>
-									</CardHeader>
-									<CardContent>
-										{dayAvailability.length === 0 ? (
-											<p className="text-sm text-muted-foreground">Geen beschikbaarheid</p>
-										) : (
-											<div className="space-y-2">
-												{dayAvailability.map((avail) => {
-													const teacher = teachers.find(
-														(t) => t.user_id === avail.teacher_user_id,
-													);
-													return (
-														<div
-															key={avail.id}
-															className="rounded-md border bg-muted/50 p-2 text-sm"
-														>
-															<div className="font-medium">
-																{formatTime(avail.start_time)} -{' '}
-																{formatTime(avail.end_time)}
-															</div>
-															{selectedTeacherUserId === 'all' && teacher && (
-																<div className="text-xs text-muted-foreground">
-																	{getTeacherName(teacher)}
-																</div>
-															)}
-														</div>
-													);
-												})}
-											</div>
-										)}
-									</CardContent>
-								</Card>
+								<div key={avail.id} className="rounded-md border bg-muted/50 p-2 text-sm">
+									<div className="font-medium">
+										{formatTime(avail.start_time)} - {formatTime(avail.end_time)}
+									</div>
+									{selectedTeacherUserId === 'all' && teacher && (
+										<div className="text-xs text-muted-foreground">{getTeacherName(teacher)}</div>
+									)}
+								</div>
 							);
-						})}
-					</div>
+						}}
+					/>
 				</>
 			)}
 		</div>

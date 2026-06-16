@@ -59,9 +59,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		}
 	}, [user, fetchRole, fetchTeacher]);
 
-	useEffect(() => {
-		// Get initial session
-		supabase.auth.getSession().then(({ data: { session } }) => {
+	const applySession = useCallback(
+		(session: Session | null, clearOnLogout: boolean) => {
 			setSession(session);
 			setUser(session?.user ?? null);
 			if (session?.user) {
@@ -69,29 +68,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
 					setIsLoading(false);
 				});
 			} else {
+				if (clearOnLogout) {
+					setRole(null);
+					setTeacherUserId(null);
+				}
 				setIsLoading(false);
 			}
+		},
+		[fetchRole, fetchTeacher],
+	);
+
+	useEffect(() => {
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			applySession(session, false);
 		});
 
-		// Listen for auth changes
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-			setUser(session?.user ?? null);
-			if (session?.user) {
-				Promise.all([fetchRole(session.user.id), fetchTeacher(session.user.id)]).finally(() => {
-					setIsLoading(false);
-				});
-			} else {
-				setRole(null);
-				setTeacherUserId(null);
-				setIsLoading(false);
-			}
+			applySession(session, true);
 		});
 
 		return () => subscription.unsubscribe();
-	}, [fetchRole, fetchTeacher]);
+	}, [applySession]);
 
 	const signOut = async () => {
 		await supabase.auth.signOut();

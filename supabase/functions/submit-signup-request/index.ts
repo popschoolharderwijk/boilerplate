@@ -4,6 +4,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { UUID_RE } from '../_shared/http.ts';
 
 interface SignupRequest {
 	lesson_type_id: string;
@@ -20,7 +21,6 @@ interface SignupRequest {
 	notes?: string | null;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function bad(message: string, status = 400) {

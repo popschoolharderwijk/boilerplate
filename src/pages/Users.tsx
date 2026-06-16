@@ -1,4 +1,3 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { LuPlus, LuTrash2 } from 'react-icons/lu';
@@ -12,8 +11,9 @@ import { UserDisplay } from '@/components/ui/user-display';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
-import { useServerTableState } from '@/hooks/useServerTableState';
+import { useServerPaginatedListState } from '@/hooks/useServerPaginatedListState';
 import { supabase } from '@/integrations/supabase/client';
+import { getInvokeErrorMessage } from '@/lib/auth/invokeError';
 import { formatDateTimeShort } from '@/lib/date/date-format';
 import { getDisplayName } from '@/lib/display-name';
 import { type AppRole, allRoles, getIcon, roleLabels } from '@/lib/roles';
@@ -39,11 +39,11 @@ interface PaginatedUsersResponse {
 export default function Users() {
 	const { user, isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const [users, setUsers] = useState<UserWithRole[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
-
-	// Server-side table state (pagination, sorting, search, filters)
 	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
 		searchQuery,
 		debouncedSearchQuery,
 		handleSearchChange,
@@ -56,7 +56,7 @@ export default function Users() {
 		handleSortChange,
 		filters,
 		setFilters,
-	} = useServerTableState({
+	} = useServerPaginatedListState({
 		storageKey: 'users',
 		initialSortColumn: 'created_at',
 		initialSortDirection: 'desc',
@@ -122,7 +122,17 @@ export default function Users() {
 			toast.error('Fout bij laden gebruikers');
 			setLoading(false);
 		}
-	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, selectedRole, sortColumn, sortDirection]);
+	}, [
+		hasAccess,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		selectedRole,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+	]);
 
 	// Load users when dependencies change
 	useEffect(() => {
@@ -241,21 +251,7 @@ export default function Users() {
 			});
 
 			if (invokeError) {
-				let errorMessage = isSiteAdmin ? invokeError.message : 'Er is een onbekende fout opgetreden.';
-
-				if (invokeError instanceof FunctionsHttpError) {
-					try {
-						const errorBody = await invokeError.context.json();
-						errorMessage = errorBody?.error || errorMessage;
-					} catch {
-						// Could not parse error body - for site_admin show raw message
-						if (isSiteAdmin) {
-							errorMessage = invokeError.message || String(invokeError);
-						}
-					}
-				} else if (isSiteAdmin) {
-					errorMessage = invokeError.message || String(invokeError);
-				}
+				const errorMessage = await getInvokeErrorMessage(invokeError, { isSiteAdmin });
 
 				toast.error('Fout bij verwijderen gebruiker', {
 					description: errorMessage,

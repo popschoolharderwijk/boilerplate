@@ -10,6 +10,33 @@ import type { WizardInitialAgreement, WizardLessonTypeInfo, WizardTeacherInfo } 
 import type { UserOptional } from '@/types/users';
 import { ConfirmStepRow } from './ConfirmStepRow';
 
+function ConfirmStudentRow({
+	selectedUser,
+	studentUserId,
+}: {
+	selectedUser: UserOptional | null;
+	studentUserId: string;
+}) {
+	return (
+		<ConfirmStepRow label="Leerling" alwaysSame>
+			{selectedUser ? (
+				<UserDisplay
+					profile={{
+						first_name: selectedUser.first_name,
+						last_name: selectedUser.last_name,
+						email: selectedUser.email,
+						avatar_url: selectedUser.avatar_url,
+					}}
+					href={`/students/${studentUserId}`}
+					showEmail
+				/>
+			) : (
+				<span>-</span>
+			)}
+		</ConfirmStepRow>
+	);
+}
+
 interface ConfirmStepContentProps {
 	isEditMode: boolean;
 	hasChanges: boolean;
@@ -44,22 +71,10 @@ export function ConfirmStepContent({
 				<Card className="border-muted">
 					<CardContent className="p-4">
 						<p className="mb-3 text-sm font-semibold text-muted-foreground">Huidige overeenkomst</p>
-						<ConfirmStepRow label="Leerling" alwaysSame>
-							{selectedUser ? (
-								<UserDisplay
-									profile={{
-										first_name: selectedUser.first_name,
-										last_name: selectedUser.last_name,
-										email: selectedUser.email,
-										avatar_url: selectedUser.avatar_url,
-									}}
-									href={`/students/${initialAgreement.student_user_id}`}
-									showEmail
-								/>
-							) : (
-								<span>-</span>
-							)}
-						</ConfirmStepRow>
+						<ConfirmStudentRow
+							selectedUser={selectedUser}
+							studentUserId={initialAgreement.student_user_id}
+						/>
 						<ConfirmStepRow label="Lessoort" alwaysSame>
 							<span>
 								{initialAgreement.lesson_type?.name
@@ -126,22 +141,10 @@ export function ConfirmStepContent({
 				<Card>
 					<CardContent className="p-4">
 						<p className="mb-3 text-sm font-semibold text-primary">Nieuwe overeenkomst</p>
-						<ConfirmStepRow label="Leerling" alwaysSame>
-							{selectedUser ? (
-								<UserDisplay
-									profile={{
-										first_name: selectedUser.first_name,
-										last_name: selectedUser.last_name,
-										email: selectedUser.email,
-										avatar_url: selectedUser.avatar_url,
-									}}
-									href={`/students/${initialAgreement.student_user_id}`}
-									showEmail
-								/>
-							) : (
-								<span>-</span>
-							)}
-						</ConfirmStepRow>
+						<ConfirmStudentRow
+							selectedUser={selectedUser}
+							studentUserId={initialAgreement.student_user_id}
+						/>
 						<ConfirmStepRow label="Lessoort" alwaysSame>
 							<span>
 								{selectedLessonType

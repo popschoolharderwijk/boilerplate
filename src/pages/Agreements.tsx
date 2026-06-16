@@ -4,31 +4,33 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { UserDisplay } from '@/components/ui/user-display';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useActiveLessonTypes } from '@/hooks/useActiveLessonTypes';
 import { useAuth } from '@/hooks/useAuth';
-import { useServerTableState } from '@/hooks/useServerTableState';
-import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
+import { useListPageTableState } from '@/hooks/useListPageTableState';
 import { supabase } from '@/integrations/supabase/client';
+import { mapRawAgreementToTableRow, type RawAgreementRow } from '@/lib/agreements/mapAgreementTableRow';
 import { formatDateTimeShort } from '@/lib/date/date-format';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
 import { frequencyLabels } from '@/lib/frequencies';
 import { formatTime } from '@/lib/time/time-format';
-import type { AgreementTableRow, LessonFrequency } from '@/types/lesson-agreements';
+import type { AgreementTableRow } from '@/types/lesson-agreements';
 
 export default function Agreements() {
 	const { isPrivileged, isLoading: authLoading } = useAuth();
 	const navigate = useNavigate();
+	const hasAccess = isPrivileged;
+	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 	const [agreements, setAgreements] = useState<AgreementTableRow[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
-
-	// Server-side table state (pagination, sorting, search, filters)
 	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
 		searchQuery,
 		debouncedSearchQuery,
 		handleSearchChange,
@@ -39,24 +41,19 @@ export default function Agreements() {
 		sortColumn,
 		sortDirection,
 		handleSortChange,
-		filters,
-		setFilters,
-	} = useServerTableState({
+		statusFilter,
+		selectedLessonTypeId,
+		quickFilterGroups,
+	} = useListPageTableState({
 		storageKey: 'agreements',
 		initialSortColumn: 'created_at',
 		initialSortDirection: 'desc',
-		initialFilters: { statusFilter: 'all', selectedLessonTypeId: null },
+		lessonTypes,
 	});
-
-	const statusFilter = (filters.statusFilter as 'all' | 'active' | 'inactive') ?? 'all';
-	const selectedLessonTypeId = (filters.selectedLessonTypeId as string | null) ?? null;
 
 	const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; agreement: AgreementTableRow | null } | null>(
 		null,
 	);
-
-	const hasAccess = isPrivileged;
-	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 
 	const loadAgreements = useCallback(async () => {
 		if (!hasAccess) return;
@@ -111,81 +108,32 @@ export default function Agreements() {
 				return;
 			}
 
-			type RawRow = {
-				id: string;
-				created_at: string;
-				day_of_week: number;
-				start_time: string;
-				start_date: string;
-				end_date: string | null;
-				is_active: boolean;
-				notes: string | null;
-				student_user_id: string;
-				teacher_user_id: string;
-				lesson_type_id: string;
-				duration_minutes: number;
-				frequency: LessonFrequency;
-				price_per_lesson: number;
-				duo_pair_id: string | null;
-				lesson_types: {
-					id: string;
-					name: string;
-					icon: string;
-					color: string;
-				};
-				teachers: { user_id: string } | null;
-			};
-			const raw = (agreementsData ?? []) as unknown as RawRow[];
+			const raw = (agreementsData ?? []) as unknown as RawAgreementRow[];
 
-			const getTeachers = (a: RawRow) => (Array.isArray(a.teachers) ? a.teachers[0] : a.teachers);
-			const getLessonTypes = (a: RawRow) => (Array.isArray(a.lesson_types) ? a.lesson_types[0] : a.lesson_types);
-
-			// Collect all user IDs for profile lookup
 			const studentUserIds = [...new Set(raw.map((a) => a.student_user_id))];
-			const teacherUserIds = [...new Set(raw.map((a) => getTeachers(a)?.user_id).filter(Boolean) as string[])];
+			const teacherUserIds = [
+				...new Set(
+					raw
+						.map((a) => {
+							const teachers = a.teachers;
+							const ref = Array.isArray(teachers) ? teachers[0] : teachers;
+							return ref?.user_id;
+						})
+						.filter(Boolean) as string[],
+				),
+			];
 			const allUserIds = [...new Set([...studentUserIds, ...teacherUserIds])];
 
-			// Default empty profiles
 			const emptyStudent = { first_name: null, last_name: null, avatar_url: null, email: '' };
 			const emptyTeacher = { first_name: null, last_name: null, avatar_url: null, email: '' };
 
 			if (allUserIds.length === 0) {
-				setAgreements(
-					raw.map((a) => {
-						const lt = getLessonTypes(a);
-						return {
-							id: a.id,
-							created_at: a.created_at,
-							day_of_week: a.day_of_week,
-							start_time: a.start_time,
-							start_date: a.start_date,
-							end_date: a.end_date,
-							is_active: a.is_active,
-							notes: a.notes,
-							student_user_id: a.student_user_id,
-							teacher_user_id: a.teacher_user_id,
-							lesson_type_id: a.lesson_type_id,
-							duration_minutes: a.duration_minutes,
-							frequency: a.frequency,
-							price_per_lesson: a.price_per_lesson,
-							duo_pair_id: a.duo_pair_id,
-							student: emptyStudent,
-							teacher: emptyTeacher,
-							lesson_type: {
-								id: lt.id,
-								name: lt.name,
-								icon: lt.icon,
-								color: lt.color,
-							},
-						};
-					}),
-				);
+				setAgreements(raw.map((a) => mapRawAgreementToTableRow(a, new Map(), emptyStudent, emptyTeacher)));
 				setTotalCount(0);
 				setLoading(false);
 				return;
 			}
 
-			// Load profiles for students and teachers
 			const { data: profilesData, error: profilesError } = await supabase
 				.from('profiles')
 				.select('user_id, first_name, last_name, avatar_url, email')
@@ -210,38 +158,9 @@ export default function Agreements() {
 				]),
 			);
 
-			let rows: AgreementTableRow[] = raw.map((a) => {
-				const teacherRef = getTeachers(a);
-				const lt = getLessonTypes(a);
-				const studentProfile = profileMap.get(a.student_user_id);
-				const teacherProfile = profileMap.get(teacherRef?.user_id ?? '');
-
-				return {
-					id: a.id,
-					created_at: a.created_at,
-					day_of_week: a.day_of_week,
-					start_time: a.start_time,
-					start_date: a.start_date,
-					end_date: a.end_date,
-					is_active: a.is_active,
-					notes: a.notes,
-					student_user_id: a.student_user_id,
-					teacher_user_id: a.teacher_user_id,
-					lesson_type_id: a.lesson_type_id,
-					duration_minutes: a.duration_minutes,
-					frequency: a.frequency,
-					price_per_lesson: a.price_per_lesson,
-					duo_pair_id: a.duo_pair_id,
-					student: studentProfile ?? emptyStudent,
-					teacher: teacherProfile ?? emptyTeacher,
-					lesson_type: {
-						id: lt.id,
-						name: lt.name,
-						icon: lt.icon,
-						color: lt.color,
-					},
-				};
-			});
+			let rows: AgreementTableRow[] = raw.map((a) =>
+				mapRawAgreementToTableRow(a, profileMap, emptyStudent, emptyTeacher),
+			);
 
 			// Apply search filter (client-side since we need profile data)
 			if (debouncedSearchQuery) {
@@ -296,6 +215,8 @@ export default function Agreements() {
 		sortDirection,
 		currentPage,
 		rowsPerPage,
+		setLoading,
+		setTotalCount,
 	]);
 
 	useEffect(() => {
@@ -326,22 +247,6 @@ export default function Agreements() {
 		setDeleteDialog(null);
 		loadAgreements();
 	}, [deleteDialog, loadAgreements]);
-
-	// Quick filter groups configuration
-	const statusFilterGroup = useStatusFilter(statusFilter, (v) =>
-		setFilters((prev) => ({ ...prev, statusFilter: v })),
-	);
-	const lessonTypeFilterGroup = useLessonTypeFilter(lessonTypes, selectedLessonTypeId, (v) =>
-		setFilters((prev) => ({ ...prev, selectedLessonTypeId: v })),
-	);
-
-	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
-		const groups: QuickFilterGroup[] = [statusFilterGroup];
-		if (lessonTypeFilterGroup) {
-			groups.push(lessonTypeFilterGroup);
-		}
-		return groups;
-	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
 	const columns: DataTableColumn<AgreementTableRow>[] = useMemo(
 		() => [

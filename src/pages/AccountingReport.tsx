@@ -1,23 +1,11 @@
-import {
-	endOfMonth,
-	endOfQuarter,
-	endOfYear,
-	startOfMonth,
-	startOfQuarter,
-	startOfYear,
-	subMonths,
-	subQuarters,
-	subYears,
-} from 'date-fns';
 import { useMemo, useState } from 'react';
 import { LuFileSpreadsheet, LuFileText, LuSettings } from 'react-icons/lu';
 import { Link, Navigate } from 'react-router-dom';
+import { PeriodPresetControls } from '@/components/reports/PeriodPresetControls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { DatePicker } from '@/components/ui/date-picker';
-import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
@@ -27,74 +15,9 @@ import { downloadFile } from '@/lib/accounting/download';
 import { generateCsv, generateExactXml, generateJournalLines } from '@/lib/accounting/exporters';
 import type { AccountingInvoice } from '@/lib/accounting/types';
 import { formatCentsEUR } from '@/lib/accounting/types';
-import { formatDateToDb } from '@/lib/date/date-format';
+import { ACCOUNTING_PRESET_LABELS, type ExtendedPeriodPreset, getPresetDateRange } from '@/lib/reports/periodPresets';
 
-type PeriodPreset =
-	| 'this_month'
-	| 'last_month'
-	| 'this_quarter'
-	| 'last_quarter'
-	| 'this_year'
-	| 'last_year'
-	| 'this_school_year'
-	| 'last_school_year'
-	| 'custom';
-
-const PRESET_LABELS: Record<PeriodPreset, string> = {
-	this_month: 'Deze maand',
-	last_month: 'Vorige maand',
-	this_quarter: 'Dit kwartaal',
-	last_quarter: 'Vorig kwartaal',
-	this_year: 'Dit jaar',
-	last_year: 'Vorig jaar',
-	this_school_year: 'Dit schooljaar',
-	last_school_year: 'Vorig schooljaar',
-	custom: 'Aangepast',
-};
-
-function schoolYearRange(now: Date, startMonth: number): { start: Date; end: Date } {
-	// School year runs from startMonth (year X) through startMonth-1 (year X+1)
-	const month = now.getMonth() + 1;
-	const year = now.getFullYear();
-	const startYear = month >= startMonth ? year : year - 1;
-	const start = new Date(startYear, startMonth - 1, 1);
-	const end = new Date(startYear + 1, startMonth - 1, 0); // last day of month before
-	return { start, end };
-}
-
-function getPresetDates(preset: PeriodPreset, schoolStartMonth: number): { start: string; end: string } {
-	const now = new Date();
-	switch (preset) {
-		case 'this_month':
-			return { start: formatDateToDb(startOfMonth(now)), end: formatDateToDb(endOfMonth(now)) };
-		case 'last_month': {
-			const p = subMonths(now, 1);
-			return { start: formatDateToDb(startOfMonth(p)), end: formatDateToDb(endOfMonth(p)) };
-		}
-		case 'this_quarter':
-			return { start: formatDateToDb(startOfQuarter(now)), end: formatDateToDb(endOfQuarter(now)) };
-		case 'last_quarter': {
-			const p = subQuarters(now, 1);
-			return { start: formatDateToDb(startOfQuarter(p)), end: formatDateToDb(endOfQuarter(p)) };
-		}
-		case 'this_year':
-			return { start: formatDateToDb(startOfYear(now)), end: formatDateToDb(endOfYear(now)) };
-		case 'last_year': {
-			const p = subYears(now, 1);
-			return { start: formatDateToDb(startOfYear(p)), end: formatDateToDb(endOfYear(p)) };
-		}
-		case 'this_school_year': {
-			const r = schoolYearRange(now, schoolStartMonth);
-			return { start: formatDateToDb(r.start), end: formatDateToDb(r.end) };
-		}
-		case 'last_school_year': {
-			const r = schoolYearRange(subYears(now, 1), schoolStartMonth);
-			return { start: formatDateToDb(r.start), end: formatDateToDb(r.end) };
-		}
-		default:
-			return { start: formatDateToDb(startOfMonth(now)), end: formatDateToDb(endOfMonth(now)) };
-	}
-}
+const ACCOUNTING_PRESETS = Object.keys(ACCOUNTING_PRESET_LABELS) as ExtendedPeriodPreset[];
 
 const AGE_BADGE: Record<string, { label: string; variant: 'secondary' | 'outline' | 'default' }> = {
 	under_21: { label: '<21 vrijgesteld', variant: 'secondary' },
@@ -109,17 +32,17 @@ export default function AccountingReportPage() {
 	const { settings, loading: settingsLoading } = useAccountingSettings();
 	const schoolStartMonth = settings?.school_year_start_month ?? 8;
 
-	const [preset, setPreset] = useState<PeriodPreset>('this_month');
-	const initial = getPresetDates('this_month', schoolStartMonth);
+	const [preset, setPreset] = useState<ExtendedPeriodPreset>('this_month');
+	const initial = getPresetDateRange('this_month', { schoolStartMonth });
 	const [startDate, setStartDate] = useState(initial.start);
 	const [endDate, setEndDate] = useState(initial.end);
 
 	const { report, loading } = useAccountingReport(startDate, endDate, hasAccess);
 
-	const handlePreset = (p: PeriodPreset) => {
+	const handlePreset = (p: ExtendedPeriodPreset) => {
 		setPreset(p);
 		if (p !== 'custom') {
-			const d = getPresetDates(p, schoolStartMonth);
+			const d = getPresetDateRange(p, { schoolStartMonth });
 			setStartDate(d.start);
 			setEndDate(d.end);
 		}
@@ -236,31 +159,16 @@ export default function AccountingReportPage() {
 				</Button>
 			</div>
 
-			<div className="flex flex-wrap gap-2">
-				{(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
-					<Button
-						key={p}
-						variant={preset === p ? 'default' : 'outline'}
-						size="sm"
-						onClick={() => handlePreset(p)}
-					>
-						{PRESET_LABELS[p]}
-					</Button>
-				))}
-			</div>
-
-			{preset === 'custom' && (
-				<div className="flex flex-wrap items-end gap-4">
-					<div className="space-y-1.5">
-						<Label>Startdatum</Label>
-						<DatePicker value={startDate} onChange={(v) => setStartDate(v || '')} />
-					</div>
-					<div className="space-y-1.5">
-						<Label>Einddatum</Label>
-						<DatePicker value={endDate} onChange={(v) => setEndDate(v || '')} />
-					</div>
-				</div>
-			)}
+			<PeriodPresetControls
+				preset={preset}
+				presets={ACCOUNTING_PRESETS}
+				labels={ACCOUNTING_PRESET_LABELS}
+				onPresetChange={handlePreset}
+				startDate={startDate}
+				endDate={endDate}
+				onStartDateChange={setStartDate}
+				onEndDateChange={setEndDate}
+			/>
 
 			<div className="flex flex-wrap gap-2">
 				<Button onClick={handleCsv} disabled={!journalLines.length}>

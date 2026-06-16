@@ -5,8 +5,8 @@
 //   (wizard prefills using fromRequest=<id>)
 // Marks the request as approved and links created_agreement_id when applicable.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
+import { createSupabaseClients, requireAdminUser } from '../_shared/supabase.ts';
 
 interface Body {
 	request_id: string;
@@ -14,50 +14,21 @@ interface Body {
 	override_lesson_group_id?: string | null;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
 	if (!body.request_id || !UUID_RE.test(body.request_id)) return jsonResponse(400, { error: 'Ongeldig request id' });
 	if (body.override_lesson_group_id != null && !UUID_RE.test(body.override_lesson_group_id)) {
 		return jsonResponse(400, { error: 'Ongeldig groep id' });
 	}
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	// Authn + authz check
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-
-	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin') return jsonResponse(403, { error: 'Geen rechten' });
+	const authn = await requireAdminUser(userClient);
+	if (!authn.ok) return authn.response;
+	const { user } = authn;
 
 	// Load request
 	const { data: reqRow, error: reqErr } = await admin

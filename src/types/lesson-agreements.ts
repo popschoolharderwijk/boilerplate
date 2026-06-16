@@ -4,7 +4,6 @@
  */
 
 import type { Enums, Tables } from '@/integrations/supabase/types';
-import type { AgendaEventDeviationWithEvent } from '@/types/agenda-events';
 import type { User } from '@/types/users';
 
 // Base types from Supabase
@@ -183,13 +182,4 @@ export type AgreementTableRow = LessonAgreementTableFields & {
 	student: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	teacher: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	lesson_type: LessonTypeDisplayFields;
-};
-
-/**
- * Lesson appointment deviation with its agenda event (replaces old deviation + lesson_agreement).
- * Use agenda_event for start_time, start_date, recurring_frequency; day_of_week from start_date.
- * When source_type is lesson_agreement, lesson_agreement can be loaded via event.source_id for student/lesson type display.
- */
-export type LessonAppointmentDeviationWithAgreement = AgendaEventDeviationWithEvent & {
-	lesson_agreement?: LessonAgreementWithStudent;
 };

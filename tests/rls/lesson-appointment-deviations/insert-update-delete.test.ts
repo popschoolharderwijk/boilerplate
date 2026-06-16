@@ -12,8 +12,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { parseISO } from 'date-fns';
-import { addDaysToDate, formatDateToDb, getDateForDayOfWeek } from '../../../src/lib/date/date-format';
+import { addDaysToDateStr, formatDateToDb, getDateForDayOfWeek } from '../../../src/lib/date/date-format';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import type { AgendaEventDeviationInsert } from '../../types';
 import { unwrap, unwrapError } from '../../utils';
@@ -51,13 +50,15 @@ async function getAgendaEventIdForAgreement(agreementId: string): Promise<string
 /** Next Monday from today (YYYY-MM-DD). */
 function nextMonday(): string {
 	const today = new Date();
-	let monday = getDateForDayOfWeek(1, today);
-	monday = monday.getTime() <= today.getTime() ? addDaysToDate(monday, 7) : monday;
+	const monday = getDateForDayOfWeek(1, today);
+	if (monday.getTime() <= today.getTime()) {
+		return addDaysToDateStr(formatDateToDb(monday), 7);
+	}
 	return formatDateToDb(monday);
 }
 
 function addDays(dateStr: string, days: number): string {
-	return formatDateToDb(addDaysToDate(parseISO(`${dateStr}T12:00:00Z`), days));
+	return addDaysToDateStr(dateStr, days);
 }
 
 type AgendaEventTimeRow = { id: string; start_time: string };

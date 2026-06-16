@@ -5,9 +5,9 @@
 // - Inserts trial_lessons row, agenda_events row (source_type='trial_lesson') and participants.
 // - Marks the related signup request as 'trial_scheduled' when applicable.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
+import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
 
 interface Body {
 	signup_request_id?: string | null;
@@ -29,24 +29,12 @@ interface Body {
 	parent_phone_number?: string | null;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
-
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return begun.response;
+	const { authHeader, body } = begun;
 
 	if (!body.teacher_user_id || !UUID_RE.test(body.teacher_user_id))
 		return jsonResponse(400, { error: 'Ongeldige docent' });
@@ -63,28 +51,12 @@ Deno.serve(async (req) => {
 	if (body.lesson_type_option_id && !UUID_RE.test(body.lesson_type_option_id))
 		return jsonResponse(400, { error: 'Ongeldige optie' });
 
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+	const auth = await requireAuthenticatedClients(authHeader);
+	if (!auth.ok) return auth.response;
+	const { userClient, admin, user } = auth;
 
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	// Authn + authz
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-	const role = roleRow?.role;
-	if (role !== 'admin' && role !== 'site_admin' && role !== 'staff')
-		return jsonResponse(403, { error: 'Geen rechten' });
+	const denied = await requireUserRole(userClient, user.id, ['admin', 'site_admin', 'staff']);
+	if (denied) return denied;
 
 	// Resolve student data either from signup request or from request body
 	let studentEmail: string | null = null;

@@ -18,6 +18,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchProfileContactByUserId } from '@/lib/profiles/fetchProfileContact';
 import type { Teacher } from '@/types/teachers';
 
 interface TeacherFormDialogProps {
@@ -125,29 +126,18 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 
 	// Load user data when existing user is selected (only for email, not for form fields)
 	const loadUserData = async (userId: string) => {
-		const { data: profile, error } = await supabase
-			.from('profiles')
-			.select('email, first_name, last_name, phone_number')
-			.eq('user_id', userId)
-			.single();
+		const profile = await fetchProfileContactByUserId(userId);
+		if (!profile) return;
 
-		if (error) {
-			console.error('Error loading user data:', error);
-			toast.error('Fout bij laden gebruikersgegevens');
-			return;
-		}
-
-		if (profile) {
-			// Only set email for validation, keep other fields empty for existing users
-			setForm({
-				email: profile.email,
-				first_name: '',
-				last_name: '',
-				phone_number: '',
-				bio: '',
-				lesson_type_ids: [],
-			});
-		}
+		// Only set email for validation, keep other fields empty for existing users
+		setForm({
+			email: profile.email,
+			first_name: '',
+			last_name: '',
+			phone_number: '',
+			bio: '',
+			lesson_type_ids: [],
+		});
 	};
 
 	const handleOpenChange = (newOpen: boolean) => {

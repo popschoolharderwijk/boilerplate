@@ -8,6 +8,7 @@ import * as XLSX from 'npm:xlsx@0.18.5';
 import { z } from 'npm:zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
+import { resolveLegacyPersonUserId, saveLegacyMapping, upsertMappedEntity } from '../_shared/legacy-import.ts';
 
 type Action = 'template' | 'validate' | 'import';
 
@@ -39,23 +40,21 @@ const lessonTypeOptionSchema = z.object({
 	price_per_lesson_under_21_cents: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
-const teacherSchema = z.object({
+const personLegacySchema = z.object({
 	legacy_id: z.string().min(1),
 	email: z.string().email(),
 	first_name: z.string().optional().nullable(),
 	last_name: z.string().optional().nullable(),
 	phone_number: z.string().optional().nullable(),
+});
+
+const teacherSchema = personLegacySchema.extend({
 	bio: z.string().optional().nullable(),
 	is_active: z.coerce.boolean().optional().default(true),
 	lesson_type_legacy_ids: z.string().optional().nullable(), // pipe-separated
 });
 
-const studentSchema = z.object({
-	legacy_id: z.string().min(1),
-	email: z.string().email(),
-	first_name: z.string().optional().nullable(),
-	last_name: z.string().optional().nullable(),
-	phone_number: z.string().optional().nullable(),
+const studentSchema = personLegacySchema.extend({
 	date_of_birth: z.string().optional().nullable(),
 	parent_name: z.string().optional().nullable(),
 	parent_email: z.string().email().optional().nullable().or(z.literal('')),
@@ -276,22 +275,6 @@ async function getMapping(admin: SupabaseClient, entity: string): Promise<Map<st
 	return map;
 }
 
-async function saveMapping(
-	admin: SupabaseClient,
-	entity: string,
-	legacyId: string,
-	newId: string,
-	importedBy: string | null,
-) {
-	const { error } = await admin
-		.from('legacy_ids')
-		.upsert(
-			{ entity_type: entity, legacy_id: legacyId, new_id: newId, imported_by: importedBy },
-			{ onConflict: 'entity_type,legacy_id' },
-		);
-	if (error) throw error;
-}
-
 async function findAuthUserByEmail(admin: SupabaseClient, email: string): Promise<string | null> {
 	// Iterate pages — small workspaces, fine for first import.
 	const perPage = 1000;
@@ -317,27 +300,24 @@ async function importLessonTypes(
 	const summary: ImportSummary = { tab: 'lesson_types', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const existingId = mapping.get(row.legacy_id);
-			const payload = {
-				name: row.name,
-				icon: row.icon,
-				color: row.color,
-				is_group_lesson: row.is_group_lesson ?? false,
-				cost_center: row.cost_center ?? null,
-				description: row.description ?? null,
-				is_active: row.is_active ?? true,
-			};
-			if (existingId) {
-				const { error } = await admin.from('lesson_types').update(payload).eq('id', existingId);
-				if (error) throw error;
-				summary.updated++;
-			} else {
-				const { data, error } = await admin.from('lesson_types').insert(payload).select('id').single();
-				if (error) throw error;
-				await saveMapping(admin, 'lesson_type', row.legacy_id, data.id, importedBy);
-				mapping.set(row.legacy_id, data.id);
-				summary.created++;
-			}
+			await upsertMappedEntity({
+				admin,
+				table: 'lesson_types',
+				entityType: 'lesson_type',
+				legacyId: row.legacy_id,
+				mapping,
+				importedBy,
+				payload: {
+					name: row.name,
+					icon: row.icon,
+					color: row.color,
+					is_group_lesson: row.is_group_lesson ?? false,
+					cost_center: row.cost_center ?? null,
+					description: row.description ?? null,
+					is_active: row.is_active ?? true,
+				},
+				summary,
+			});
 		} catch (err) {
 			summary.failed++;
 			errors.push({ tab: 'lesson_types', row: i + 2, message: getSafeErrorMessage(err) });
@@ -367,17 +347,16 @@ async function importLessonTypeOptions(
 				price_per_lesson_adult_cents: row.price_per_lesson_adult_cents ?? null,
 				price_per_lesson_under_21_cents: row.price_per_lesson_under_21_cents ?? null,
 			};
-			const existingId = mapping.get(row.legacy_id);
-			if (existingId) {
-				const { error } = await admin.from('lesson_type_options').update(payload).eq('id', existingId);
-				if (error) throw error;
-				summary.updated++;
-			} else {
-				const { data, error } = await admin.from('lesson_type_options').insert(payload).select('id').single();
-				if (error) throw error;
-				await saveMapping(admin, 'lesson_type_option', row.legacy_id, data.id, importedBy);
-				summary.created++;
-			}
+			await upsertMappedEntity({
+				admin,
+				table: 'lesson_type_options',
+				entityType: 'lesson_type_option',
+				legacyId: row.legacy_id,
+				mapping,
+				importedBy,
+				payload,
+				summary,
+			});
 		} catch (err) {
 			summary.failed++;
 			errors.push({ tab: 'lesson_type_options', row: i + 2, message: getSafeErrorMessage(err) });
@@ -405,32 +384,6 @@ async function ensureAuthUser(
 	throw error ?? new Error('Gebruiker kon niet worden aangemaakt');
 }
 
-async function upsertProfile(
-	admin: SupabaseClient,
-	userId: string,
-	email: string,
-	firstName: string | null,
-	lastName: string | null,
-	phone: string | null,
-) {
-	const { error } = await admin.from('profiles').upsert(
-		{
-			user_id: userId,
-			email,
-			first_name: firstName,
-			last_name: lastName,
-			phone_number: phone,
-		},
-		{ onConflict: 'user_id' },
-	);
-	if (error) throw error;
-}
-
-async function upsertRole(admin: SupabaseClient, userId: string, role: 'student' | 'teacher') {
-	const { error } = await admin.from('user_roles').upsert({ user_id: userId, role }, { onConflict: 'user_id,role' });
-	if (error) throw error;
-}
-
 async function importTeachers(
 	admin: SupabaseClient,
 	rows: z.infer<typeof teacherSchema>[],
@@ -442,18 +395,18 @@ async function importTeachers(
 	const summary: ImportSummary = { tab: 'teachers', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const userId =
-				teacherMap.get(row.legacy_id) ??
-				(await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
-			await upsertProfile(
+			const hadMapping = teacherMap.has(row.legacy_id);
+			const { userId } = await resolveLegacyPersonUserId({
 				admin,
-				userId,
-				row.email,
-				row.first_name ?? null,
-				row.last_name ?? null,
-				row.phone_number ?? null,
-			);
-			await upsertRole(admin, userId, 'teacher');
+				personMap: teacherMap,
+				legacyId: row.legacy_id,
+				email: row.email,
+				firstName: row.first_name,
+				lastName: row.last_name,
+				phone: row.phone_number,
+				role: 'teacher',
+				ensureAuthUser,
+			});
 			const { error: tErr } = await admin
 				.from('teachers')
 				.upsert(
@@ -486,8 +439,8 @@ async function importTeachers(
 						);
 				}
 			}
-			if (!teacherMap.has(row.legacy_id)) {
-				await saveMapping(admin, 'teacher', row.legacy_id, userId, importedBy);
+			if (!hadMapping) {
+				await saveLegacyMapping(admin, 'teacher', row.legacy_id, userId, importedBy);
 				teacherMap.set(row.legacy_id, userId);
 				summary.created++;
 			} else {
@@ -511,18 +464,18 @@ async function importStudents(
 	const summary: ImportSummary = { tab: 'students', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const userId =
-				studentMap.get(row.legacy_id) ??
-				(await ensureAuthUser(admin, row.email, row.first_name, row.last_name));
-			await upsertProfile(
+			const hadMapping = studentMap.has(row.legacy_id);
+			const { userId } = await resolveLegacyPersonUserId({
 				admin,
-				userId,
-				row.email,
-				row.first_name ?? null,
-				row.last_name ?? null,
-				row.phone_number ?? null,
-			);
-			await upsertRole(admin, userId, 'student');
+				personMap: studentMap,
+				legacyId: row.legacy_id,
+				email: row.email,
+				firstName: row.first_name,
+				lastName: row.last_name,
+				phone: row.phone_number,
+				role: 'student',
+				ensureAuthUser,
+			});
 			const { error: sErr } = await admin.from('students').upsert(
 				{
 					user_id: userId,
@@ -539,8 +492,8 @@ async function importStudents(
 				{ onConflict: 'user_id' },
 			);
 			if (sErr) throw sErr;
-			if (!studentMap.has(row.legacy_id)) {
-				await saveMapping(admin, 'student', row.legacy_id, userId, importedBy);
+			if (!hadMapping) {
+				await saveLegacyMapping(admin, 'student', row.legacy_id, userId, importedBy);
 				studentMap.set(row.legacy_id, userId);
 				summary.created++;
 			} else {
@@ -587,17 +540,16 @@ async function importAgreements(
 				signup_source: row.signup_source ?? 'legacy-import',
 				is_active: true,
 			};
-			const existingId = agreementMap.get(row.legacy_id);
-			if (existingId) {
-				const { error } = await admin.from('lesson_agreements').update(payload).eq('id', existingId);
-				if (error) throw error;
-				summary.updated++;
-			} else {
-				const { data, error } = await admin.from('lesson_agreements').insert(payload).select('id').single();
-				if (error) throw error;
-				await saveMapping(admin, 'lesson_agreement', row.legacy_id, data.id, importedBy);
-				summary.created++;
-			}
+			await upsertMappedEntity({
+				admin,
+				table: 'lesson_agreements',
+				entityType: 'lesson_agreement',
+				legacyId: row.legacy_id,
+				mapping: agreementMap,
+				importedBy,
+				payload,
+				summary,
+			});
 		} catch (err) {
 			summary.failed++;
 			errors.push({ tab: 'lesson_agreements', row: i + 2, message: getSafeErrorMessage(err) });

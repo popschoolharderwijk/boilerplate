@@ -5,58 +5,16 @@
 // 'scheduled' to 'active' once Stripe emits customer.subscription.created.
 //
 // Privileged staff/admin only.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { handleCorsPreflight, jsonResponse, requirePost } from '../_shared/http.ts';
+import { jsonResponse, serveLessonAgreementPost } from '../_shared/http.ts';
 import { getSafeErrorMessage, getStripe, getStripeId } from '../_shared/stripe.ts';
 import { writeSubscriptionState } from '../_shared/subscription-storage.ts';
+import { createSupabaseClients, requirePrivilegedUser } from '../_shared/supabase.ts';
 
-interface Body {
-	lesson_agreement_id?: string;
-}
+serveLessonAgreementPost(async ({ authHeader, lessonAgreementId }) => {
+	const { userClient, admin } = createSupabaseClients(authHeader);
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-Deno.serve(async (req) => {
-	const preflight = handleCorsPreflight(req);
-	if (preflight) return preflight;
-	const notPost = requirePost(req);
-	if (notPost) return notPost;
-
-	const authHeader = req.headers.get('Authorization');
-	if (!authHeader) return jsonResponse(401, { error: 'Missing authorization header' });
-
-	let body: Body;
-	try {
-		body = await req.json();
-	} catch {
-		return jsonResponse(400, { error: 'Invalid JSON' });
-	}
-	if (!body.lesson_agreement_id || !UUID_RE.test(body.lesson_agreement_id)) {
-		return jsonResponse(400, { error: 'Ongeldig lesson_agreement_id' });
-	}
-
-	const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-	const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-	const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-	const userClient = createClient(supabaseUrl, anonKey, {
-		global: { headers: { Authorization: authHeader } },
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-	const admin = createClient(supabaseUrl, serviceKey, {
-		auth: { autoRefreshToken: false, persistSession: false },
-	});
-
-	const {
-		data: { user },
-		error: userErr,
-	} = await userClient.auth.getUser();
-	if (userErr || !user) return jsonResponse(401, { error: 'Invalid token' });
-
-	const { data: privileged, error: privErr } = await userClient.rpc('is_privileged');
-	if (privErr || privileged !== true) return jsonResponse(403, { error: 'Onvoldoende rechten' });
-
-	const lessonAgreementId = body.lesson_agreement_id;
+	const authn = await requirePrivilegedUser(userClient);
+	if (!authn.ok) return authn.response;
 
 	const { data: agreement, error: agErr } = await admin
 		.from('lesson_agreements')

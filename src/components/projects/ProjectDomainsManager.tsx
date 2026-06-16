@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { useNamedCrudDialogState } from '@/hooks/useNamedCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
 import { PostgresErrorCodes } from '@/integrations/supabase/errorcodes';
 import type { ProjectDomain } from '@/types/projects';
@@ -19,12 +20,21 @@ interface ProjectDomainsManagerProps {
 
 export function ProjectDomainsManager({ onDomainsChange }: ProjectDomainsManagerProps = {}) {
 	const [domains, setDomains] = useState<ProjectDomain[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editing, setEditing] = useState<ProjectDomain | null>(null);
-	const [name, setName] = useState('');
-	const [saving, setSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<ProjectDomain | null>(null);
+	const {
+		loading,
+		setLoading,
+		dialogOpen,
+		setDialogOpen,
+		editing,
+		saving,
+		setSaving,
+		deleteTarget,
+		setDeleteTarget,
+		openCreate,
+		openEdit,
+		name,
+		setName,
+	} = useNamedCrudDialogState<ProjectDomain>();
 
 	const fetchDomains = useCallback(async () => {
 		const { data, error } = await supabase.from('project_domains').select('*').order('name');
@@ -34,22 +44,18 @@ export function ProjectDomainsManager({ onDomainsChange }: ProjectDomainsManager
 			setDomains(data ?? []);
 		}
 		setLoading(false);
-	}, []);
+	}, [setLoading]);
 
 	useEffect(() => {
 		fetchDomains();
 	}, [fetchDomains]);
 
-	const openCreate = () => {
-		setEditing(null);
-		setName('');
-		setDialogOpen(true);
+	const openCreateDomain = () => {
+		openCreate(() => setName(''));
 	};
 
-	const openEdit = (domain: ProjectDomain) => {
-		setEditing(domain);
-		setName(domain.name);
-		setDialogOpen(true);
+	const openEditDomain = (domain: ProjectDomain) => {
+		openEdit(domain, () => setName(domain.name));
 	};
 
 	const handleSave = async () => {
@@ -103,7 +109,7 @@ export function ProjectDomainsManager({ onDomainsChange }: ProjectDomainsManager
 		<Card className="overflow-hidden">
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 border-b py-2.5 px-4">
 				<CardTitle className="text-sm font-semibold">Domeinen</CardTitle>
-				<Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={openCreate}>
+				<Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={openCreateDomain}>
 					<LuPlus className="h-3.5 w-3.5" />
 					Toevoegen
 				</Button>
@@ -126,7 +132,7 @@ export function ProjectDomainsManager({ onDomainsChange }: ProjectDomainsManager
 										variant="ghost"
 										size="icon"
 										className="h-7 w-7"
-										onClick={() => openEdit(domain)}
+										onClick={() => openEditDomain(domain)}
 										aria-label="Bewerken"
 									>
 										<LuPencil className="h-3.5 w-3.5" />

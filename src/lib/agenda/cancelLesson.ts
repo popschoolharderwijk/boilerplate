@@ -1,6 +1,7 @@
 import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog';
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
+import { getAgendaLessonContext, lookupAgendaEvent } from '@/lib/agenda/agendaEventLookup';
 import type { AgendaAgreementLike } from '@/lib/agenda/moveAgendaEvent';
 import { formatDateToDb, now } from '@/lib/date/date-format';
 import { normalizeTime } from '@/lib/time/time-format';
@@ -22,16 +23,12 @@ export type CancelLessonResult = { ok: true; message: string } | { ok: false; me
 export async function cancelLesson(params: CancelLessonParams): Promise<CancelLessonResult> {
 	const { selectedEvent, agendaEvents, agreementsMap, scope, cancellationType, cancelledParticipantIds } = params;
 	const needsReschedule = cancellationType === 'teacher';
-	const eventId = selectedEvent.resource.eventId;
-	if (!eventId) return { ok: false, message: 'Geen afspraak' };
-
-	const agendaEvent = agendaEvents.find((e) => e.id === eventId);
-	if (!agendaEvent) return { ok: false, message: 'Afspraak niet gevonden' };
+	const lookup = lookupAgendaEvent(selectedEvent.resource.eventId, agendaEvents);
+	if ('ok' in lookup) return lookup;
+	const agendaEvent = lookup.event;
 
 	const recurring = scope === 'thisAndFuture';
-	const isLessonEvent = agendaEvent.source_type === 'lesson_agreement' && agendaEvent.source_id;
-	const agreement = isLessonEvent ? agreementsMap.get(agendaEvent.source_id as string) : null;
-	const baseStartTime = agreement ? agreement.start_time : agendaEvent.start_time;
+	const { baseStartTime } = getAgendaLessonContext(agendaEvent, agreementsMap);
 
 	const isExistingDeviation = selectedEvent.resource.deviationId;
 	let originalDateStr: string;
@@ -73,7 +70,7 @@ export async function cancelLesson(params: CancelLessonParams): Promise<CancelLe
 	}
 
 	const { error } = await supabase.from('agenda_event_deviations').insert({
-		event_id: eventId,
+		event_id: agendaEvent.id,
 		original_date: originalDateStr,
 		original_start_time: originalStartTime,
 		actual_date: originalDateStr,

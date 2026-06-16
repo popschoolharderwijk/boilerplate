@@ -4,6 +4,7 @@ import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
 import { generateAgendaEvents, type NoLessonPeriod } from '@/lib/agenda/eventGenerators';
 import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
+import { pushToMapArray } from '@/lib/collections';
 import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
 import type { AgendaLessonAgreement, LessonAgreementQuery } from '@/types/lesson-agreements';
@@ -127,9 +128,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			const userIdsByEvent = new Map<string, string[]>();
 			for (const p of allParticipants) {
 				countByEvent.set(p.event_id, (countByEvent.get(p.event_id) ?? 0) + 1);
-				const list = userIdsByEvent.get(p.event_id) ?? [];
-				list.push(p.user_id);
-				userIdsByEvent.set(p.event_id, list);
+				pushToMapArray(userIdsByEvent, p.event_id, p.user_id);
 			}
 			setParticipantCountByEventId(countByEvent);
 			setParticipantUserIdsByEventId(userIdsByEvent);

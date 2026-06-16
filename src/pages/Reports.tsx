@@ -1,22 +1,12 @@
-import {
-	endOfMonth,
-	endOfQuarter,
-	endOfYear,
-	startOfMonth,
-	startOfQuarter,
-	startOfYear,
-	subMonths,
-	subQuarters,
-} from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuClock, LuFolderOpen, LuTrash2, LuUsers } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { PeriodPresetControls } from '@/components/reports/PeriodPresetControls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
-import { DatePicker } from '@/components/ui/date-picker';
 import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { Label } from '@/components/ui/label';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
@@ -28,12 +18,12 @@ import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDateToDb } from '@/lib/date/date-format';
+import { BASE_PRESET_LABELS, type BasePeriodPreset, getPresetDateRange } from '@/lib/reports/periodPresets';
 import { formatDurationMinutes } from '@/lib/time/time-format';
 
 // --- Types ---
 
-type ReportSourceType = 'lesson' | 'project';
+const REPORT_PRESETS = Object.keys(BASE_PRESET_LABELS) as BasePeriodPreset[];
 
 interface ReportRow {
 	source_type: ReportSourceType;
@@ -53,50 +43,17 @@ interface ReportRow {
 	project_name: string | null;
 }
 
+type ReportSourceType = 'lesson' | 'project';
+
 const DUO_PERSPECTIVE_LABELS: Record<'teacher_block' | 'student_lesson', string> = {
 	teacher_block: 'docent-blokken',
 	student_lesson: 'per leerling',
 };
 
-type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
-
-// --- Helpers ---
-
-function getPresetDates(preset: PeriodPreset): { start: string; end: string } {
-	const now = new Date();
-	switch (preset) {
-		case 'this_month':
-			return { start: formatDateToDb(startOfMonth(now)), end: formatDateToDb(endOfMonth(now)) };
-		case 'last_month': {
-			const prev = subMonths(now, 1);
-			return { start: formatDateToDb(startOfMonth(prev)), end: formatDateToDb(endOfMonth(prev)) };
-		}
-		case 'this_quarter':
-			return { start: formatDateToDb(startOfQuarter(now)), end: formatDateToDb(endOfQuarter(now)) };
-		case 'last_quarter': {
-			const prevQ = subQuarters(now, 1);
-			return { start: formatDateToDb(startOfQuarter(prevQ)), end: formatDateToDb(endOfQuarter(prevQ)) };
-		}
-		case 'this_year':
-			return { start: formatDateToDb(startOfYear(now)), end: formatDateToDb(endOfYear(now)) };
-		default:
-			return { start: formatDateToDb(startOfMonth(now)), end: formatDateToDb(endOfMonth(now)) };
-	}
-}
-
 const AGE_LABELS: Record<string, string> = {
 	under_21: 'Onder 21',
 	'21_plus': '21+',
 	unknown: 'Onbekend',
-};
-
-const PRESET_LABELS: Record<PeriodPreset, string> = {
-	this_month: 'Deze maand',
-	last_month: 'Vorige maand',
-	this_quarter: 'Dit kwartaal',
-	last_quarter: 'Vorig kwartaal',
-	this_year: 'Dit jaar',
-	custom: 'Aangepast',
 };
 
 // --- ReportsDataTable (DataTable with search + quick filter) ---
@@ -323,8 +280,8 @@ export default function Reports() {
 	const hasAccess = isPrivileged || isTeacher;
 
 	// Period state
-	const [preset, setPreset] = useState<PeriodPreset>('this_month');
-	const initialDates = getPresetDates('this_month');
+	const [preset, setPreset] = useState<BasePeriodPreset>('this_month');
+	const initialDates = getPresetDateRange('this_month');
 	const [startDate, setStartDate] = useState(initialDates.start);
 	const [endDate, setEndDate] = useState(initialDates.end);
 
@@ -342,10 +299,10 @@ export default function Reports() {
 	const [loading, setLoading] = useState(true);
 
 	// Handle preset change
-	const handlePresetChange = (newPreset: PeriodPreset) => {
+	const handlePresetChange = (newPreset: BasePeriodPreset) => {
 		setPreset(newPreset);
 		if (newPreset !== 'custom') {
-			const dates = getPresetDates(newPreset);
+			const dates = getPresetDateRange(newPreset);
 			setStartDate(dates.start);
 			setEndDate(dates.end);
 		}
@@ -467,33 +424,16 @@ export default function Reports() {
 				subtitle="Urenrapportage per docent, lessoort en leeftijdscategorie"
 			/>
 
-			{/* Period presets */}
-			<div className="flex flex-wrap gap-2">
-				{(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
-					<Button
-						key={p}
-						variant={preset === p ? 'default' : 'outline'}
-						size="sm"
-						onClick={() => handlePresetChange(p)}
-					>
-						{PRESET_LABELS[p]}
-					</Button>
-				))}
-			</div>
-
-			{/* Custom date range (always shown but disabled unless custom) */}
-			{preset === 'custom' && (
-				<div className="flex flex-wrap items-end gap-4">
-					<div className="space-y-1.5">
-						<Label>Startdatum</Label>
-						<DatePicker value={startDate} onChange={(v) => setStartDate(v || '')} />
-					</div>
-					<div className="space-y-1.5">
-						<Label>Einddatum</Label>
-						<DatePicker value={endDate} onChange={(v) => setEndDate(v || '')} />
-					</div>
-				</div>
-			)}
+			<PeriodPresetControls
+				preset={preset}
+				presets={REPORT_PRESETS}
+				labels={BASE_PRESET_LABELS}
+				onPresetChange={handlePresetChange}
+				startDate={startDate}
+				endDate={endDate}
+				onStartDateChange={setStartDate}
+				onEndDateChange={setEndDate}
+			/>
 
 			{/* Teacher filter (API) - staff/admin only */}
 			{isPrivileged && (

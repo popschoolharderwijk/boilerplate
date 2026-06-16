@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<SignupRequestDetail['status'], string> = {
 	pending: 'In behandeling',
 	approved: 'Goedgekeurd',
 	rejected: 'Afgewezen',
+	trial_scheduled: 'Proefles ingepland',
 };
 
 export function SignupRequestItem({ request, className }: SignupRequestItemProps) {

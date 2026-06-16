@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SubmitButton } from '@/components/ui/submit-button';
+import { useNamedCrudDialogState } from '@/hooks/useNamedCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
 import { PostgresErrorCodes } from '@/integrations/supabase/errorcodes';
 import type { ProjectDomain, ProjectLabel } from '@/types/projects';
@@ -24,13 +25,22 @@ interface ProjectLabelsManagerProps {
 export function ProjectLabelsManager({ registerRefetch }: ProjectLabelsManagerProps = {}) {
 	const [labels, setLabels] = useState<LabelWithDomain[]>([]);
 	const [domains, setDomains] = useState<ProjectDomain[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editing, setEditing] = useState<LabelWithDomain | null>(null);
-	const [name, setName] = useState('');
+	const {
+		loading,
+		setLoading,
+		dialogOpen,
+		setDialogOpen,
+		editing,
+		saving,
+		setSaving,
+		deleteTarget,
+		setDeleteTarget,
+		openCreate,
+		openEdit,
+		name,
+		setName,
+	} = useNamedCrudDialogState<LabelWithDomain>();
 	const [domainId, setDomainId] = useState('');
-	const [saving, setSaving] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<LabelWithDomain | null>(null);
 
 	const fetchData = useCallback(async () => {
 		const [labelsRes, domainsRes] = await Promise.all([
@@ -45,7 +55,7 @@ export function ProjectLabelsManager({ registerRefetch }: ProjectLabelsManagerPr
 		}
 		setDomains(domainsRes.data ?? []);
 		setLoading(false);
-	}, []);
+	}, [setLoading]);
 
 	useEffect(() => {
 		fetchData();
@@ -55,18 +65,18 @@ export function ProjectLabelsManager({ registerRefetch }: ProjectLabelsManagerPr
 		registerRefetch?.(fetchData);
 	}, [registerRefetch, fetchData]);
 
-	const openCreate = () => {
-		setEditing(null);
-		setName('');
-		setDomainId('');
-		setDialogOpen(true);
+	const openCreateLabel = () => {
+		openCreate(() => {
+			setName('');
+			setDomainId('');
+		});
 	};
 
-	const openEdit = (label: LabelWithDomain) => {
-		setEditing(label);
-		setName(label.name);
-		setDomainId(label.domain_id);
-		setDialogOpen(true);
+	const openEditLabel = (label: LabelWithDomain) => {
+		openEdit(label, () => {
+			setName(label.name);
+			setDomainId(label.domain_id);
+		});
 	};
 
 	const handleSave = async () => {
@@ -139,7 +149,7 @@ export function ProjectLabelsManager({ registerRefetch }: ProjectLabelsManagerPr
 					variant="outline"
 					size="sm"
 					className="h-7 gap-1 text-xs"
-					onClick={openCreate}
+					onClick={openCreateLabel}
 					disabled={domains.length === 0}
 				>
 					<LuPlus className="h-3.5 w-3.5" />
@@ -171,7 +181,7 @@ export function ProjectLabelsManager({ registerRefetch }: ProjectLabelsManagerPr
 										variant="ghost"
 										size="icon"
 										className="h-7 w-7"
-										onClick={() => openEdit(label)}
+										onClick={() => openEditLabel(label)}
 										aria-label="Bewerken"
 									>
 										<LuPencil className="h-3.5 w-3.5" />
