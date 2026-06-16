@@ -138,9 +138,9 @@ Deze users komen uit de test seed (`supabase/seeds/test.sql`) en zijn beschikbaa
 VITE_DEV_LOGIN_PASSWORD=your-custom-password
 ```
 
-Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De seed users in de remote dev instance gebruiken standaard het wachtwoord `password`.
+Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De test-seed users in `supabase/seeds/test.sql` gebruiken standaard het wachtwoord `password`.
 
-> 💡 **Let op**: De Dev Login knop gebruikt hardcoded emails uit de seed data (bijv. `site-admin@test.nl`). Deze emails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run create-user` met `DEV_LOGIN_EMAIL`.
+> 💡 **Let op**: De Dev Login knop gebruikt hardcoded e-mails uit `supabase/seeds/test.sql` (bijv. `site-admin@test.nl`). Deze e-mails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run create-user` met `DEV_LOGIN_EMAIL`.
 
 ### Beveiliging
 

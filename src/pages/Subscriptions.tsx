@@ -128,22 +128,26 @@ export default function Subscriptions() {
 		]);
 
 		const profileByUser = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-		const subs: Row[] = raw.map((s) => ({
-			...s,
-			lesson_agreement: s.lesson_agreement
-				? {
-						...s.lesson_agreement,
-						profiles: profileByUser.get(s.lesson_agreement.student_user_id)
-							? {
-									first_name: profileByUser.get(s.lesson_agreement.student_user_id)!.first_name,
-									last_name: profileByUser.get(s.lesson_agreement.student_user_id)!.last_name,
-									email: profileByUser.get(s.lesson_agreement.student_user_id)!.email,
-									avatar_url: profileByUser.get(s.lesson_agreement.student_user_id)!.avatar_url,
-								}
-							: null,
-					}
-				: null,
-		}));
+		const subs: Row[] = raw.map((s) => {
+			const agreement = s.lesson_agreement;
+			const studentProfile = agreement ? profileByUser.get(agreement.student_user_id) : undefined;
+			return {
+				...s,
+				lesson_agreement: agreement
+					? {
+							...agreement,
+							profiles: studentProfile
+								? {
+										first_name: studentProfile.first_name,
+										last_name: studentProfile.last_name,
+										email: studentProfile.email,
+										avatar_url: studentProfile.avatar_url,
+									}
+								: null,
+						}
+					: null,
+			};
+		});
 		setRows(subs);
 
 		const dobByUser = new Map((students ?? []).map((s) => [s.user_id, s.date_of_birth]));

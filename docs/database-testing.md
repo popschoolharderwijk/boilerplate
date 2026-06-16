@@ -9,7 +9,7 @@ Tests draaien tegen een **remote Supabase-project** (geen lokale instance). Er z
 
 **In CI** (`pull-request-test-code-and-supabase.yml`):
 - Workflow linkt naar **mcp-test** (via secret `SUPABASE_PROJECT_REF`)
-- `supabase db reset --linked --yes` (seed wordt toegepast)
+- `supabase db reset --linked --yes` (`seeds/bootstrap.sql` + `seeds/test.sql` worden toegepast)
 - Credentials uit GitHub secrets (moeten van mcp-test zijn) → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`
 - `bun test` draait RLS- en Auth-tests tegen mcp-test
 

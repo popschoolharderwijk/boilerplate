@@ -244,7 +244,7 @@ export function setupDatabaseStateVerification(): {
 
 	const verifyState = async (initialState: DatabaseState): Promise<void> => {
 		// Verify database integrity after tests
-		// All data should come from seeds/test.sql - tests should not modify database state
+		// All data should come from seeds/test.sql (+ bootstrap.sql) - tests should not modify database state
 		const finalState = await captureDatabaseState();
 		const comparison = compareDatabaseStates(initialState, finalState);
 
