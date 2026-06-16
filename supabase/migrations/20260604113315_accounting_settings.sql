@@ -54,8 +54,7 @@ CREATE TRIGGER trg_audit_accounting_settings
   BEFORE INSERT OR UPDATE ON public.accounting_settings
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
--- Seed singleton row
-INSERT INTO public.accounting_settings (id) VALUES (true) ON CONFLICT DO NOTHING;
+-- (Singleton-rij wordt geseed in supabase/seed.sql)
 
 -- ============================================================
 -- get_accounting_report: per Stripe-factuur de journaalposten berekenen

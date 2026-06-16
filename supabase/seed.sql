@@ -1404,3 +1404,64 @@ SELECT id, owner_user_id FROM project_events;
 -- =============================================================================
 -- END SEED
 -- =============================================================================
+
+-- =============================================================================
+-- BOOTSTRAP / DEFAULT DATA
+-- Verplaatst uit migraties: standaardtarieven, e-mailtemplates, en
+-- singleton-rijen die de app nodig heeft. Hier zodat ze na elke reset terug
+-- gezet worden en niet in migratiebestanden hoeven te staan.
+-- =============================================================================
+
+-- Standaardtarieven voor weekly/biweekly lesson_type_options (uit stripe_billing migratie).
+UPDATE public.lesson_type_options
+SET price_per_lesson_under_21_cents = 1950,
+    price_per_lesson_adult_cents = 2360
+WHERE frequency = 'weekly'
+  AND price_per_lesson_under_21_cents IS NULL;
+
+UPDATE public.lesson_type_options
+SET price_per_lesson_under_21_cents = 2055,
+    price_per_lesson_adult_cents = 2498
+WHERE frequency = 'biweekly'
+  AND price_per_lesson_under_21_cents IS NULL;
+
+-- Singleton boekhoudinstellingen (uit accounting_settings migratie).
+INSERT INTO public.accounting_settings (id) VALUES (true) ON CONFLICT DO NOTHING;
+
+-- Standaard e-mailtemplates (uit email_templates migratie).
+INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
+	'signup_received',
+	'Bevestiging van je aanmelding bij Popschool Harderwijk',
+	'<p>Hoi {{leerling_naam}},</p>
+<p>Bedankt voor je aanmelding bij Popschool Harderwijk!</p>
+<p>We hebben je aanvraag voor <strong>{{les_type}}</strong> ({{frequentie}}) ontvangen voor <strong>{{prijs_per_les}}</strong> per les.</p>
+<p>We nemen zo snel mogelijk contact met je op om je inschrijving te verwerken.</p>
+<p>Met muzikale groet,<br/>Popschool Harderwijk</p>',
+	true
+) ON CONFLICT (event_key) DO NOTHING;
+
+INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
+	'trial_scheduled',
+	'Je proefles bij Popschool Harderwijk is ingepland',
+	'<p>Hoi {{leerling_naam}},</p>
+<p>Je proefles voor <strong>{{les_type}}</strong> is ingepland op <strong>{{datum}}</strong> om <strong>{{tijd}}</strong> ({{duur}} minuten).</p>
+<p>Na de proefles kun je in de portal aangeven of je verder wilt met lessen. Pas dan stellen we een definitieve overeenkomst op.</p>
+<p>Veel plezier en tot dan!<br/>Popschool Harderwijk</p>',
+	true
+) ON CONFLICT (event_key) DO NOTHING;
+
+INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
+	'trial_scheduled_teacher',
+	'Nieuwe proefles ingepland: {{leerling_naam}}',
+	'<p>Hoi {{docent_naam}},</p>
+<p>Er is een proefles voor je ingepland.</p>
+<ul>
+  <li><strong>Leerling:</strong> {{leerling_naam}}</li>
+  <li><strong>Lessoort:</strong> {{les_type}}</li>
+  <li><strong>Datum:</strong> {{datum}}</li>
+  <li><strong>Tijd:</strong> {{tijd}} ({{duur}} minuten)</li>
+</ul>
+<p>De afspraak staat in je agenda.</p>
+<p>Groet,<br/>Popschool Harderwijk</p>',
+	true
+) ON CONFLICT (event_key) DO NOTHING;
