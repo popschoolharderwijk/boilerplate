@@ -113,9 +113,7 @@ Deno.serve(async (req) => {
 		});
 		return new Response(
 			JSON.stringify({
-				error: 'Kon aanmelding niet opslaan',
-				detail: error.message,
-				code: error.code,
+				error: `Kon aanmelding niet opslaan: ${error.message}${error.code ? ` (${error.code})` : ''}`,
 			}),
 			{ status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
 		);
