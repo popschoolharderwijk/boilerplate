@@ -127,18 +127,7 @@ ALTER TABLE public.subscriptions
 ALTER TABLE public.lesson_agreements
   ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
 
--- Backfill standaardtarieven voor bestaande weekly/biweekly opties
-UPDATE public.lesson_type_options
-SET price_per_lesson_under_21_cents = 1950,
-    price_per_lesson_adult_cents = 2360
-WHERE frequency = 'weekly'
-  AND price_per_lesson_under_21_cents IS NULL;
-
-UPDATE public.lesson_type_options
-SET price_per_lesson_under_21_cents = 2055,
-    price_per_lesson_adult_cents = 2498
-WHERE frequency = 'biweekly'
-  AND price_per_lesson_under_21_cents IS NULL;
+-- (Backfill van weekly/biweekly tarieven is verplaatst naar supabase/seed.sql)
 -- ============================================================
 -- Part 3: subscriptions adjustments (nullable stripe_subscription_id, status set, unique index)
 -- ============================================================
