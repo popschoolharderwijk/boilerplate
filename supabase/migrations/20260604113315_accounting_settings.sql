@@ -1,6 +1,6 @@
 
 -- ============================================================
--- Boekhouding: accounting_settings tabel
+-- Accounting: accounting_settings table
 -- ============================================================
 CREATE TABLE public.accounting_settings (
   id boolean PRIMARY KEY DEFAULT true,
@@ -54,10 +54,10 @@ CREATE TRIGGER trg_audit_accounting_settings
   BEFORE INSERT OR UPDATE ON public.accounting_settings
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
--- (Singleton-rij wordt geseed in supabase/seed.sql)
+-- (Singleton row is seeded in supabase/seed.sql)
 
 -- ============================================================
--- get_accounting_report: per Stripe-factuur de journaalposten berekenen
+-- get_accounting_report: compute journal entries per Stripe invoice
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_accounting_report(
   p_start_date date,

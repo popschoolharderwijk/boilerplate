@@ -6,7 +6,7 @@
 
 -- Idempotent re-run of duo lessons migration (first run failed on profiles.id)
 
--- 1. Lesson types: duo flag (kolom kan al bestaan)
+-- 1. Lesson types: duo flag (column may already exist)
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_schema='public' AND table_name='lesson_types' AND column_name='is_duo_lesson') THEN
@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_lesson_agreements_duo_pair_id
   ON public.lesson_agreements (duo_pair_id)
   WHERE duo_pair_id IS NOT NULL;
 
--- 3. Validation trigger (was al aangemaakt door deel-run, vervang met OR REPLACE)
+-- 3. Validation trigger (may already exist from a partial run; replace with OR REPLACE)
 CREATE OR REPLACE FUNCTION public.validate_duo_agreement()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -135,9 +135,9 @@ GRANT EXECUTE ON FUNCTION public.get_duo_partner_display_name(uuid) TO authentic
 -- ============================================================
 -- Part 2: trigger to reuse agenda_event for duo partner
 -- ============================================================
--- Duo-overeenkomsten: hergebruik bestaand agenda_event voor partner i.p.v. nieuwe maken.
--- Wanneer een tweede agreement met dezelfde duo_pair_id wordt ingevoegd, voegen we de
--- leerling toe als extra participant aan het bestaande event van de eerste agreement.
+-- Duo agreements: reuse existing agenda_event for partner instead of creating a new one.
+-- When a second agreement with the same duo_pair_id is inserted, we add the
+-- student as an additional participant to the existing event of the first agreement.
 
 CREATE OR REPLACE FUNCTION public.trigger_lesson_agreement_create_agenda_event()
 RETURNS TRIGGER
@@ -158,8 +158,8 @@ BEGIN
     RAISE EXCEPTION 'Teacher not found for teacher_user_id %', NEW.teacher_user_id;
   END IF;
 
-  -- Duo-pad: als er al een agenda_event bestaat voor een andere agreement in dit duo_pair,
-  -- voeg de leerling daar als participant aan toe en maak GEEN nieuw event.
+  -- Duo path: if an agenda_event already exists for another agreement in this duo_pair,
+  -- add the student there as a participant and do NOT create a new event.
   IF NEW.duo_pair_id IS NOT NULL THEN
     SELECT ae.id INTO v_partner_event_id
     FROM public.agenda_events ae

@@ -115,19 +115,19 @@ SELECT public.apply_audit_trail('public.subscription_invoices'::regclass);
 -- ============================================================
 -- Part 2: age-based pricing + stripe_schedule_id linkage
 -- ============================================================
--- Leeftijdsspecifieke prijzen op lesopties (in centen om afrondingsfouten te voorkomen)
+-- Age-specific prices on lesson options (in cents to avoid rounding errors)
 ALTER TABLE public.lesson_type_options
   ADD COLUMN IF NOT EXISTS price_per_lesson_under_21_cents integer,
   ADD COLUMN IF NOT EXISTS price_per_lesson_adult_cents integer;
 
--- Stripe Subscription Schedule koppeling
+-- Stripe Subscription Schedule linkage
 ALTER TABLE public.subscriptions
   ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
 
 ALTER TABLE public.lesson_agreements
   ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
 
--- (Backfill van weekly/biweekly tarieven is verplaatst naar supabase/seed.sql)
+-- (Backfill of weekly/biweekly rates moved to supabase/seed.sql)
 -- ============================================================
 -- Part 3: subscriptions adjustments (nullable stripe_subscription_id, status set, unique index)
 -- ============================================================

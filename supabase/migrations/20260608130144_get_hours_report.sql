@@ -95,7 +95,7 @@ BEGIN
     JOIN lesson_types lt ON lt.id = nco.lesson_type_id
     LEFT JOIN students s ON s.user_id = nco.student_user_id
   ),
-  -- Standaard (niet-duo) lessen: 1 les + volledige duur per leerling-occurrence
+  -- Standard (non-duo) lessons: 1 lesson + full duration per student occurrence
   enriched_standard AS (
     SELECT
       teacher_user_id,
@@ -107,8 +107,8 @@ BEGIN
     FROM occurrences_typed
     WHERE COALESCE(is_duo_lesson, false) = false
   ),
-  -- Duo, docent-blok weergave: 0.5 les + halve duur per leerling-occurrence
-  -- (totaal per duo-occurrence = 1 les + volledige duur, gesplitst per BTW)
+  -- Duo, teacher-block view: 0.5 lesson + half duration per student occurrence
+  -- (total per duo occurrence = 1 lesson + full duration, split per VAT)
   enriched_duo_teacher AS (
     SELECT
       teacher_user_id,
@@ -120,7 +120,7 @@ BEGIN
     FROM occurrences_typed
     WHERE COALESCE(is_duo_lesson, false) = true
   ),
-  -- Duo, leerling-lessen weergave: 1 les + volledige duur per leerling-occurrence
+  -- Duo, student-lessons view: 1 lesson + full duration per student occurrence
   -- (totaal per duo-occurrence = 2 lessen + 2x duur)
   enriched_duo_student AS (
     SELECT
