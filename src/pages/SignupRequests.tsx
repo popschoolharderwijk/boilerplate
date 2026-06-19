@@ -112,7 +112,7 @@ function buildSignupColumns(
 								onClick={() => setTrialFor(r)}
 								disabled={busyId === r.id}
 							>
-								<LuCalendarPlus className="h-4 w-4 mr-1" /> Proefles
+								<LuCalendarPlus className="h-4 w-4" /> Proefles
 							</Button>
 						)}
 						<Button
@@ -120,7 +120,7 @@ function buildSignupColumns(
 							onClick={() => runAction({ kind: 'process', row: r })}
 							disabled={busyId === r.id}
 						>
-							<LuCheck className="h-4 w-4 mr-1" /> Verwerken
+							<LuCheck className="h-4 w-4" /> Verwerken
 						</Button>
 					</div>
 				) : null,
