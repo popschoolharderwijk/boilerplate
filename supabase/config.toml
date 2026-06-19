@@ -112,11 +112,3 @@ verify_jwt = false
 # Stripe webhook is publiek — signature wordt in de function geverifieerd
 [functions.stripe-webhook]
 verify_jwt = false
-
-# Publieke aanmeldpagina mag lessoorten/opties/groepen ophalen zonder login
-[functions.get-public-signup-options]
-verify_jwt = false
-
-[functions.submit-signup-request]
-verify_jwt = false
-
