@@ -43,17 +43,10 @@ Deno.serve(async (req) => {
 		});
 	}
 
-	const admin = createClient(
-		Deno.env.get('SUPABASE_URL') ?? '',
-		Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-	);
+	const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
 	const [lessonTypesRes, optionsRes, groupsRes] = await Promise.all([
-		admin
-			.from('lesson_types')
-			.select('id, name, icon, color, is_group_lesson')
-			.eq('is_active', true)
-			.order('name'),
+		admin.from('lesson_types').select('id, name, icon, color, is_group_lesson').eq('is_active', true).order('name'),
 		admin
 			.from('lesson_type_options')
 			.select('id, lesson_type_id, duration_minutes, frequency, price_per_lesson')
@@ -61,20 +54,24 @@ Deno.serve(async (req) => {
 			.order('frequency'),
 		admin
 			.from('lesson_groups')
-			.select('id, lesson_type_id, name, day_of_week, start_time, duration_minutes, frequency, price_per_lesson, teacher_user_id')
+			.select(
+				'id, lesson_type_id, name, day_of_week, start_time, duration_minutes, frequency, price_per_lesson, teacher_user_id',
+			)
 			.eq('is_active', true),
 	]);
 
 	if (lessonTypesRes.error || optionsRes.error || groupsRes.error) {
-		return new Response(
-			JSON.stringify({ error: 'Failed to load signup options' }),
-			{ status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-		);
+		return new Response(JSON.stringify({ error: 'Failed to load signup options' }), {
+			status: 500,
+			headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+		});
 	}
 
 	const lessonTypes = (lessonTypesRes.data ?? []) as LessonTypeOut[];
 	const options = (optionsRes.data ?? []) as LessonTypeOptionOut[];
-	const rawGroups = (groupsRes.data ?? []) as Array<Omit<GroupOut, 'teacher_name' | 'members_count'> & { teacher_user_id: string }>;
+	const rawGroups = (groupsRes.data ?? []) as Array<
+		Omit<GroupOut, 'teacher_name' | 'members_count'> & { teacher_user_id: string }
+	>;
 
 	let groups: GroupOut[] = [];
 	if (rawGroups.length > 0) {
