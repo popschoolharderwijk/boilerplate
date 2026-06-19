@@ -97,31 +97,31 @@ function buildSignupColumns(
 			render: (r) =>
 				r.status === 'pending' || r.status === 'trial_scheduled' ? (
 					<div className="flex gap-2 justify-end">
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => runAction({ kind: 'reject', row: r })}
-									disabled={busyId === r.id}
-								>
-									<LuX className="h-4 w-4" />
-								</Button>
-								{r.status === 'pending' && (
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={() => setTrialFor(r)}
-										disabled={busyId === r.id}
-									>
-										<LuCalendarPlus className="h-4 w-4" /> Proefles
-									</Button>
-								)}
-								<Button
-									size="sm"
-									onClick={() => runAction({ kind: 'process', row: r })}
-									disabled={busyId === r.id}
-								>
-									<LuCheck className="h-4 w-4" /> Verwerken
-								</Button>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => runAction({ kind: 'reject', row: r })}
+							disabled={busyId === r.id}
+						>
+							<LuX className="h-4 w-4" />
+						</Button>
+						{r.status === 'pending' && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => setTrialFor(r)}
+								disabled={busyId === r.id}
+							>
+								<LuCalendarPlus className="h-4 w-4" /> Proefles
+							</Button>
+						)}
+						<Button
+							size="sm"
+							onClick={() => runAction({ kind: 'process', row: r })}
+							disabled={busyId === r.id}
+						>
+							<LuCheck className="h-4 w-4" /> Verwerken
+						</Button>
 					</div>
 				) : null,
 		},
