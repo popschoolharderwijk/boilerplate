@@ -17,7 +17,7 @@
 		"check": "npx @biomejs/biome check --write",
 		"check:ci": "bunx @biomejs/biome ci && bunx tsc -b --noEmit && rm *.tsbuildinfo && echo 'no errors'",
 		"lint:sql": "squawk supabase/migrations/*.sql",
-		"reset-db:dev": "bun run scripts/reset-db.ts",
+		"db:reset": "bun run scripts/reset-db.ts",
 		"reset-branch:lovable": "bun run scripts/reset-branch-lovable.ts",
 		"preview": "vite preview"
 	},

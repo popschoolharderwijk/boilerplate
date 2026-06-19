@@ -77,7 +77,7 @@ supabase config push --linked
 supabase gen types typescript --linked > src/integrations/supabase/types.ts
 ```
 
-> 💡 **Workflow**: Er zijn geen lokale Supabase-databases. **Development** (Lovable, `bun dev`, `reset-db:dev`) gebruikt **mcp-dev** (`zdvscmogkfyddnnxzkdu`). **CI bij een PR** gebruikt altijd **mcp-test** (link via secret `SUPABASE_PROJECT_REF`, credentials uit secrets). Lokaal testen (`bun test rls`): zet in `.env.test` de credentials van mcp-test of mcp-dev. Zie [secrets.md](./secrets.md) en [architecture.md](./architecture.md).
+> 💡 **Workflow**: Er zijn geen lokale Supabase-databases. **Development** (Lovable, `bun dev`, `db:reset`) gebruikt **mcp-dev** (`zdvscmogkfyddnnxzkdu`). **CI bij een PR** gebruikt altijd **mcp-test** (link via secret `SUPABASE_PROJECT_REF`, credentials uit secrets). Lokaal testen (`bun test rls`): zet in `.env.test` de credentials van mcp-test of mcp-dev. Zie [secrets.md](./secrets.md) en [architecture.md](./architecture.md).
 
 ---
 
@@ -128,7 +128,7 @@ De Dev Login knop heeft een dropdown waarmee je kunt kiezen uit verschillende ro
 - **Student** (`student-001@test.nl`)
 - **User (geen rol)** (`user-001@test.nl`)
 
-Deze users komen uit de test seed (`supabase/seeds/test.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev) na `bun run reset-db:dev`.
+Deze users komen uit de test seed (`supabase/seeds/test.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev) na `bun run db:reset`.
 
 ### Configuratie
 

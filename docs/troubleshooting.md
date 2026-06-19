@@ -20,7 +20,7 @@
 ## Tests falen lokaal (RLS/Auth)
 
 1. Zet in je omgeving (of `.env.test`) de credentials van het project waar je tegen test: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_DEV_LOGIN_PASSWORD` (seed-users: wachtwoord `password`). Gebruik **mcp-test**-credentials om hetzelfde als CI te gebruiken, of **mcp-dev** als je daar tegen ontwikkelt.
-2. Optioneel: voor mcp-dev kun je `bun run reset-db:dev` draaien voor een schone database met `seeds/bootstrap.sql` + `seeds/test.sql`.
+2. Optioneel: voor mcp-dev kun je `bun run db:reset` draaien voor een schone database met `seeds/bootstrap.sql` + `seeds/test.sql`.
 
 ---
 

@@ -2,9 +2,15 @@
 alwaysApply: true
 ---
 
-* **Never hand-edit `src/integrations/supabase/types.ts`.** After schema/migration changes run `bun run reset-db:dev` (or `supabase gen types typescript --linked` as in that script) so types stay codegen-only.
+## Database reset — NEVER run yourself
+
+**NEVER run a database reset yourself** — not `bun run db:reset`, not `supabase db reset --linked`, not any variant. The user always runs these commands themselves.
+
+After migration or schema changes: **tell the user** to run `bun run db:reset` (or the relevant reset command). Do not execute it.
+
+* **Never hand-edit `src/integrations/supabase/types.ts`.** After schema/migration changes the user must run `bun run db:reset` (or `supabase gen types typescript --linked` as in that script) so types stay codegen-only.
 * **ALWAYS use `--linked` flag for Supabase commands, NEVER the local database**
-* ALWAYS use:
+* When documenting or planning Supabase DB commands for the user, ALWAYS use:
   - `supabase db reset --linked` (not `supabase db reset`)
   - `supabase gen types typescript --linked > src/integrations/supabase/types.ts` (not without --linked)
   - `supabase db push --linked` (not without --linked)

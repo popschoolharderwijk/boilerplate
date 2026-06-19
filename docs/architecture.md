@@ -226,7 +226,7 @@ Dit project gebruikt drie aparte Supabase omgevingen:
 | Omgeving | Project ID | Gebruik |
 |----------|------------|---------|
 | **mcp-test** | `jserlqacarlgtdzrblic` | Testproject: `bun dev:test` en **CI/PR-checks** (workflow linkt via `SUPABASE_PROJECT_REF`) |
-| **mcp-dev** | `zdvscmogkfyddnnxzkdu` | Development: Lovable / `bun dev`, en lokaal `reset-db:dev` |
+| **mcp-dev** | `zdvscmogkfyddnnxzkdu` | Development: Lovable / `bun dev`, en lokaal `db:reset` |
 | **Production** | `bnagepkxryauifzyoxgo` | Productie deployment (`bun prod`) |
 
 ### Hoe dit werkt

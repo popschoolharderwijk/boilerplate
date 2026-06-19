@@ -24,7 +24,7 @@ git rebase origin/main
 # Herhaal indien meerdere commits conflicten geven
 
 # Types opnieuw genereren na andere wijzigingen (nooit overslaan)
-bun run reset-db:dev
+bun run db:reset
 
 # Run Biome check voor de rest van de code (format + lint + fix)
 biome check --write .

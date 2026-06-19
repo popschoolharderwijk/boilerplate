@@ -10,15 +10,17 @@ alwaysApply: false
 
 **Do not edit `src/integrations/supabase/types.ts` by hand** (no patching Functions/Tables for new RPCs or columns). It must match codegen from the linked database.
 
-After **any** migration or schema change, regenerate types by running:
+After **any** migration or schema change, ask the **user** to regenerate types:
 
 ```bash
-bun run reset-db:dev
+bun run db:reset
 ```
+
+**Do not run this command yourself.**
 
 That script resets the linked dev DB, applies migrations + `supabase/seeds/bootstrap.sql` + `supabase/seeds/test.sql`, runs `supabase gen types typescript --linked`, and formats the output. Use that instead of editing `types.ts` in the editor or in agent diffs.
 
-If types are missing or wrong locally, run `bun run reset-db:dev` — do not “fix” TypeScript by changing `types.ts`.
+If types are missing or wrong locally, ask the user to run `bun run db:reset` — do not “fix” TypeScript by changing `types.ts`.
 
 ## Always Use Generated Types First
 
