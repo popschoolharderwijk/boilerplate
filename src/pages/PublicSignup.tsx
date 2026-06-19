@@ -36,8 +36,12 @@ export default function PublicSignup() {
 	const [step, setStep] = useState<Step>(1);
 	const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
 	const [selectedType, setSelectedType] = useState<LessonType | null>(null);
+	const [allGroups, setAllGroups] = useState<(GroupOption & { lesson_type_id: string })[]>([]);
 	const [groups, setGroups] = useState<GroupOption[]>([]);
 	const [selectedGroupId, setSelectedGroupId] = useState<string | 'waitlist' | null>(null);
+	const [allLessonTypeOptions, setAllLessonTypeOptions] = useState<
+		(LessonTypeOptionRow & { lesson_type_id: string })[]
+	>([]);
 	const [lessonTypeOptions, setLessonTypeOptions] = useState<LessonTypeOptionRow[]>([]);
 	const [selectedOption, setSelectedOption] = useState<OptionSnapshot | null>(null);
 
@@ -58,12 +62,17 @@ export default function PublicSignup() {
 	const [done, setDone] = useState(false);
 
 	useEffect(() => {
-		supabase
-			.from('lesson_types')
-			.select('id, name, icon, color, is_group_lesson')
-			.eq('is_active', true)
-			.order('name')
-			.then(({ data }) => setLessonTypes(data ?? []));
+		(async () => {
+			const { data, error: fnError } = await supabase.functions.invoke<{
+				lesson_types: LessonType[];
+				lesson_type_options: (LessonTypeOptionRow & { lesson_type_id: string })[];
+				groups: (GroupOption & { lesson_type_id: string })[];
+			}>('get-public-signup-options', { method: 'GET' });
+			if (fnError || !data) return;
+			setLessonTypes(data.lesson_types ?? []);
+			setAllLessonTypeOptions(data.lesson_type_options ?? []);
+			setAllGroups(data.groups ?? []);
+		})();
 	}, []);
 
 	useEffect(() => {
@@ -71,63 +80,18 @@ export default function PublicSignup() {
 			setGroups([]);
 			return;
 		}
-		(async () => {
-			const { data: lg } = await supabase
-				.from('lesson_groups')
-				.select(
-					'id, name, day_of_week, start_time, duration_minutes, frequency, price_per_lesson, teacher_user_id',
-				)
-				.eq('lesson_type_id', selectedType.id)
-				.eq('is_active', true);
-			if (!lg?.length) {
-				setGroups([]);
-				return;
-			}
-			const teacherIds = [...new Set(lg.map((g) => g.teacher_user_id))];
-			const groupIds = lg.map((g) => g.id);
-			const [{ data: profiles }, { data: members }] = await Promise.all([
-				supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', teacherIds),
-				supabase
-					.from('lesson_group_members')
-					.select('lesson_group_id')
-					.in('lesson_group_id', groupIds)
-					.is('left_date', null),
-			]);
-			const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
-			const counts = new Map<string, number>();
-			for (const m of members ?? []) counts.set(m.lesson_group_id, (counts.get(m.lesson_group_id) ?? 0) + 1);
-			setGroups(
-				lg.map((g) => {
-					const p = profileMap.get(g.teacher_user_id);
-					return {
-						id: g.id,
-						name: g.name,
-						day_of_week: g.day_of_week,
-						start_time: g.start_time,
-						duration_minutes: g.duration_minutes,
-						frequency: g.frequency,
-						price_per_lesson: g.price_per_lesson,
-						teacher_name: p ? [p.first_name, p.last_name].filter(Boolean).join(' ') : null,
-						members_count: counts.get(g.id) ?? 0,
-					};
-				}),
-			);
-		})();
-	}, [selectedType]);
+		setGroups(allGroups.filter((g) => g.lesson_type_id === selectedType.id));
+	}, [selectedType, allGroups]);
 
 	useEffect(() => {
 		if (!selectedType || selectedType.is_group_lesson) {
 			setLessonTypeOptions([]);
 			return;
 		}
-		supabase
-			.from('lesson_type_options')
-			.select('id, duration_minutes, frequency, price_per_lesson')
-			.eq('lesson_type_id', selectedType.id)
-			.order('duration_minutes')
-			.order('frequency')
-			.then(({ data }) => setLessonTypeOptions((data ?? []) as LessonTypeOptionRow[]));
-	}, [selectedType]);
+		setLessonTypeOptions(
+			allLessonTypeOptions.filter((o) => o.lesson_type_id === selectedType.id) as LessonTypeOptionRow[],
+		);
+	}, [selectedType, allLessonTypeOptions]);
 
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
