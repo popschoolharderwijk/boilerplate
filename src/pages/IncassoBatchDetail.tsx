@@ -7,21 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import {
 	BATCH_STATUS_LABELS,
 	type BatchItemStatus,
+	formatCentsEUR,
 	type IncassoBatch,
 	type IncassoBatchItem,
 	ITEM_STATUS_LABELS,
-	formatCentsEUR,
 } from '@/lib/incasso/types';
 
 interface ItemRow extends IncassoBatchItem {
@@ -97,10 +91,13 @@ function Detail() {
 		if (invErr) {
 			toast.error(`Factuurgeneratie faalde: ${invErr.message}`);
 		} else {
-			const results = (invResp as { results?: Array<{ invoice_number?: string; error?: string }> } | null)?.results ?? [];
+			const results =
+				(invResp as { results?: Array<{ invoice_number?: string; error?: string }> } | null)?.results ?? [];
 			const ok = results.filter((r) => r.invoice_number && !r.error).length;
 			const failed = results.filter((r) => r.error).length;
-			toast.success(`Batch goedgekeurd — ${ok} factuur/facturen aangemaakt${failed > 0 ? `, ${failed} fout` : ''}.`);
+			toast.success(
+				`Batch goedgekeurd — ${ok} factuur/facturen aangemaakt${failed > 0 ? `, ${failed} fout` : ''}.`,
+			);
 		}
 		load();
 	};
@@ -263,17 +260,21 @@ function Detail() {
 											{batch.status === 'submitted' || batch.status === 'closed' ? (
 												<Select
 													value={it.status}
-													onValueChange={(v) => handleUpdateItemStatus(it.id, v as BatchItemStatus)}
+													onValueChange={(v) =>
+														handleUpdateItemStatus(it.id, v as BatchItemStatus)
+													}
 												>
 													<SelectTrigger className="h-8 w-36">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														{(Object.keys(ITEM_STATUS_LABELS) as BatchItemStatus[]).map((s) => (
-															<SelectItem key={s} value={s}>
-																{ITEM_STATUS_LABELS[s]}
-															</SelectItem>
-														))}
+														{(Object.keys(ITEM_STATUS_LABELS) as BatchItemStatus[]).map(
+															(s) => (
+																<SelectItem key={s} value={s}>
+																	{ITEM_STATUS_LABELS[s]}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 											) : (

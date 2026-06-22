@@ -103,7 +103,9 @@ export function AccountingSettingsManager() {
 			<Card>
 				<CardHeader>
 					<CardTitle>Betaalwijze</CardTitle>
-					<CardDescription>Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.</CardDescription>
+					<CardDescription>
+						Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.
+					</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					<div className="space-y-1.5">
@@ -198,7 +200,10 @@ export function AccountingSettingsManager() {
 							disabled={!canEdit}
 							value={form.school_year_start_month}
 							onChange={(e) =>
-								update('school_year_start_month', Math.min(12, Math.max(1, Number(e.target.value) || 1)))
+								update(
+									'school_year_start_month',
+									Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+								)
 							}
 						/>
 					</div>
@@ -231,7 +236,12 @@ export function AccountingSettingsManager() {
 							max={90}
 							disabled={!canEdit}
 							value={form.invoice_payment_term_days}
-							onChange={(e) => update('invoice_payment_term_days', Math.min(90, Math.max(1, Number(e.target.value) || 14)))}
+							onChange={(e) =>
+								update(
+									'invoice_payment_term_days',
+									Math.min(90, Math.max(1, Number(e.target.value) || 14)),
+								)
+							}
 						/>
 					</div>
 					<div className="space-y-1.5 sm:col-span-2">
