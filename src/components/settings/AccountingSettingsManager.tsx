@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { AccountingSettings } from '@/lib/accounting/types';
+import type { AccountingSettings, PaymentProvider } from '@/lib/accounting/types';
 
 export function AccountingSettingsManager() {
 	const { isAdmin, isSiteAdmin } = useAuth();
@@ -18,7 +19,7 @@ export function AccountingSettingsManager() {
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
-		if (settings) setForm(settings);
+		if (settings) setForm(settings as AccountingSettings);
 	}, [settings]);
 
 	if (loading || !form) {
@@ -46,11 +47,20 @@ export function AccountingSettingsManager() {
 				account_omzet_21_plus: form.account_omzet_21_plus,
 				account_btw_21: form.account_btw_21,
 				account_bank_stripe: form.account_bank_stripe,
+				account_bank_sepa: form.account_bank_sepa,
 				btw_code_21: form.btw_code_21,
 				btw_code_exempt: form.btw_code_exempt,
 				currency: form.currency,
 				school_year_start_month: form.school_year_start_month,
 				description_template: form.description_template,
+				payment_provider: form.payment_provider,
+				sepa_creditor_name: form.sepa_creditor_name,
+				sepa_creditor_iban: form.sepa_creditor_iban,
+				sepa_creditor_bic: form.sepa_creditor_bic,
+				sepa_creditor_id: form.sepa_creditor_id,
+				sepa_collection_day: form.sepa_collection_day,
+				sepa_remittance_template: form.sepa_remittance_template,
+				sepa_mandate_prefix: form.sepa_mandate_prefix,
 			})
 			.eq('id', true);
 		setSaving(false);
@@ -79,12 +89,37 @@ export function AccountingSettingsManager() {
 		<div className="space-y-6">
 			<Card>
 				<CardHeader>
+					<CardTitle>Betaalwijze</CardTitle>
+					<CardDescription>Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					<div className="space-y-1.5">
+						<Label>Standaard betaalwijze</Label>
+						<Select
+							value={form.payment_provider}
+							disabled={!canEdit}
+							onValueChange={(v) => update('payment_provider', v as PaymentProvider)}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="stripe">Stripe (online betaling)</SelectItem>
+								<SelectItem value="sepa">SEPA-incasso (eigen bestand)</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
 					<CardTitle>Dagboeken</CardTitle>
 					<CardDescription>Exact Online dagboek-codes</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					{field('Memoriaal-dagboek', 'journal_code_memoriaal', 'bv. 90')}
-					{field('Bank-dagboek (Stripe)', 'journal_code_bank', 'bv. 20')}
+					{field('Bank-dagboek', 'journal_code_bank', 'bv. 20')}
 				</CardContent>
 			</Card>
 
@@ -96,9 +131,39 @@ export function AccountingSettingsManager() {
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					{field('Debiteuren', 'account_debiteuren', 'bv. 1300')}
 					{field('Bank Stripe', 'account_bank_stripe', 'bv. 1100')}
+					{field('Bank SEPA-incasso', 'account_bank_sepa', 'bv. 1102')}
 					{field('Omzet <21 (vrijgesteld)', 'account_omzet_under_21', 'bv. 8000')}
 					{field('Omzet 21+ (excl. BTW)', 'account_omzet_21_plus', 'bv. 8010')}
 					{field('BTW af te dragen 21%', 'account_btw_21', 'bv. 1500')}
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>SEPA-incasso</CardTitle>
+					<CardDescription>Gegevens van uw incassant; gebruikt voor pain.008 XML-bestanden.</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('Naam crediteur', 'sepa_creditor_name', 'Popschool Harderwijk')}
+					{field('Crediteur-ID (SEPA)', 'sepa_creditor_id', 'NL00ZZZ123456780000')}
+					{field('IBAN crediteur', 'sepa_creditor_iban', 'NL00BANK0123456789')}
+					{field('BIC crediteur', 'sepa_creditor_bic', 'BANKNL2A')}
+					<div className="space-y-1.5">
+						<Label htmlFor="acc-coll-day">Incassodag van de maand</Label>
+						<Input
+							id="acc-coll-day"
+							type="number"
+							min={1}
+							max={28}
+							disabled={!canEdit}
+							value={form.sepa_collection_day}
+							onChange={(e) =>
+								update('sepa_collection_day', Math.min(28, Math.max(1, Number(e.target.value) || 27)))
+							}
+						/>
+					</div>
+					{field('Mandaat-prefix', 'sepa_mandate_prefix', 'MND')}
+					{field('Omschrijving-template', 'sepa_remittance_template', 'Lesgeld {periode} - {leerling}')}
 				</CardContent>
 			</Card>
 
@@ -120,10 +185,7 @@ export function AccountingSettingsManager() {
 							disabled={!canEdit}
 							value={form.school_year_start_month}
 							onChange={(e) =>
-								update(
-									'school_year_start_month',
-									Math.min(12, Math.max(1, Number(e.target.value) || 1)),
-								)
+								update('school_year_start_month', Math.min(12, Math.max(1, Number(e.target.value) || 1)))
 							}
 						/>
 					</div>
