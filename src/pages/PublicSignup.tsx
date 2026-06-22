@@ -140,6 +140,20 @@ export default function PublicSignup() {
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!selectedType) return;
+		if (sepaEnabled) {
+			if (!isValidIban(sepaIban)) {
+				setError('Ongeldig IBAN');
+				return;
+			}
+			if (!sepaHolder.trim()) {
+				setError('Vul de rekeninghouder in');
+				return;
+			}
+			if (!sepaConsent) {
+				setError('Bevestig de SEPA-machtiging om door te gaan');
+				return;
+			}
+		}
 		setSubmitting(true);
 		setError(null);
 		const groupId = selectedType.is_group_lesson && selectedGroupId !== 'waitlist' ? selectedGroupId : null;
@@ -158,6 +172,9 @@ export default function PublicSignup() {
 				lesson_group_id: groupId,
 				lesson_type_option_id: optionId,
 				...form,
+				sepa_iban: sepaEnabled ? normalizeIban(sepaIban) : null,
+				sepa_account_holder: sepaEnabled ? sepaHolder.trim() : null,
+				sepa_bic: sepaEnabled && sepaBic.trim() ? sepaBic.trim().toUpperCase() : null,
 			},
 		});
 		setSubmitting(false);
