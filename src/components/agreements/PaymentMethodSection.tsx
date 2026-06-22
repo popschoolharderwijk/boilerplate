@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react';
 import { LuCreditCard, LuSignature, LuWallet } from 'react-icons/lu';
-import { supabase } from '@/integrations/supabase/client';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
 export type PaymentMethod = 'stripe' | 'sepa' | 'manual';
 
@@ -60,16 +54,13 @@ export function PaymentMethodSection({
 			});
 	}, [paymentMethod, studentUserId, sepaMandateId, onSepaMandateIdChange]);
 
-	const maskIban = (iban: string) =>
-		iban.length > 8 ? `${iban.slice(0, 4)} •••• ${iban.slice(-4)}` : iban;
+	const maskIban = (iban: string) => (iban.length > 8 ? `${iban.slice(0, 4)} •••• ${iban.slice(-4)}` : iban);
 
 	return (
 		<div className="rounded-lg border bg-muted/30 p-4 space-y-4">
 			<div>
 				<h4 className="font-medium mb-1">Betaalmethode</h4>
-				<p className="text-sm text-muted-foreground">
-					Kies hoe de leerling deze overeenkomst betaalt.
-				</p>
+				<p className="text-sm text-muted-foreground">Kies hoe de leerling deze overeenkomst betaalt.</p>
 			</div>
 
 			<RadioGroup
@@ -119,9 +110,7 @@ export function PaymentMethodSection({
 						<div className="flex items-center gap-2 font-medium">
 							<LuWallet className="h-4 w-4" /> Handmatig / op factuur
 						</div>
-						<p className="text-xs text-muted-foreground">
-							Geen automatische betaling; je factureert zelf.
-						</p>
+						<p className="text-xs text-muted-foreground">Geen automatische betaling; je factureert zelf.</p>
 					</div>
 				</label>
 			</RadioGroup>
@@ -140,10 +129,7 @@ export function PaymentMethodSection({
 							.
 						</p>
 					) : (
-						<Select
-							value={sepaMandateId ?? ''}
-							onValueChange={(v) => onSepaMandateIdChange(v || null)}
-						>
+						<Select value={sepaMandateId ?? ''} onValueChange={(v) => onSepaMandateIdChange(v || null)}>
 							<SelectTrigger id="sepa-mandate">
 								<SelectValue placeholder="Kies een mandaat" />
 							</SelectTrigger>
