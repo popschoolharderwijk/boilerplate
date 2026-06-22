@@ -359,7 +359,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 					ui.selectedEvent.resource.deviationId &&
 					ui.selectedEvent.resource.eventId &&
 					ui.selectedEvent.resource.originalDate &&
-					isOwnAgenda &&
+					canManageAgenda &&
 					user
 						? async () => {
 								await notifyAgendaOpResult(
