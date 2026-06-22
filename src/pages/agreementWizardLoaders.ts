@@ -41,6 +41,8 @@ type SaveParams = {
 		} | null;
 		startDate: string;
 		endDate: string;
+		paymentMethod: 'stripe' | 'sepa' | 'manual';
+		sepaMandateId: string | null;
 	};
 	agreement: AgreementTableRow | null;
 	isDuoLesson: boolean;
