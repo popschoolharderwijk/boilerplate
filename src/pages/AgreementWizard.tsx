@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
+import { PaymentMethodSection } from '@/components/agreements/PaymentMethodSection';
 import { PeriodStepContent } from '@/components/agreements/PeriodStepContent';
 import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepContent';
 import { UserStepContent } from '@/components/agreements/UserStepContent';
