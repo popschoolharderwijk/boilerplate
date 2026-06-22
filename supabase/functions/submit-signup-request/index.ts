@@ -19,9 +19,33 @@ interface SignupRequest {
 	parent_email?: string | null;
 	parent_phone_number?: string | null;
 	notes?: string | null;
+	sepa_iban?: string | null;
+	sepa_account_holder?: string | null;
+	sepa_bic?: string | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const IBAN_STRUCTURE_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
+
+function normalizeIban(input: string): string {
+	return input.replace(/\s+/g, '').toUpperCase();
+}
+
+function isValidIban(input: string): boolean {
+	const iban = normalizeIban(input);
+	if (!IBAN_STRUCTURE_RE.test(iban)) return false;
+	const rearranged = iban.slice(4) + iban.slice(0, 4);
+	const numeric = rearranged
+		.split('')
+		.map((c) => (c >= 'A' && c <= 'Z' ? (c.charCodeAt(0) - 55).toString() : c))
+		.join('');
+	let remainder = 0;
+	for (let i = 0; i < numeric.length; i += 7) {
+		const chunk = remainder.toString() + numeric.slice(i, i + 7);
+		remainder = Number(chunk) % 97;
+	}
+	return remainder === 1;
+}
 
 function bad(message: string, status = 400) {
 	return new Response(JSON.stringify({ error: message }), {
