@@ -575,6 +575,7 @@ export default function AgreementWizard() {
 							form.slot.status === 'occupied' ||
 							saving ||
 							isTeacherOwnStudent ||
+							(form.paymentMethod === 'sepa' && !form.sepaMandateId) ||
 							(isEditMode && !hasChanges)
 						}
 					>
