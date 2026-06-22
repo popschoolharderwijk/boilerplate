@@ -254,7 +254,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 		currentView: ui.currentView,
 		currentDate: ui.currentDate,
 		canEdit,
-		isOwnAgenda,
+		isOwnAgenda: canManageAgenda,
 		scrollToTime,
 		onEventDrop: handleEventDrop,
 		onSelectEvent: handleSelectEvent,
