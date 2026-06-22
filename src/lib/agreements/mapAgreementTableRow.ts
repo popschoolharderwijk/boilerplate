@@ -19,6 +19,8 @@ export type RawAgreementRow = {
 	frequency: LessonFrequency;
 	price_per_lesson: number;
 	duo_pair_id: string | null;
+	payment_method?: string | null;
+	sepa_mandate_id?: string | null;
 	lesson_types:
 		| { id: string; name: string; icon: string; color: string }
 		| { id: string; name: string; icon: string; color: string }[]
