@@ -318,7 +318,9 @@ export default function AgreementWizard() {
 			(agreement.end_date ?? '') !== form.endDate ||
 			agreement.teacher_user_id !== form.teacherUserId ||
 			agreement.day_of_week !== effectiveSlot?.day_of_week ||
-			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '')
+			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '') ||
+			(agreement.payment_method ?? 'stripe') !== form.paymentMethod ||
+			(agreement.sepa_mandate_id ?? null) !== (form.paymentMethod === 'sepa' ? form.sepaMandateId : null)
 		: false;
 
 	const isTeacherOwnStudent = selectedTeacher && form.studentUserId && selectedTeacher.userId === form.studentUserId;
