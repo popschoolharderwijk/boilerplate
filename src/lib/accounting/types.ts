@@ -1,3 +1,5 @@
+export type PaymentProvider = 'stripe' | 'sepa';
+
 export interface AccountingSettings {
 	id: boolean;
 	journal_code_memoriaal: string;
@@ -7,11 +9,21 @@ export interface AccountingSettings {
 	account_omzet_21_plus: string;
 	account_btw_21: string;
 	account_bank_stripe: string;
+	account_bank_sepa: string;
 	btw_code_21: string;
 	btw_code_exempt: string;
 	currency: string;
 	school_year_start_month: number;
 	description_template: string;
+	payment_provider: PaymentProvider;
+	sepa_creditor_name: string | null;
+	sepa_creditor_iban: string | null;
+	sepa_creditor_bic: string | null;
+	sepa_creditor_id: string | null;
+	sepa_collection_day: number;
+	sepa_remittance_template: string;
+	sepa_mandate_prefix: string;
+	sepa_mandate_next_seq: number;
 }
 
 export type AgeCategory = 'under_21' | '21_plus' | 'unknown';

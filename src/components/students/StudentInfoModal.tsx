@@ -129,8 +129,8 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 			}
 
 			setFullData({
-				...studentData,
-				...profileData,
+				...(studentData as object),
+				...(profileData as object),
 			} as Student);
 		} catch (error) {
 			console.error('Error loading student data:', error);
