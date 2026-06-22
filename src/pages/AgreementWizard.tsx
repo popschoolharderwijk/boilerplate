@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
+import { PaymentMethodSection } from '@/components/agreements/PaymentMethodSection';
 import { PeriodStepContent } from '@/components/agreements/PeriodStepContent';
 import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepContent';
 import { UserStepContent } from '@/components/agreements/UserStepContent';
@@ -193,6 +194,8 @@ export default function AgreementWizard() {
 		slot: null as SlotWithStatus | null,
 		partnerStudentUserId: null as string | null,
 		partnerUser: null as User | null,
+		paymentMethod: 'stripe' as 'stripe' | 'sepa' | 'manual',
+		sepaMandateId: null as string | null,
 	});
 
 	const [highestStep, setHighestStep] = useState(0);
@@ -315,7 +318,9 @@ export default function AgreementWizard() {
 			(agreement.end_date ?? '') !== form.endDate ||
 			agreement.teacher_user_id !== form.teacherUserId ||
 			agreement.day_of_week !== effectiveSlot?.day_of_week ||
-			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '')
+			formatTime(agreement.start_time) !== (effectiveSlot ? formatTime(effectiveSlot.start_time) : '') ||
+			(agreement.payment_method ?? 'stripe') !== form.paymentMethod ||
+			(agreement.sepa_mandate_id ?? null) !== (form.paymentMethod === 'sepa' ? form.sepaMandateId : null)
 		: false;
 
 	const isTeacherOwnStudent = selectedTeacher && form.studentUserId && selectedTeacher.userId === form.studentUserId;
@@ -539,6 +544,13 @@ export default function AgreementWizard() {
 							selectedTeacher={selectedTeacher}
 							effectiveSlot={effectiveSlot}
 						/>
+						<PaymentMethodSection
+							paymentMethod={form.paymentMethod}
+							sepaMandateId={form.sepaMandateId}
+							studentUserId={form.studentUserId}
+							onPaymentMethodChange={(v) => setForm((f) => ({ ...f, paymentMethod: v }))}
+							onSepaMandateIdChange={(v) => setForm((f) => ({ ...f, sepaMandateId: v }))}
+						/>
 						{isEditMode && agreement && <SubscriptionCard lessonAgreementId={agreement.id} />}
 					</div>
 				)}
@@ -563,6 +575,7 @@ export default function AgreementWizard() {
 							form.slot.status === 'occupied' ||
 							saving ||
 							isTeacherOwnStudent ||
+							(form.paymentMethod === 'sepa' && !form.sepaMandateId) ||
 							(isEditMode && !hasChanges)
 						}
 					>

@@ -19,6 +19,8 @@ export type RawAgreementRow = {
 	frequency: LessonFrequency;
 	price_per_lesson: number;
 	duo_pair_id: string | null;
+	payment_method?: string | null;
+	sepa_mandate_id?: string | null;
 	lesson_types:
 		| { id: string; name: string; icon: string; color: string }
 		| { id: string; name: string; icon: string; color: string }[]
@@ -65,6 +67,8 @@ export function mapRawAgreementToTableRow(
 		frequency: a.frequency,
 		price_per_lesson: a.price_per_lesson,
 		duo_pair_id: a.duo_pair_id,
+		payment_method: a.payment_method ?? 'stripe',
+		sepa_mandate_id: a.sepa_mandate_id ?? null,
 		student: studentProfile ?? emptyStudent,
 		teacher: teacherProfile ?? emptyTeacher,
 		lesson_type: {

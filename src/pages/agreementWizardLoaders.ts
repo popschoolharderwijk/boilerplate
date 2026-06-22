@@ -41,6 +41,8 @@ type SaveParams = {
 		} | null;
 		startDate: string;
 		endDate: string;
+		paymentMethod: 'stripe' | 'sepa' | 'manual';
+		sepaMandateId: string | null;
 	};
 	agreement: AgreementTableRow | null;
 	isDuoLesson: boolean;
@@ -57,6 +59,7 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 		.select(
 			`id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, 
 			student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson,
+			payment_method, sepa_mandate_id,
 			lesson_types(id, name, icon, color), 
 			teachers(user_id)`,
 		)
@@ -105,6 +108,8 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 			duration_minutes: data.duration_minutes,
 			frequency: data.frequency,
 			price_per_lesson: data.price_per_lesson,
+			payment_method: (data as { payment_method?: string }).payment_method ?? 'stripe',
+			sepa_mandate_id: (data as { sepa_mandate_id?: string | null }).sepa_mandate_id ?? null,
 			student: {
 				first_name: studentProfile.data?.first_name ?? null,
 				last_name: studentProfile.data?.last_name ?? null,
@@ -270,12 +275,19 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 		return true;
 	}
 
+	if (form.paymentMethod === 'sepa' && !form.sepaMandateId) {
+		toast.error('Kies een SEPA-mandaat of een andere betaalmethode');
+		return false;
+	}
+
 	const payload = {
 		teacher_user_id: form.teacherUserId,
 		day_of_week: form.slot.day_of_week,
 		start_time: timeValue,
 		start_date: form.startDate,
 		end_date: form.endDate || null,
+		payment_method: form.paymentMethod,
+		sepa_mandate_id: form.paymentMethod === 'sepa' ? form.sepaMandateId : null,
 	};
 
 	const insertResult = agreement
@@ -322,7 +334,7 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 			.eq('id', fromTrialId);
 	}
 
-	if (!agreement && insertResult.data?.id) {
+	if (!agreement && insertResult.data?.id && form.paymentMethod === 'stripe') {
 		const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
 			body: { lesson_agreement_id: insertResult.data.id },
 		});
@@ -331,6 +343,10 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 		} else {
 			toast.success('Overeenkomst toegevoegd — betaaluitnodiging verstuurd naar de leerling');
 		}
+	} else if (!agreement && form.paymentMethod === 'sepa') {
+		toast.success('Overeenkomst toegevoegd — SEPA-incasso gekoppeld');
+	} else if (!agreement && form.paymentMethod === 'manual') {
+		toast.success('Overeenkomst toegevoegd — handmatige facturatie');
 	} else {
 		toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
 	}
