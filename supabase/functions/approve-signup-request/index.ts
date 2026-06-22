@@ -102,6 +102,36 @@ Deno.serve(async (req) => {
 	// Ensure 'student' role exists (idempotent)
 	await admin.from('user_roles').upsert({ user_id: studentUserId, role: 'student' }, { onConflict: 'user_id,role' });
 
+	// Auto-create SEPA mandate if bank details were provided in the signup request.
+	if (reqRow.sepa_iban && reqRow.sepa_account_holder) {
+		const { data: existingMandate } = await admin
+			.from('sepa_mandates')
+			.select('id')
+			.eq('student_user_id', studentUserId)
+			.eq('iban', reqRow.sepa_iban)
+			.maybeSingle();
+		if (!existingMandate) {
+			const { data: refData, error: refErr } = await admin.rpc('next_mandate_reference');
+			if (refErr || !refData) {
+				console.error('next_mandate_reference error', refErr);
+			} else {
+				const { error: mandateErr } = await admin.from('sepa_mandates').insert({
+					student_user_id: studentUserId,
+					mandate_reference: refData as unknown as string,
+					iban: reqRow.sepa_iban,
+					bic: reqRow.sepa_bic,
+					account_holder: reqRow.sepa_account_holder,
+					signed_at: new Date().toISOString().slice(0, 10),
+					signature_method: 'digital',
+					status: 'pending',
+					sequence_type: 'FRST',
+				});
+				if (mandateErr) console.error('sepa_mandates insert error', mandateErr);
+			}
+		}
+	}
+
+
 	let createdAgreementId: string | null = null;
 
 	const targetGroupId = body.override_lesson_group_id ?? reqRow.lesson_group_id;
