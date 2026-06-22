@@ -140,6 +140,27 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.invoices,
+		title: NAV_LABELS.invoices,
+		description:
+			'Automatisch genereren, versturen en archiveren van facturen per incasso-batch. Iedere leerling krijgt één factuur per batch, met de juiste BTW-categorie en SEPA-verwijzing.',
+		details: [
+			'Stap 1 – Bedrijfsgegevens vullen: ga naar Instellingen → Boekhouding → "Bedrijfsgegevens & factuur" en vul bedrijfsnaam, adres, KvK, BTW-nummer, IBAN, e-mail en telefoon in. Stel ook factuurnummer-prefix (bv. INV-), startnummer, betalingstermijn (dagen) en optioneel een footertekst in. Zonder deze gegevens kan generate-invoice niet draaien.',
+			'Stap 2 – Mandaten en batch klaarzetten: zorg dat de betreffende leerlingen een actief SEPA-mandaat hebben (Mandaten). Maak vervolgens via Incasso een nieuwe batch aan met collection date, en voeg per leerling één of meer batch-items toe (bedrag in centen + remittance-info).',
+			'Stap 3 – Batch goedkeuren: open de batch-detailpagina en klik "Goedkeuren". Dit triggert automatisch de edge function generate-invoice met send_email: true.',
+			'Stap 4 – Factuurnummer toekennen: generate-invoice roept next_invoice_number() aan; dit verhoogt atomair invoice_number_next en levert een nummer in het formaat {prefix}{jaar}-{volgnummer} (bv. INV-2026-00001).',
+			'Stap 5 – BTW bepalen per regel: per batch-item kijkt het systeem naar de geboortedatum van de leerling op de collection date. <21 jaar → 0% BTW (vrijgesteld), ≥21 jaar → 21% BTW. Mist de geboortedatum, dan valt de regel in categorie "unknown" (behandeld als vrijgesteld). Een factuur met zowel vrijgestelde als belaste regels krijgt age_category "mixed".',
+			'Stap 6 – PDF renderen: er wordt een A4-PDF in Mplifi-huisstijl (oranje #F97316 header) opgebouwd met bedrijfsblok, debiteurgegevens (of ouder/verzorger), factuurnummer, vervaldatum, regels met BTW-splitsing, totalen en het SEPA-mandaatreferentie.',
+			'Stap 7 – Opslaan: de PDF wordt opgeslagen in de privé storage-bucket "invoices" onder pad {student_user_id}/{invoice_id}.pdf. De invoices-rij krijgt status "issued" plus pdf_storage_path.',
+			'Stap 8 – Versturen: indien een Resend-API-key is geconfigureerd, wordt de PDF als bijlage gemaild naar ouder/verzorger of anders de leerling zelf. Bij succes worden sent_at en email_sent_to bijgewerkt.',
+			'Stap 9 – Idempotent opnieuw draaien: een tweede call op dezelfde batch slaat bestaande facturen over (skipped: true). Veilig bij retries of bij toevoegen van nieuwe leerlingen aan een batch.',
+			'Stap 10 – Inzage door admins: ga naar Facturen voor een doorzoekbaar overzicht van alle facturen (nummer, leerling, datum, bedrag, status). Klik op een rij om de PDF te downloaden via een tijdelijke signed URL (60 sec.).',
+			'Stap 11 – Inzage door leerling: leerlingen openen "Mijn facturen" in het portal en zien uitsluitend hun eigen facturen (RLS afgedwongen op invoices en op de storage-bucket). Downloaden gebeurt via dezelfde signed URL-functie.',
+			'Handmatige correctie: een factuur kan in de DB op status "cancelled" worden gezet; admins kunnen indien nodig een correctie-batch aanmaken (kind: correction) en opnieuw genereren.',
+		],
+	},
+
+	{
 		icon: NAV_ICONS.projects,
 		title: NAV_LABELS.projects,
 		description: 'Beheer projecten en plan afspraken voor docenten en leerlingen.',
