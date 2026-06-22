@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { frequencyLabels } from '@/lib/frequencies';
+import { formatIban, isValidIban, normalizeIban } from '@/lib/incasso/iban';
 import type { LessonTypeOptionRow } from '@/types/lesson-agreements';
 
 interface LessonType {
@@ -52,6 +53,12 @@ export default function PublicSignup() {
 		parent_phone_number: '',
 		notes: '',
 	});
+
+	const [sepaEnabled, setSepaEnabled] = useState(false);
+	const [sepaIban, setSepaIban] = useState('');
+	const [sepaHolder, setSepaHolder] = useState('');
+	const [sepaBic, setSepaBic] = useState('');
+	const [sepaConsent, setSepaConsent] = useState(false);
 
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -132,6 +139,20 @@ export default function PublicSignup() {
 	const submit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!selectedType) return;
+		if (sepaEnabled) {
+			if (!isValidIban(sepaIban)) {
+				setError('Ongeldig IBAN');
+				return;
+			}
+			if (!sepaHolder.trim()) {
+				setError('Vul de rekeninghouder in');
+				return;
+			}
+			if (!sepaConsent) {
+				setError('Bevestig de SEPA-machtiging om door te gaan');
+				return;
+			}
+		}
 		setSubmitting(true);
 		setError(null);
 		const groupId = selectedType.is_group_lesson && selectedGroupId !== 'waitlist' ? selectedGroupId : null;
@@ -150,6 +171,9 @@ export default function PublicSignup() {
 				lesson_group_id: groupId,
 				lesson_type_option_id: optionId,
 				...form,
+				sepa_iban: sepaEnabled ? normalizeIban(sepaIban) : null,
+				sepa_account_holder: sepaEnabled ? sepaHolder.trim() : null,
+				sepa_bic: sepaEnabled && sepaBic.trim() ? sepaBic.trim().toUpperCase() : null,
 			},
 		});
 		setSubmitting(false);
@@ -396,6 +420,60 @@ export default function PublicSignup() {
 									value={form.parent_phone_number}
 									onChange={(v) => setForm({ ...form, parent_phone_number: v })}
 								/>
+							</div>
+							<div className="border-t pt-4 space-y-3">
+								<label className="flex items-start gap-2 cursor-pointer">
+									<input
+										type="checkbox"
+										className="mt-1"
+										checked={sepaEnabled}
+										onChange={(e) => setSepaEnabled(e.target.checked)}
+									/>
+									<span className="text-sm">
+										<span className="font-medium">Betalen via automatische incasso (SEPA)</span>
+										<span className="block text-muted-foreground">
+											Vul hieronder je bankgegevens in. We rekenen pas af na bevestiging van de
+											aanmelding.
+										</span>
+									</span>
+								</label>
+								{sepaEnabled && (
+									<div className="space-y-3 pl-6">
+										<div>
+											<Label>IBAN *</Label>
+											<Input
+												className="mt-1 font-mono"
+												value={sepaIban}
+												onChange={(e) => setSepaIban(e.target.value)}
+												onBlur={() => setSepaIban(formatIban(sepaIban))}
+												placeholder="NL00 BANK 0123 4567 89"
+												required={sepaEnabled}
+											/>
+										</div>
+										<Field
+											label="Rekeninghouder *"
+											value={sepaHolder}
+											onChange={setSepaHolder}
+											required={sepaEnabled}
+										/>
+										<Field label="BIC (optioneel)" value={sepaBic} onChange={setSepaBic} />
+										<label className="flex items-start gap-2 cursor-pointer">
+											<input
+												type="checkbox"
+												className="mt-1"
+												checked={sepaConsent}
+												onChange={(e) => setSepaConsent(e.target.checked)}
+											/>
+											<span className="text-xs text-muted-foreground">
+												Door ondertekening van dit machtigingsformulier geef ik toestemming aan
+												POPschool Harderwijk om doorlopend incasso-opdrachten naar mijn bank te
+												sturen om een bedrag van mijn rekening af te schrijven wegens lesgeld,
+												en aan mijn bank om doorlopend een bedrag van mijn rekening af te
+												schrijven overeenkomstig die opdracht.
+											</span>
+										</label>
+									</div>
+								)}
 							</div>
 							<div>
 								<Label htmlFor="notes">Opmerkingen</Label>

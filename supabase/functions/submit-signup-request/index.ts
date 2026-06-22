@@ -19,9 +19,33 @@ interface SignupRequest {
 	parent_email?: string | null;
 	parent_phone_number?: string | null;
 	notes?: string | null;
+	sepa_iban?: string | null;
+	sepa_account_holder?: string | null;
+	sepa_bic?: string | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const IBAN_STRUCTURE_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
+
+function normalizeIban(input: string): string {
+	return input.replace(/\s+/g, '').toUpperCase();
+}
+
+function isValidIban(input: string): boolean {
+	const iban = normalizeIban(input);
+	if (!IBAN_STRUCTURE_RE.test(iban)) return false;
+	const rearranged = iban.slice(4) + iban.slice(0, 4);
+	const numeric = rearranged
+		.split('')
+		.map((c) => (c >= 'A' && c <= 'Z' ? (c.charCodeAt(0) - 55).toString() : c))
+		.join('');
+	let remainder = 0;
+	for (let i = 0; i < numeric.length; i += 7) {
+		const chunk = remainder.toString() + numeric.slice(i, i + 7);
+		remainder = Number(chunk) % 97;
+	}
+	return remainder === 1;
+}
 
 function bad(message: string, status = 400) {
 	return new Response(JSON.stringify({ error: message }), {
@@ -46,6 +70,17 @@ Deno.serve(async (req) => {
 	if (body.lesson_type_option_id && !UUID_RE.test(body.lesson_type_option_id)) return bad('Ongeldige optie');
 	if (!body.first_name?.trim() || !body.last_name?.trim()) return bad('Naam is verplicht');
 	if (!body.email || !EMAIL_RE.test(body.email)) return bad('Ongeldig e-mailadres');
+
+	let sepaIban: string | null = null;
+	let sepaHolder: string | null = null;
+	let sepaBic: string | null = null;
+	if (body.sepa_iban || body.sepa_account_holder) {
+		if (!body.sepa_iban || !isValidIban(body.sepa_iban)) return bad('Ongeldig IBAN');
+		if (!body.sepa_account_holder?.trim()) return bad('Rekeninghouder is verplicht bij SEPA');
+		sepaIban = normalizeIban(body.sepa_iban);
+		sepaHolder = body.sepa_account_holder.trim();
+		sepaBic = body.sepa_bic?.trim().toUpperCase() || null;
+	}
 
 	const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
 		auth: { autoRefreshToken: false, persistSession: false },
@@ -99,6 +134,9 @@ Deno.serve(async (req) => {
 			parent_email: body.parent_email?.trim().toLowerCase() || null,
 			parent_phone_number: body.parent_phone_number?.trim() || null,
 			notes: body.notes?.trim() || null,
+			sepa_iban: sepaIban,
+			sepa_account_holder: sepaHolder,
+			sepa_bic: sepaBic,
 			status: 'pending',
 		})
 		.select('id')
