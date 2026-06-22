@@ -18,6 +18,7 @@ import EmailTemplates from './pages/EmailTemplates';
 import Incasso from './pages/Incasso';
 import IncassoBatchDetail from './pages/IncassoBatchDetail';
 import IncassoStart from './pages/IncassoStart';
+import Invoices from './pages/Invoices';
 import LegacyImport from './pages/LegacyImport';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
