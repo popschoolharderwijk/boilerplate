@@ -24,6 +24,20 @@ export interface AccountingSettings {
 	sepa_remittance_template: string;
 	sepa_mandate_prefix: string;
 	sepa_mandate_next_seq: number;
+	company_name: string | null;
+	company_address: string | null;
+	company_postcode: string | null;
+	company_city: string | null;
+	company_kvk: string | null;
+	company_btw_nummer: string | null;
+	company_iban: string | null;
+	company_email: string | null;
+	company_phone: string | null;
+	company_logo_url: string | null;
+	invoice_number_prefix: string;
+	invoice_number_next: number;
+	invoice_payment_term_days: number;
+	invoice_footer_text: string | null;
 }
 
 export type AgeCategory = 'under_21' | '21_plus' | 'unknown';
