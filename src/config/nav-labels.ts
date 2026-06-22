@@ -96,6 +96,8 @@ export const NAV_ICONS: Record<NavLabelKey, IconType> = {
 	subscriptions: LuCreditCard,
 	incasso: LuFileSpreadsheet,
 	mandaten: LuBuilding2,
+	invoices: LuFileText,
+	myInvoices: LuFileText,
 	noLessonPeriods: LuCalendarOff,
 	emailTemplates: LuMail,
 	announcements: LuMegaphone,
