@@ -71,6 +71,18 @@ Deno.serve(async (req) => {
 	if (!body.first_name?.trim() || !body.last_name?.trim()) return bad('Naam is verplicht');
 	if (!body.email || !EMAIL_RE.test(body.email)) return bad('Ongeldig e-mailadres');
 
+	let sepaIban: string | null = null;
+	let sepaHolder: string | null = null;
+	let sepaBic: string | null = null;
+	if (body.sepa_iban || body.sepa_account_holder) {
+		if (!body.sepa_iban || !isValidIban(body.sepa_iban)) return bad('Ongeldig IBAN');
+		if (!body.sepa_account_holder?.trim()) return bad('Rekeninghouder is verplicht bij SEPA');
+		sepaIban = normalizeIban(body.sepa_iban);
+		sepaHolder = body.sepa_account_holder.trim();
+		sepaBic = body.sepa_bic?.trim().toUpperCase() || null;
+	}
+
+
 	const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
 		auth: { autoRefreshToken: false, persistSession: false },
 	});
