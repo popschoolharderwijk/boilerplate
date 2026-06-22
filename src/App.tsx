@@ -111,6 +111,8 @@ const App = () => (
 						<Route path="/incasso" element={<Incasso />} />
 						<Route path="/incasso/batches/:id" element={<IncassoBatchDetail />} />
 						<Route path="/mandaten" element={<Mandaten />} />
+						<Route path="/facturen" element={<Invoices />} />
+						<Route path="/mijn-facturen" element={<MyInvoices />} />
 						<Route path="/data-import" element={<LegacyImport />} />
 						<Route path="/announcements" element={<Announcements />} />
 						<Route path="/manual" element={<UserManual />} />
