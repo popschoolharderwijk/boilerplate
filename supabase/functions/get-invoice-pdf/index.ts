@@ -3,7 +3,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
 
-interface Body { invoice_id: string }
+interface Body {
+	invoice_id: string;
+}
 
 Deno.serve(async (req) => {
 	const begun = await beginAuthenticatedPostRequest<Body>(req);
@@ -21,7 +23,10 @@ Deno.serve(async (req) => {
 	});
 	// RLS-checked: returns 0 rows if the user isn't allowed to see it.
 	const { data: inv, error } = await userClient
-		.from('invoices').select('id, invoice_number, pdf_storage_path').eq('id', body.invoice_id).maybeSingle();
+		.from('invoices')
+		.select('id, invoice_number, pdf_storage_path')
+		.eq('id', body.invoice_id)
+		.maybeSingle();
 	if (error || !inv || !inv.pdf_storage_path) return jsonResponse(404, { error: 'Factuur niet beschikbaar' });
 
 	const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });

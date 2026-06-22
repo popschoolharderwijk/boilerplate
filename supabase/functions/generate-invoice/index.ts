@@ -8,7 +8,7 @@
 // Auth: requires admin JWT.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
 
 interface Body {
@@ -83,7 +83,18 @@ async function buildPdf(args: {
 	}>;
 	totals: { excl: number; btw21: number; btw0: number; total: number };
 }): Promise<Uint8Array> {
-	const { settings: s, invoiceNumber, issueDate, dueDate, periodStart, periodEnd, student, mandateRef, lines, totals } = args;
+	const {
+		settings: s,
+		invoiceNumber,
+		issueDate,
+		dueDate,
+		periodStart,
+		periodEnd,
+		student,
+		mandateRef,
+		lines,
+		totals,
+	} = args;
 	const pdf = await PDFDocument.create();
 	const page = pdf.addPage([595.28, 841.89]); // A4
 	const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -95,7 +106,11 @@ async function buildPdf(args: {
 	// Orange header band
 	page.drawRectangle({ x: 0, y: 791, width: W, height: 50, color: ORANGE });
 	page.drawText(String(s.company_name ?? 'popschool harderwijk'), {
-		x: margin, y: 808, size: 20, font: bold, color: rgb(1, 1, 1),
+		x: margin,
+		y: 808,
+		size: 20,
+		font: bold,
+		color: rgb(1, 1, 1),
 	});
 	page.drawText('FACTUUR', { x: W - margin - 90, y: 808, size: 20, font: bold, color: rgb(1, 1, 1) });
 
@@ -146,7 +161,11 @@ async function buildPdf(args: {
 		}
 		if (student.debtor_postal_code || student.debtor_city) {
 			page.drawText(`${student.debtor_postal_code ?? ''} ${student.debtor_city ?? ''}`.trim(), {
-				x: margin, y, size: 10, font, color: BLACK,
+				x: margin,
+				y,
+				size: 10,
+				font,
+				color: BLACK,
 			});
 			y -= 12;
 		}
@@ -165,9 +184,21 @@ async function buildPdf(args: {
 
 	for (const l of lines) {
 		page.drawText(l.description.slice(0, 50), { x: margin + 6, y: ty, size: 9, font, color: BLACK });
-		page.drawText(l.lesson_date ? fmtDateNL(l.lesson_date) : '—', { x: margin + 280, y: ty, size: 9, font, color: GRAY_TEXT });
+		page.drawText(l.lesson_date ? fmtDateNL(l.lesson_date) : '—', {
+			x: margin + 280,
+			y: ty,
+			size: 9,
+			font,
+			color: GRAY_TEXT,
+		});
 		page.drawText(String(l.quantity), { x: margin + 350, y: ty, size: 9, font, color: BLACK });
-		page.drawText(l.btw_rate > 0 ? `${l.btw_rate}%` : 'vrij', { x: margin + 400, y: ty, size: 9, font, color: BLACK });
+		page.drawText(l.btw_rate > 0 ? `${l.btw_rate}%` : 'vrij', {
+			x: margin + 400,
+			y: ty,
+			size: 9,
+			font,
+			color: BLACK,
+		});
 		page.drawText(fmtEUR(l.amount_total_cents), { x: W - margin - 60, y: ty, size: 9, font, color: BLACK });
 		ty -= 16;
 	}
@@ -176,8 +207,10 @@ async function buildPdf(args: {
 	ty -= 12;
 	const totalsX = W - margin - 200;
 	page.drawLine({
-		start: { x: totalsX, y: ty + 8 }, end: { x: W - margin, y: ty + 8 },
-		thickness: 0.5, color: GRAY_TEXT,
+		start: { x: totalsX, y: ty + 8 },
+		end: { x: W - margin, y: ty + 8 },
+		thickness: 0.5,
+		color: GRAY_TEXT,
 	});
 	page.drawText('Subtotaal (excl. BTW)', { x: totalsX, y: ty, size: 9, font, color: BLACK });
 	page.drawText(fmtEUR(totals.excl), { x: W - margin - 60, y: ty, size: 9, font, color: BLACK });
@@ -210,8 +243,10 @@ async function buildPdf(args: {
 	// Footer
 	if (s.invoice_footer_text) {
 		page.drawLine({
-			start: { x: margin, y: 60 }, end: { x: W - margin, y: 60 },
-			thickness: 0.5, color: rgb(0.85, 0.85, 0.85),
+			start: { x: margin, y: 60 },
+			end: { x: W - margin, y: 60 },
+			thickness: 0.5,
+			color: rgb(0.85, 0.85, 0.85),
 		});
 		for (const line of wrap(String(s.invoice_footer_text), 110).slice(0, 3)) {
 			page.drawText(line, { x: margin, y: 46, size: 8, font, color: GRAY_TEXT });
@@ -260,7 +295,9 @@ Deno.serve(async (req) => {
 			global: { headers: { Authorization: authHeader } },
 			auth: { autoRefreshToken: false, persistSession: false },
 		});
-		const { data: { user } } = await userClient.auth.getUser();
+		const {
+			data: { user },
+		} = await userClient.auth.getUser();
 		if (!user) return jsonResponse(401, { error: 'Unauthenticated' });
 		const { data: roles } = await userClient.from('user_roles').select('role').eq('user_id', user.id);
 		const ok = (roles ?? []).some((r) => r.role === 'admin' || r.role === 'site_admin');
@@ -270,11 +307,17 @@ Deno.serve(async (req) => {
 	const admin = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
 	const { data: settings, error: sErr } = await admin
-		.from('accounting_settings').select('*').eq('id', true).maybeSingle();
+		.from('accounting_settings')
+		.select('*')
+		.eq('id', true)
+		.maybeSingle();
 	if (sErr || !settings) return jsonResponse(500, { error: 'Accounting-instellingen ontbreken' });
 
 	const { data: batch, error: bErr } = await admin
-		.from('incasso_batches').select('*').eq('id', body.batch_id).maybeSingle();
+		.from('incasso_batches')
+		.select('*')
+		.eq('id', body.batch_id)
+		.maybeSingle();
 	if (bErr || !batch) return jsonResponse(404, { error: 'Batch niet gevonden' });
 
 	const { data: items, error: iErr } = await admin
@@ -286,8 +329,19 @@ Deno.serve(async (req) => {
 	const studentIds = [...new Set(items.map((i) => i.student_user_id))];
 	const [{ data: profiles }, { data: students }, { data: mandates }] = await Promise.all([
 		admin.from('profiles').select('user_id, first_name, last_name, email').in('user_id', studentIds),
-		admin.from('students').select('user_id, date_of_birth, parent_email, parent_name, debtor_info_same_as_student, debtor_name, debtor_address, debtor_postal_code, debtor_city').in('user_id', studentIds),
-		admin.from('sepa_mandates').select('id, mandate_reference').in('id', items.map((i) => (i as { mandate_id: string }).mandate_id)),
+		admin
+			.from('students')
+			.select(
+				'user_id, date_of_birth, parent_email, parent_name, debtor_info_same_as_student, debtor_name, debtor_address, debtor_postal_code, debtor_city',
+			)
+			.in('user_id', studentIds),
+		admin
+			.from('sepa_mandates')
+			.select('id, mandate_reference')
+			.in(
+				'id',
+				items.map((i) => (i as { mandate_id: string }).mandate_id),
+			),
 	]);
 
 	const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
@@ -295,17 +349,35 @@ Deno.serve(async (req) => {
 	const mandateMap = new Map((mandates ?? []).map((m) => [m.id, m.mandate_reference]));
 
 	const issueDate = new Date().toISOString().slice(0, 10);
-	const dueDate = new Date(Date.now() + ((settings as { invoice_payment_term_days?: number }).invoice_payment_term_days ?? 14) * 86400000)
-		.toISOString().slice(0, 10);
+	const dueDate = new Date(
+		Date.now() + ((settings as { invoice_payment_term_days?: number }).invoice_payment_term_days ?? 14) * 86400000,
+	)
+		.toISOString()
+		.slice(0, 10);
 
-	const results: Array<{ student_user_id: string; invoice_id?: string; invoice_number?: string; skipped?: boolean; error?: string }> = [];
+	const results: Array<{
+		student_user_id: string;
+		invoice_id?: string;
+		invoice_number?: string;
+		skipped?: boolean;
+		error?: string;
+	}> = [];
 
 	for (const sid of studentIds) {
 		// Skip if invoice already exists for this batch+student
 		const { data: existing } = await admin
-			.from('invoices').select('id, invoice_number').eq('batch_id', body.batch_id).eq('student_user_id', sid).maybeSingle();
+			.from('invoices')
+			.select('id, invoice_number')
+			.eq('batch_id', body.batch_id)
+			.eq('student_user_id', sid)
+			.maybeSingle();
 		if (existing) {
-			results.push({ student_user_id: sid, invoice_id: existing.id, invoice_number: existing.invoice_number, skipped: true });
+			results.push({
+				student_user_id: sid,
+				invoice_id: existing.id,
+				invoice_number: existing.invoice_number,
+				skipped: true,
+			});
 			continue;
 		}
 
@@ -325,12 +397,16 @@ Deno.serve(async (req) => {
 			parent_name: (stRow as { parent_name?: string | null } | undefined)?.parent_name ?? null,
 			debtor_name: (stRow as { debtor_name?: string | null } | undefined)?.debtor_name ?? null,
 			debtor_address: (stRow as { debtor_address?: string | null } | undefined)?.debtor_address ?? null,
-			debtor_postal_code: (stRow as { debtor_postal_code?: string | null } | undefined)?.debtor_postal_code ?? null,
+			debtor_postal_code:
+				(stRow as { debtor_postal_code?: string | null } | undefined)?.debtor_postal_code ?? null,
 			debtor_city: (stRow as { debtor_city?: string | null } | undefined)?.debtor_city ?? null,
-			debtor_info_same_as_student: (stRow as { debtor_info_same_as_student?: boolean } | undefined)?.debtor_info_same_as_student ?? true,
+			debtor_info_same_as_student:
+				(stRow as { debtor_info_same_as_student?: boolean } | undefined)?.debtor_info_same_as_student ?? true,
 		};
 
-		const studentItems = items.filter((i) => i.student_user_id === sid) as Array<BatchItem & { mandate_id: string }>;
+		const studentItems = items.filter((i) => i.student_user_id === sid) as Array<
+			BatchItem & { mandate_id: string }
+		>;
 
 		// Build lines with BTW
 		const lines = studentItems.map((it) => {
@@ -407,9 +483,9 @@ Deno.serve(async (req) => {
 			continue;
 		}
 
-		await admin.from('invoice_lines').insert(
-			lines.map((l, idx) => ({ ...l, invoice_id: inv.id, sort_order: idx })),
-		);
+		await admin
+			.from('invoice_lines')
+			.insert(lines.map((l, idx) => ({ ...l, invoice_id: inv.id, sort_order: idx })));
 
 		const mandateRef = mandateMap.get(studentItems[0].mandate_id) ?? null;
 
@@ -429,7 +505,8 @@ Deno.serve(async (req) => {
 
 		const storagePath = `${sid}/${inv.id}.pdf`;
 		const { error: upErr } = await admin.storage.from('invoices').upload(storagePath, pdfBytes, {
-			contentType: 'application/pdf', upsert: true,
+			contentType: 'application/pdf',
+			upsert: true,
 		});
 		if (upErr) {
 			results.push({ student_user_id: sid, invoice_id: inv.id, error: `Upload: ${upErr.message}` });
@@ -464,7 +541,10 @@ ${mandateRef ? `<p>Dit bedrag wordt automatisch geïncasseerd op of rond ${fmtDa
 					}),
 				});
 				if (resp.ok) {
-					await admin.from('invoices').update({ sent_at: new Date().toISOString(), email_sent_to: recipient }).eq('id', inv.id);
+					await admin
+						.from('invoices')
+						.update({ sent_at: new Date().toISOString(), email_sent_to: recipient })
+						.eq('id', inv.id);
 				} else {
 					console.error('Resend error', resp.status, await resp.text());
 				}
