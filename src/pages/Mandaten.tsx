@@ -188,7 +188,7 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 			account_holder: holder,
 			signed_at: signedAt,
 			signature_method: method,
-			status: 'pending',
+			status: 'active',
 			sequence_type: 'FRST',
 		});
 		setSaving(false);
