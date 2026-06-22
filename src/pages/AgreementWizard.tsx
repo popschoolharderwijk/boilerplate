@@ -542,6 +542,13 @@ export default function AgreementWizard() {
 							selectedTeacher={selectedTeacher}
 							effectiveSlot={effectiveSlot}
 						/>
+						<PaymentMethodSection
+							paymentMethod={form.paymentMethod}
+							sepaMandateId={form.sepaMandateId}
+							studentUserId={form.studentUserId}
+							onPaymentMethodChange={(v) => setForm((f) => ({ ...f, paymentMethod: v }))}
+							onSepaMandateIdChange={(v) => setForm((f) => ({ ...f, sepaMandateId: v }))}
+						/>
 						{isEditMode && agreement && <SubscriptionCard lessonAgreementId={agreement.id} />}
 					</div>
 				)}
