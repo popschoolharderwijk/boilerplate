@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       accounting_settings: {
         Row: {
+          account_bank_sepa: string
           account_bank_stripe: string
           account_btw_21: string
           account_debiteuren: string
@@ -30,11 +31,21 @@ export type Database = {
           id: boolean
           journal_code_bank: string
           journal_code_memoriaal: string
+          payment_provider: string
           school_year_start_month: number
+          sepa_collection_day: number
+          sepa_creditor_bic: string | null
+          sepa_creditor_iban: string | null
+          sepa_creditor_id: string | null
+          sepa_creditor_name: string | null
+          sepa_mandate_next_seq: number
+          sepa_mandate_prefix: string
+          sepa_remittance_template: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          account_bank_sepa?: string
           account_bank_stripe?: string
           account_btw_21?: string
           account_debiteuren?: string
@@ -49,11 +60,21 @@ export type Database = {
           id?: boolean
           journal_code_bank?: string
           journal_code_memoriaal?: string
+          payment_provider?: string
           school_year_start_month?: number
+          sepa_collection_day?: number
+          sepa_creditor_bic?: string | null
+          sepa_creditor_iban?: string | null
+          sepa_creditor_id?: string | null
+          sepa_creditor_name?: string | null
+          sepa_mandate_next_seq?: number
+          sepa_mandate_prefix?: string
+          sepa_remittance_template?: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          account_bank_sepa?: string
           account_bank_stripe?: string
           account_btw_21?: string
           account_debiteuren?: string
@@ -68,7 +89,16 @@ export type Database = {
           id?: boolean
           journal_code_bank?: string
           journal_code_memoriaal?: string
+          payment_provider?: string
           school_year_start_month?: number
+          sepa_collection_day?: number
+          sepa_creditor_bic?: string | null
+          sepa_creditor_iban?: string | null
+          sepa_creditor_id?: string | null
+          sepa_creditor_name?: string | null
+          sepa_mandate_next_seq?: number
+          sepa_mandate_prefix?: string
+          sepa_remittance_template?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -333,6 +363,168 @@ export type Database = {
         }
         Relationships: []
       }
+      incasso_batch_items: {
+        Row: {
+          amount_cents: number
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          end_to_end_id: string
+          id: string
+          kind: string
+          lesson_agreement_id: string | null
+          mandate_id: string
+          reason_code: string | null
+          remittance_info: string
+          sequence_type: string
+          status: string
+          status_updated_at: string | null
+          student_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          batch_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          end_to_end_id: string
+          id?: string
+          kind?: string
+          lesson_agreement_id?: string | null
+          mandate_id: string
+          reason_code?: string | null
+          remittance_info: string
+          sequence_type?: string
+          status?: string
+          status_updated_at?: string | null
+          student_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          end_to_end_id?: string
+          id?: string
+          kind?: string
+          lesson_agreement_id?: string | null
+          mandate_id?: string
+          reason_code?: string | null
+          remittance_info?: string
+          sequence_type?: string
+          status?: string
+          status_updated_at?: string | null
+          student_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incasso_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "incasso_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incasso_batch_items_lesson_agreement_id_fkey"
+            columns: ["lesson_agreement_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incasso_batch_items_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "sepa_mandates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incasso_batch_items_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "incasso_batch_items_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "view_profiles_with_display_name"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      incasso_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          batch_number: string
+          closed_at: string | null
+          collection_date: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item_count: number
+          message_id: string | null
+          notes: string | null
+          status: string
+          submitted_at: string | null
+          total_amount_cents: number
+          updated_at: string
+          updated_by: string | null
+          xml_sha256: string | null
+          xml_storage_path: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_number: string
+          closed_at?: string | null
+          collection_date: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_count?: number
+          message_id?: string | null
+          notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_amount_cents?: number
+          updated_at?: string
+          updated_by?: string | null
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_number?: string
+          closed_at?: string | null
+          collection_date?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_count?: number
+          message_id?: string | null
+          notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_amount_cents?: number
+          updated_at?: string
+          updated_by?: string | null
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Relationships: []
+      }
       incasso_invitations: {
         Row: {
           created_at: string
@@ -414,8 +606,11 @@ export type Database = {
           is_active: boolean
           lesson_group_id: string | null
           lesson_type_id: string
+          monthly_amount_cents: number | null
           notes: string | null
+          payment_method: string
           price_per_lesson: number
+          sepa_mandate_id: string | null
           signup_source: string | null
           start_date: string
           start_time: string
@@ -438,8 +633,11 @@ export type Database = {
           is_active?: boolean
           lesson_group_id?: string | null
           lesson_type_id: string
+          monthly_amount_cents?: number | null
           notes?: string | null
+          payment_method?: string
           price_per_lesson: number
+          sepa_mandate_id?: string | null
           signup_source?: string | null
           start_date: string
           start_time: string
@@ -462,8 +660,11 @@ export type Database = {
           is_active?: boolean
           lesson_group_id?: string | null
           lesson_type_id?: string
+          monthly_amount_cents?: number | null
           notes?: string | null
+          payment_method?: string
           price_per_lesson?: number
+          sepa_mandate_id?: string | null
           signup_source?: string | null
           start_date?: string
           start_time?: string
@@ -487,6 +688,13 @@ export type Database = {
             columns: ["lesson_type_id"]
             isOneToOne: false
             referencedRelation: "lesson_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_agreements_sepa_mandate_id_fkey"
+            columns: ["sepa_mandate_id"]
+            isOneToOne: false
+            referencedRelation: "sepa_mandates"
             referencedColumns: ["id"]
           },
           {
@@ -1002,6 +1210,81 @@ export type Database = {
           },
         ]
       }
+      sepa_mandates: {
+        Row: {
+          account_holder: string
+          bic: string | null
+          created_at: string
+          created_by: string | null
+          first_used_at: string | null
+          iban: string
+          id: string
+          mandate_reference: string
+          notes: string | null
+          revoked_at: string | null
+          sequence_type: string
+          signature_method: string
+          signed_at: string | null
+          status: string
+          student_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_holder: string
+          bic?: string | null
+          created_at?: string
+          created_by?: string | null
+          first_used_at?: string | null
+          iban: string
+          id?: string
+          mandate_reference: string
+          notes?: string | null
+          revoked_at?: string | null
+          sequence_type?: string
+          signature_method?: string
+          signed_at?: string | null
+          status?: string
+          student_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_holder?: string
+          bic?: string | null
+          created_at?: string
+          created_by?: string | null
+          first_used_at?: string | null
+          iban?: string
+          id?: string
+          mandate_reference?: string
+          notes?: string | null
+          revoked_at?: string | null
+          sequence_type?: string
+          signature_method?: string
+          signed_at?: string | null
+          status?: string
+          student_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sepa_mandates_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sepa_mandates_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "view_profiles_with_display_name"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       stripe_customers: {
         Row: {
           created_at: string
@@ -1508,6 +1791,10 @@ export type Database = {
         Args: { p_regprocedure: string }
         Returns: boolean
       }
+      build_incasso_batch_items: {
+        Args: { p_batch_id: string }
+        Returns: number
+      }
       can_delete_user: { Args: { _target_id: string }; Returns: boolean }
       can_manage_agenda_event: { Args: { ev_id: string }; Returns: boolean }
       check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean }
@@ -1629,11 +1916,14 @@ export type Database = {
       is_staff: { Args: never; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
       is_teacher: { Args: { _user_id: string }; Returns: boolean }
+      is_valid_iban: { Args: { p_iban: string }; Returns: boolean }
       is_valid_phone_number: { Args: { p_phone: string }; Returns: boolean }
+      next_mandate_reference: { Args: never; Returns: string }
       policy_exists: {
         Args: { p_policy_name: string; p_table_name: string }
         Returns: boolean
       }
+      recalc_incasso_batch: { Args: { p_batch_id: string }; Returns: undefined }
       shift_recurring_deviation_to_next_week: {
         Args: { p_deviation_id: string }
         Returns: string
