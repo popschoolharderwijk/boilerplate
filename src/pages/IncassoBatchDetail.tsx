@@ -78,15 +78,30 @@ function Detail() {
 
 	const handleApprove = async () => {
 		if (!id) return;
+		setBusy(true);
 		const { error } = await supabase
 			.from('incasso_batches')
 			.update({ status: 'approved', approved_at: new Date().toISOString() })
 			.eq('id', id);
 		if (error) {
+			setBusy(false);
 			toast.error(error.message);
 			return;
 		}
-		toast.success('Batch goedgekeurd');
+		// Genereer facturen + verstuur per e-mail
+		toast.info('Facturen worden aangemaakt en gemaild...');
+		const { data: invResp, error: invErr } = await supabase.functions.invoke('generate-invoice', {
+			body: { batch_id: id, send_email: true },
+		});
+		setBusy(false);
+		if (invErr) {
+			toast.error(`Factuurgeneratie faalde: ${invErr.message}`);
+		} else {
+			const results = (invResp as { results?: Array<{ invoice_number?: string; error?: string }> } | null)?.results ?? [];
+			const ok = results.filter((r) => r.invoice_number && !r.error).length;
+			const failed = results.filter((r) => r.error).length;
+			toast.success(`Batch goedgekeurd — ${ok} factuur/facturen aangemaakt${failed > 0 ? `, ${failed} fout` : ''}.`);
+		}
 		load();
 	};
 
