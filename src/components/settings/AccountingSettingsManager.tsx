@@ -205,6 +205,48 @@ export function AccountingSettingsManager() {
 				</CardContent>
 			</Card>
 
+			<Card>
+				<CardHeader>
+					<CardTitle>Bedrijfsgegevens & factuur</CardTitle>
+					<CardDescription>Verschijnen op alle facturen (PDF + e-mail).</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('Bedrijfsnaam', 'company_name', 'popschool harderwijk')}
+					{field('E-mailadres', 'company_email', 'info@popschoolharderwijk.nl')}
+					{field('Telefoon', 'company_phone', '0341 - 123456')}
+					{field('Adres', 'company_address', 'Hoofdstraat 1')}
+					{field('Postcode', 'company_postcode', '3841 AB')}
+					{field('Plaats', 'company_city', 'Harderwijk')}
+					{field('KvK-nummer', 'company_kvk', '12345678')}
+					{field('BTW-nummer', 'company_btw_nummer', 'NL123456789B01')}
+					{field('IBAN', 'company_iban', 'NL00BANK0123456789')}
+					{field('Logo-URL (optioneel)', 'company_logo_url')}
+					{field('Factuurnummer-prefix', 'invoice_number_prefix', 'INV-')}
+					<div className="space-y-1.5">
+						<Label htmlFor="acc-pay-term">Betaaltermijn (dagen)</Label>
+						<Input
+							id="acc-pay-term"
+							type="number"
+							min={1}
+							max={90}
+							disabled={!canEdit}
+							value={form.invoice_payment_term_days}
+							onChange={(e) => update('invoice_payment_term_days', Math.min(90, Math.max(1, Number(e.target.value) || 14)))}
+						/>
+					</div>
+					<div className="space-y-1.5 sm:col-span-2">
+						<Label htmlFor="acc-footer">Footer-tekst (optioneel)</Label>
+						<Input
+							id="acc-footer"
+							value={form.invoice_footer_text ?? ''}
+							disabled={!canEdit}
+							onChange={(e) => update('invoice_footer_text', e.target.value)}
+							placeholder="bv. Bedankt voor je aanmelding bij popschool harderwijk!"
+						/>
+					</div>
+				</CardContent>
+			</Card>
+
 			{canEdit && (
 				<div className="flex justify-end">
 					<Button onClick={handleSave} disabled={saving}>
