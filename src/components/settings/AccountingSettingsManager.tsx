@@ -61,6 +61,19 @@ export function AccountingSettingsManager() {
 				sepa_collection_day: form.sepa_collection_day,
 				sepa_remittance_template: form.sepa_remittance_template,
 				sepa_mandate_prefix: form.sepa_mandate_prefix,
+				company_name: form.company_name,
+				company_address: form.company_address,
+				company_postcode: form.company_postcode,
+				company_city: form.company_city,
+				company_kvk: form.company_kvk,
+				company_btw_nummer: form.company_btw_nummer,
+				company_iban: form.company_iban,
+				company_email: form.company_email,
+				company_phone: form.company_phone,
+				company_logo_url: form.company_logo_url,
+				invoice_number_prefix: form.invoice_number_prefix,
+				invoice_payment_term_days: form.invoice_payment_term_days,
+				invoice_footer_text: form.invoice_footer_text,
 			})
 			.eq('id', true);
 		setSaving(false);
