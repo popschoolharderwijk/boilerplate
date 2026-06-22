@@ -67,15 +67,8 @@ function MandatenContent() {
 		load();
 	};
 
-	const handleActivate = async (id: string) => {
-		const { error } = await supabase.from('sepa_mandates').update({ status: 'active' }).eq('id', id);
-		if (error) {
-			toast.error(error.message);
-			return;
-		}
-		toast.success('Mandaat geactiveerd');
-		load();
-	};
+
+
 
 	return (
 		<div className="space-y-6">
