@@ -24,19 +24,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { UserSelectSingle } from '@/components/ui/user-select';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { supabase } from '@/integrations/supabase/client';
+import { isValidIban, normalizeIban } from '@/lib/incasso/iban';
 import { MANDATE_STATUS_LABELS, type SepaMandate } from '@/lib/incasso/types';
 
 interface MandateRow extends SepaMandate {
 	profiles: { first_name: string | null; last_name: string | null; email: string } | null;
-}
-
-interface StudentOption {
-	user_id: string;
-	first_name: string | null;
-	last_name: string | null;
-	email: string;
 }
 
 export default function Mandaten() {
