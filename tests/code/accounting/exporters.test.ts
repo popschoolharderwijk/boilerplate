@@ -19,6 +19,16 @@ const SETTINGS: AccountingSettings = {
 	currency: 'EUR',
 	school_year_start_month: 8,
 	description_template: 'x',
+	account_bank_sepa: '1102',
+	payment_provider: 'stripe',
+	sepa_creditor_name: null,
+	sepa_creditor_iban: null,
+	sepa_creditor_bic: null,
+	sepa_creditor_id: null,
+	sepa_collection_day: 27,
+	sepa_remittance_template: 'Lesgeld {month} {year} - {student_name}',
+	sepa_mandate_prefix: 'MND',
+	sepa_mandate_next_seq: 1,
 };
 
 function makeReport(overrides: Partial<AccountingReport['invoices'][number]> = {}): AccountingReport {
