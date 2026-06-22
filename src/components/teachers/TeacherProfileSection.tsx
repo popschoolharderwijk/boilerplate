@@ -19,6 +19,7 @@ interface TeacherProfileSectionProps {
 	initialFirstName?: string | null;
 	initialLastName?: string | null;
 	initialPhoneNumber?: string | null;
+	initialHasVog?: boolean | null;
 }
 
 export function TeacherProfileSection({
@@ -30,12 +31,14 @@ export function TeacherProfileSection({
 	initialFirstName,
 	initialLastName,
 	initialPhoneNumber,
+	initialHasVog,
 }: TeacherProfileSectionProps) {
 	const { user } = useAuth();
 	const [bio, setBio] = useState<string>(initialBio || '');
 	const [firstName, setFirstName] = useState<string>(initialFirstName || '');
 	const [lastName, setLastName] = useState<string>(initialLastName || '');
 	const [phoneNumber, setPhoneNumber] = useState<string>(initialPhoneNumber || '');
+	const [hasVog, setHasVog] = useState<boolean>(initialHasVog ?? false);
 	const [loading, setLoading] = useState(!initialBio && !initialFirstName);
 	const [saving, setSaving] = useState(false);
 
@@ -46,7 +49,7 @@ export function TeacherProfileSection({
 		setLoading(true);
 		void supabase
 			.from('teachers')
-			.select('bio')
+			.select('bio, has_vog')
 			.eq('user_id', teacherUserId)
 			.single()
 			.then(async ({ data: teacherData, error: teacherError }) => {
@@ -68,6 +71,7 @@ export function TeacherProfileSection({
 					toast.error('Fout bij laden profiel');
 				} else {
 					setBio(teacherData?.bio || '');
+					setHasVog(teacherData?.has_vog ?? false);
 					setFirstName(profileData?.first_name || '');
 					setLastName(profileData?.last_name || '');
 					setPhoneNumber(profileData?.phone_number || '');
@@ -81,7 +85,8 @@ export function TeacherProfileSection({
 		if (initialFirstName !== undefined) setFirstName(initialFirstName || '');
 		if (initialLastName !== undefined) setLastName(initialLastName || '');
 		if (initialPhoneNumber !== undefined) setPhoneNumber(initialPhoneNumber || '');
-	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber]);
+		if (initialHasVog !== undefined && initialHasVog !== null) setHasVog(initialHasVog);
+	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, initialHasVog]);
 
 	const runAction = async () => {
 		if (!teacherUserId || !user_id || !canEdit || !user) return;
@@ -90,7 +95,7 @@ export function TeacherProfileSection({
 
 		const { error: bioError } = await supabase
 			.from('teachers')
-			.update({ bio: bio || null })
+			.update({ bio: bio || null, has_vog: hasVog })
 			.eq('user_id', teacherUserId);
 
 		if (bioError) {
@@ -170,6 +175,16 @@ export function TeacherProfileSection({
 						className="resize-none"
 					/>
 				</div>
+				<label className="flex items-center gap-2 cursor-pointer select-none">
+					<input
+						type="checkbox"
+						checked={hasVog}
+						onChange={(e) => setHasVog(e.target.checked)}
+						disabled={!canEdit}
+						className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+					/>
+					<span className="text-sm font-medium">VOG aanwezig</span>
+				</label>
 				{canEdit && (
 					<SubmitButton onClick={() => runAction()} loading={saving} size="sm" loadingLabel="Opslaan...">
 						Opslaan
