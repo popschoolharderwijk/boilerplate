@@ -42,7 +42,7 @@ export default function MyInvoices() {
 
 	return (
 		<div className="space-y-6">
-			<PageHeader title="Mijn facturen" subtitle="Overzicht van al je facturen" icon={LuFileText} />
+			<PageHeader title="Mijn facturen" subtitle="Overzicht van al je facturen" icon={<LuFileText className="h-16 w-16 text-primary" />} />
 
 			{loading ? (
 				<Card><CardContent className="py-8 text-center text-muted-foreground">Laden...</CardContent></Card>
