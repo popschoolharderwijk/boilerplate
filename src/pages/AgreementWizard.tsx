@@ -126,11 +126,19 @@ function useTeacherSlots(
 			endDate,
 			initialAgreement,
 			selectedLessonType,
-		}).then((statuses) => {
-			if (!active) return;
-			setSlots(statuses ?? []);
-			setLoading(false);
-		});
+		})
+			.then((statuses) => {
+				if (!active) return;
+				setSlots(statuses ?? []);
+			})
+			.catch(() => {
+				if (!active) return;
+				setSlots([]);
+			})
+			.finally(() => {
+				if (!active) return;
+				setLoading(false);
+			});
 		return () => {
 			active = false;
 		};
