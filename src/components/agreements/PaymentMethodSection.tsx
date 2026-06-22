@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LuCreditCard, LuFileSignature, LuWallet } from 'react-icons/lu';
+import { LuCreditCard, LuSignature, LuWallet } from 'react-icons/lu';
 import { supabase } from '@/integrations/supabase/client';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
