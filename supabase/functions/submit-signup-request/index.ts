@@ -135,6 +135,9 @@ Deno.serve(async (req) => {
 			parent_email: body.parent_email?.trim().toLowerCase() || null,
 			parent_phone_number: body.parent_phone_number?.trim() || null,
 			notes: body.notes?.trim() || null,
+			sepa_iban: sepaIban,
+			sepa_account_holder: sepaHolder,
+			sepa_bic: sepaBic,
 			status: 'pending',
 		})
 		.select('id')
