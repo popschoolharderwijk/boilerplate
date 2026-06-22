@@ -106,6 +106,8 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 			duration_minutes: data.duration_minutes,
 			frequency: data.frequency,
 			price_per_lesson: data.price_per_lesson,
+			payment_method: (data as { payment_method?: string }).payment_method ?? 'stripe',
+			sepa_mandate_id: (data as { sepa_mandate_id?: string | null }).sepa_mandate_id ?? null,
 			student: {
 				first_name: studentProfile.data?.first_name ?? null,
 				last_name: studentProfile.data?.last_name ?? null,
