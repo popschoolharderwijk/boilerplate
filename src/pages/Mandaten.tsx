@@ -173,8 +173,7 @@ function MandatenContent() {
 }
 
 function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-	const [students, setStudents] = useState<StudentOption[]>([]);
-	const [studentId, setStudentId] = useState('');
+	const [studentId, setStudentId] = useState<string | null>(null);
 	const [iban, setIban] = useState('');
 	const [bic, setBic] = useState('');
 	const [holder, setHolder] = useState('');
@@ -182,34 +181,14 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 	const [method, setMethod] = useState<'digital' | 'paper'>('paper');
 	const [saving, setSaving] = useState(false);
 
-	useEffect(() => {
-		supabase
-			.from('students')
-			.select('user_id, profiles!students_user_id_fkey(first_name,last_name,email)')
-			.limit(500)
-			.then(({ data }) => {
-				if (!data) return;
-				const mapped: StudentOption[] = (data as unknown as Array<{
-					user_id: string;
-					profiles: { first_name: string | null; last_name: string | null; email: string } | null;
-				}>).map((s) => ({
-					user_id: s.user_id,
-					first_name: s.profiles?.first_name ?? null,
-					last_name: s.profiles?.last_name ?? null,
-					email: s.profiles?.email ?? '',
-				}));
-				mapped.sort((a, b) =>
-					`${a.last_name ?? ''}${a.first_name ?? ''}`.localeCompare(
-						`${b.last_name ?? ''}${b.first_name ?? ''}`,
-					),
-				);
-				setStudents(mapped);
-			});
-	}, []);
-
 	const handleSubmit = async () => {
 		if (!studentId || !iban || !holder) {
 			toast.error('Vul leerling, IBAN en rekeninghouder in');
+			return;
+		}
+		const normalizedIban = normalizeIban(iban);
+		if (!isValidIban(normalizedIban)) {
+			toast.error('Ongeldig IBAN');
 			return;
 		}
 		setSaving(true);
@@ -222,7 +201,7 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 		const { error } = await supabase.from('sepa_mandates').insert({
 			student_user_id: studentId,
 			mandate_reference: refData as string,
-			iban: iban.replace(/\s/g, '').toUpperCase(),
+			iban: normalizedIban,
 			bic: bic || null,
 			account_holder: holder,
 			signed_at: signedAt,
@@ -248,18 +227,18 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 			<div className="space-y-3">
 				<div className="space-y-1.5">
 					<Label>Leerling</Label>
-					<Select value={studentId} onValueChange={setStudentId}>
-						<SelectTrigger>
-							<SelectValue placeholder="Kies leerling..." />
-						</SelectTrigger>
-						<SelectContent>
-							{students.map((s) => (
-								<SelectItem key={s.user_id} value={s.user_id}>
-									{`${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || s.email}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<UserSelectSingle
+						value={studentId}
+						onChange={(u) => {
+							setStudentId(u?.user_id ?? null);
+							if (u && !holder) {
+								const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
+								if (name) setHolder(name);
+							}
+						}}
+						filter="students"
+						placeholder="Kies leerling..."
+					/>
 				</div>
 				<div className="space-y-1.5">
 					<Label>IBAN</Label>
