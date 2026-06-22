@@ -842,6 +842,9 @@ export type Database = {
           phone_number: string | null
           processed_at: string | null
           processed_by: string | null
+          sepa_account_holder: string | null
+          sepa_bic: string | null
+          sepa_iban: string | null
           status: Database["public"]["Enums"]["signup_request_status"]
           updated_at: string
           updated_by: string | null
@@ -865,6 +868,9 @@ export type Database = {
           phone_number?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          sepa_account_holder?: string | null
+          sepa_bic?: string | null
+          sepa_iban?: string | null
           status?: Database["public"]["Enums"]["signup_request_status"]
           updated_at?: string
           updated_by?: string | null
@@ -888,6 +894,9 @@ export type Database = {
           phone_number?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          sepa_account_holder?: string | null
+          sepa_bic?: string | null
+          sepa_iban?: string | null
           status?: Database["public"]["Enums"]["signup_request_status"]
           updated_at?: string
           updated_by?: string | null
