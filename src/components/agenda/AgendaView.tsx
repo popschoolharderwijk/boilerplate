@@ -333,7 +333,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				initialSlot={ui.newEventSlot}
 				onSuccess={reloadAgenda}
 				onDelete={
-					isOwnAgenda && user
+					canManageAgenda && user
 						? async (eventId: string, scope: DeleteScope, occurrenceDate?: string) => {
 								await notifyAgendaOpResult(
 									await deleteAgendaEvent({
