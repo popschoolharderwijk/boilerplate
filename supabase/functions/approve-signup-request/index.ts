@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 					account_holder: reqRow.sepa_account_holder,
 					signed_at: new Date().toISOString().slice(0, 10),
 					signature_method: 'digital',
-					status: 'pending',
+					status: 'active',
 					sequence_type: 'FRST',
 				});
 				if (mandateErr) console.error('sepa_mandates insert error', mandateErr);

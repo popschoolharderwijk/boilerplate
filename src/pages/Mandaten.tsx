@@ -67,16 +67,6 @@ function MandatenContent() {
 		load();
 	};
 
-	const handleActivate = async (id: string) => {
-		const { error } = await supabase.from('sepa_mandates').update({ status: 'active' }).eq('id', id);
-		if (error) {
-			toast.error(error.message);
-			return;
-		}
-		toast.success('Mandaat geactiveerd');
-		load();
-	};
-
 	return (
 		<div className="space-y-6">
 			<PageHeader
@@ -146,15 +136,6 @@ function MandatenContent() {
 										</td>
 										<td className="p-3">{m.sequence_type}</td>
 										<td className="p-3 text-right space-x-2">
-											{m.status !== 'active' && (
-												<Button
-													size="sm"
-													variant="outline"
-													onClick={() => handleActivate(m.id)}
-												>
-													Activeren
-												</Button>
-											)}
 											<Button size="sm" variant="ghost" onClick={() => handleDelete(m.id)}>
 												<LuTrash2 className="h-4 w-4" />
 											</Button>
@@ -204,7 +185,7 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 			account_holder: holder,
 			signed_at: signedAt,
 			signature_method: method,
-			status: 'pending',
+			status: 'active',
 			sequence_type: 'FRST',
 		});
 		setSaving(false);
