@@ -24,11 +24,25 @@ export type Database = {
           account_omzet_under_21: string
           btw_code_21: string
           btw_code_exempt: string
+          company_address: string | null
+          company_btw_nummer: string | null
+          company_city: string | null
+          company_email: string | null
+          company_iban: string | null
+          company_kvk: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_phone: string | null
+          company_postcode: string | null
           created_at: string
           created_by: string | null
           currency: string
           description_template: string
           id: boolean
+          invoice_footer_text: string | null
+          invoice_number_next: number
+          invoice_number_prefix: string
+          invoice_payment_term_days: number
           journal_code_bank: string
           journal_code_memoriaal: string
           payment_provider: string
@@ -53,11 +67,25 @@ export type Database = {
           account_omzet_under_21?: string
           btw_code_21?: string
           btw_code_exempt?: string
+          company_address?: string | null
+          company_btw_nummer?: string | null
+          company_city?: string | null
+          company_email?: string | null
+          company_iban?: string | null
+          company_kvk?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_postcode?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           description_template?: string
           id?: boolean
+          invoice_footer_text?: string | null
+          invoice_number_next?: number
+          invoice_number_prefix?: string
+          invoice_payment_term_days?: number
           journal_code_bank?: string
           journal_code_memoriaal?: string
           payment_provider?: string
@@ -82,11 +110,25 @@ export type Database = {
           account_omzet_under_21?: string
           btw_code_21?: string
           btw_code_exempt?: string
+          company_address?: string | null
+          company_btw_nummer?: string | null
+          company_city?: string | null
+          company_email?: string | null
+          company_iban?: string | null
+          company_kvk?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          company_postcode?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           description_template?: string
           id?: boolean
+          invoice_footer_text?: string | null
+          invoice_number_next?: number
+          invoice_number_prefix?: string
+          invoice_payment_term_days?: number
           journal_code_bank?: string
           journal_code_memoriaal?: string
           payment_provider?: string
@@ -557,6 +599,175 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lesson_agreements"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_lines: {
+        Row: {
+          amount_excl_btw_cents: number
+          amount_total_cents: number
+          batch_item_id: string | null
+          btw_amount_cents: number
+          btw_rate: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          invoice_id: string
+          lesson_date: string | null
+          quantity: number
+          sort_order: number
+          unit_price_cents: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_excl_btw_cents?: number
+          amount_total_cents?: number
+          batch_item_id?: string | null
+          btw_amount_cents?: number
+          btw_rate?: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          invoice_id: string
+          lesson_date?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price_cents?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_excl_btw_cents?: number
+          amount_total_cents?: number
+          batch_item_id?: string | null
+          btw_amount_cents?: number
+          btw_rate?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string
+          lesson_date?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price_cents?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_lines_batch_item_id_fkey"
+            columns: ["batch_item_id"]
+            isOneToOne: false
+            referencedRelation: "incasso_batch_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          age_category: string
+          amount_excl_btw_cents: number
+          amount_total_cents: number
+          batch_id: string | null
+          btw_amount_cents: number
+          created_at: string
+          created_by: string | null
+          due_date: string
+          email_sent_to: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          notes: string | null
+          paid_at: string | null
+          pdf_storage_path: string | null
+          period_end: string | null
+          period_start: string | null
+          sent_at: string | null
+          status: string
+          student_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          age_category?: string
+          amount_excl_btw_cents?: number
+          amount_total_cents?: number
+          batch_id?: string | null
+          btw_amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          email_sent_to?: string | null
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          pdf_storage_path?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          sent_at?: string | null
+          status?: string
+          student_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          age_category?: string
+          amount_excl_btw_cents?: number
+          amount_total_cents?: number
+          batch_id?: string | null
+          btw_amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          email_sent_to?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          pdf_storage_path?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          sent_at?: string | null
+          status?: string
+          student_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "incasso_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "invoices_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "view_profiles_with_display_name"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1927,6 +2138,7 @@ export type Database = {
       is_teacher: { Args: { _user_id: string }; Returns: boolean }
       is_valid_iban: { Args: { p_iban: string }; Returns: boolean }
       is_valid_phone_number: { Args: { p_phone: string }; Returns: boolean }
+      next_invoice_number: { Args: never; Returns: string }
       next_mandate_reference: { Args: never; Returns: string }
       policy_exists: {
         Args: { p_policy_name: string; p_table_name: string }
