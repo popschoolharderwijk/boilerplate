@@ -20,6 +20,7 @@ interface TeacherProfileSectionProps {
 	initialLastName?: string | null;
 	initialPhoneNumber?: string | null;
 	initialHasVog?: boolean | null;
+	initialVogExpiresAt?: string | null;
 }
 
 export function TeacherProfileSection({
@@ -32,6 +33,7 @@ export function TeacherProfileSection({
 	initialLastName,
 	initialPhoneNumber,
 	initialHasVog,
+	initialVogExpiresAt,
 }: TeacherProfileSectionProps) {
 	const { user } = useAuth();
 	const [bio, setBio] = useState<string>(initialBio || '');
@@ -39,6 +41,7 @@ export function TeacherProfileSection({
 	const [lastName, setLastName] = useState<string>(initialLastName || '');
 	const [phoneNumber, setPhoneNumber] = useState<string>(initialPhoneNumber || '');
 	const [hasVog, setHasVog] = useState<boolean>(initialHasVog ?? false);
+	const [vogExpiresAt, setVogExpiresAt] = useState<string>(initialVogExpiresAt ?? '');
 	const [loading, setLoading] = useState(!initialBio && !initialFirstName);
 	const [saving, setSaving] = useState(false);
 
@@ -49,7 +52,7 @@ export function TeacherProfileSection({
 		setLoading(true);
 		void supabase
 			.from('teachers')
-			.select('bio, has_vog')
+			.select('bio, has_vog, vog_expires_at')
 			.eq('user_id', teacherUserId)
 			.single()
 			.then(async ({ data: teacherData, error: teacherError }) => {
@@ -70,8 +73,10 @@ export function TeacherProfileSection({
 					console.error('Error loading profile:', profileError);
 					toast.error('Fout bij laden profiel');
 				} else {
-					setBio(teacherData?.bio || '');
-					setHasVog(teacherData?.has_vog ?? false);
+					const t = teacherData as { bio: string | null; has_vog?: boolean | null; vog_expires_at?: string | null } | null;
+					setBio(t?.bio || '');
+					setHasVog(t?.has_vog ?? false);
+					setVogExpiresAt(t?.vog_expires_at ?? '');
 					setFirstName(profileData?.first_name || '');
 					setLastName(profileData?.last_name || '');
 					setPhoneNumber(profileData?.phone_number || '');
@@ -86,7 +91,8 @@ export function TeacherProfileSection({
 		if (initialLastName !== undefined) setLastName(initialLastName || '');
 		if (initialPhoneNumber !== undefined) setPhoneNumber(initialPhoneNumber || '');
 		if (initialHasVog !== undefined && initialHasVog !== null) setHasVog(initialHasVog);
-	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, initialHasVog]);
+		if (initialVogExpiresAt !== undefined) setVogExpiresAt(initialVogExpiresAt ?? '');
+	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, initialHasVog, initialVogExpiresAt]);
 
 	const runAction = async () => {
 		if (!teacherUserId || !user_id || !canEdit || !user) return;
@@ -95,7 +101,7 @@ export function TeacherProfileSection({
 
 		const { error: bioError } = await supabase
 			.from('teachers')
-			.update({ bio: bio || null, has_vog: hasVog })
+			.update({ bio: bio || null, has_vog: hasVog, vog_expires_at: vogExpiresAt || null } as never)
 			.eq('user_id', teacherUserId);
 
 		if (bioError) {
@@ -175,16 +181,31 @@ export function TeacherProfileSection({
 						className="resize-none"
 					/>
 				</div>
-				<label className="flex items-center gap-2 cursor-pointer select-none">
-					<input
-						type="checkbox"
-						checked={hasVog}
-						onChange={(e) => setHasVog(e.target.checked)}
-						disabled={!canEdit}
-						className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-					/>
-					<span className="text-sm font-medium">VOG aanwezig</span>
-				</label>
+				<div className="space-y-2">
+					<label className="flex items-center gap-2 cursor-pointer select-none">
+						<input
+							type="checkbox"
+							checked={hasVog}
+							onChange={(e) => setHasVog(e.target.checked)}
+							disabled={!canEdit}
+							className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+						/>
+						<span className="text-sm font-medium">VOG aanwezig</span>
+					</label>
+					{hasVog && (
+						<div className="space-y-2">
+							<Label htmlFor="vog-expires-at">VOG geldig tot</Label>
+							<Input
+								id="vog-expires-at"
+								type="date"
+								value={vogExpiresAt}
+								onChange={(e) => setVogExpiresAt(e.target.value)}
+								disabled={!canEdit}
+								className="max-w-xs"
+							/>
+						</div>
+					)}
+				</div>
 				{canEdit && (
 					<SubmitButton onClick={() => runAction()} loading={saving} size="sm" loadingLabel="Opslaan...">
 						Opslaan
