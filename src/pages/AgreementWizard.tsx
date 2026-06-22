@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ConfirmStepContent } from '@/components/agreements/ConfirmStepContent';
@@ -115,8 +115,10 @@ function useTeacherSlots(
 	useEffect(() => {
 		if (!shouldLoadTeacherSlots(step, teacherUserId, lessonTypeId, startDate, endDate, selectedLessonType)) {
 			setSlots([]);
+			setLoading(false);
 			return;
 		}
+		let active = true;
 		setLoading(true);
 		void runWizardLoad('teacherSlots', {
 			teacherUserId,
@@ -124,10 +126,22 @@ function useTeacherSlots(
 			endDate,
 			initialAgreement,
 			selectedLessonType,
-		}).then((statuses) => {
-			setSlots(statuses ?? []);
-			setLoading(false);
-		});
+		})
+			.then((statuses) => {
+				if (!active) return;
+				setSlots(statuses ?? []);
+			})
+			.catch(() => {
+				if (!active) return;
+				setSlots([]);
+			})
+			.finally(() => {
+				if (!active) return;
+				setLoading(false);
+			});
+		return () => {
+			active = false;
+		};
 	}, [step, teacherUserId, lessonTypeId, startDate, endDate, initialAgreement, selectedLessonType]);
 
 	return { slots, loading };
@@ -233,8 +247,9 @@ export default function AgreementWizard() {
 	}, [isEditMode, prefillOptionId, lessonTypeOptions]);
 
 	const matchedLessonType = agreement ? null : lessonTypes.find((lt) => lt.id === form.lessonTypeId);
-	const selectedLessonType: WizardLessonTypeInfo | undefined = agreement
-		? {
+	const selectedLessonType = useMemo<WizardLessonTypeInfo | undefined>(() => {
+		if (agreement) {
+			return {
 				id: agreement.lesson_type_id,
 				name: agreement.lesson_type.name,
 				icon: agreement.lesson_type.icon,
@@ -242,18 +257,21 @@ export default function AgreementWizard() {
 				duration_minutes: agreement.duration_minutes,
 				frequency: agreement.frequency,
 				price_per_lesson: agreement.price_per_lesson,
-			}
-		: matchedLessonType && form.selectedOptionSnapshot
-			? {
-					id: matchedLessonType.id,
-					name: matchedLessonType.name,
-					icon: matchedLessonType.icon,
-					color: matchedLessonType.color,
-					duration_minutes: form.selectedOptionSnapshot.duration_minutes,
-					frequency: form.selectedOptionSnapshot.frequency,
-					price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
-				}
-			: undefined;
+			};
+		}
+
+		if (!matchedLessonType || !form.selectedOptionSnapshot) return undefined;
+
+		return {
+			id: matchedLessonType.id,
+			name: matchedLessonType.name,
+			icon: matchedLessonType.icon,
+			color: matchedLessonType.color,
+			duration_minutes: form.selectedOptionSnapshot.duration_minutes,
+			frequency: form.selectedOptionSnapshot.frequency,
+			price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
+		};
+	}, [agreement, matchedLessonType, form.selectedOptionSnapshot]);
 
 	const { slots: slotsWithStatus, loading: loadingSlots } = useTeacherSlots(
 		step,
