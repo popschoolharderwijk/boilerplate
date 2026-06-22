@@ -153,6 +153,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 											icon={NAV_ICONS.myTrial}
 											collapsed={collapsed}
 										/>
+										<NavItem
+											href="/mijn-facturen"
+											label={NAV_LABELS.myInvoices}
+											icon={NAV_ICONS.myInvoices}
+											collapsed={collapsed}
+										/>
 									</>
 								)}
 
