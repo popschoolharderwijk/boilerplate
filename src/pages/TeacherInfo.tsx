@@ -148,6 +148,7 @@ export default function TeacherInfo() {
 								initialLastName={teacherProfile.last_name}
 								initialPhoneNumber={teacherProfile.phone_number}
 								initialHasVog={(teacherProfile as Teacher & { has_vog?: boolean | null }).has_vog ?? false}
+								initialVogExpiresAt={(teacherProfile as Teacher & { vog_expires_at?: string | null }).vog_expires_at ?? null}
 							/>
 							<TeacherLessonTypesSection teacherUserId={targetTeacherUserId} canEdit={canAccess} />
 							<div className="text-xs italic text-muted-foreground space-y-1">
