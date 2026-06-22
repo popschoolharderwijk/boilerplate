@@ -54,6 +54,8 @@ export const NAV_LABELS = {
 	subscriptions: 'Facturatie',
 	incasso: 'Incasso',
 	mandaten: 'Mandaten',
+	invoices: 'Facturen',
+	myInvoices: 'Mijn facturen',
 	noLessonPeriods: 'Lesvrije periodes',
 	emailTemplates: 'E-mailtemplates',
 	announcements: 'Nieuwsberichten',
