@@ -29,7 +29,22 @@ const SETTINGS: AccountingSettings = {
 	sepa_remittance_template: 'Lesgeld {month} {year} - {student_name}',
 	sepa_mandate_prefix: 'MND',
 	sepa_mandate_next_seq: 1,
+	company_name: null,
+	company_address: null,
+	company_postcode: null,
+	company_city: null,
+	company_kvk: null,
+	company_btw_nummer: null,
+	company_iban: null,
+	company_email: null,
+	company_phone: null,
+	company_logo_url: null,
+	invoice_number_prefix: 'INV-',
+	invoice_number_next: 1,
+	invoice_payment_term_days: 14,
+	invoice_footer_text: null,
 };
+
 
 function makeReport(overrides: Partial<AccountingReport['invoices'][number]> = {}): AccountingReport {
 	return {
