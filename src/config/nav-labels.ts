@@ -9,6 +9,7 @@ import {
 	LuClipboardList,
 	LuCreditCard,
 	LuFileSpreadsheet,
+	LuFileText,
 	LuFolderOpen,
 	LuGraduationCap,
 	LuInbox,
