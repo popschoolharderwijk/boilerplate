@@ -28,6 +28,7 @@ import Login from './pages/Login';
 import Mandaten from './pages/Mandaten';
 import MyAvailability from './pages/MyAvailability';
 import MyStatistics from './pages/MyStatistics';
+import MyInvoices from './pages/MyInvoices';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
 import MyTrial from './pages/MyTrial';
