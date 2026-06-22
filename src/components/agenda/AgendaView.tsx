@@ -43,6 +43,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	const effectiveUserId = viewUserId ?? user?.id;
 	const canEdit = canEditProp ?? (!!user && (isPrivileged || isTeacher));
 	const isOwnAgenda = !viewUserId;
+	const canManageAgenda = isOwnAgenda || isPrivileged;
 
 	const {
 		agendaEvents,
@@ -332,7 +333,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 				initialSlot={ui.newEventSlot}
 				onSuccess={reloadAgenda}
 				onDelete={
-					isOwnAgenda && user
+					canManageAgenda && user
 						? async (eventId: string, scope: DeleteScope, occurrenceDate?: string) => {
 								await notifyAgendaOpResult(
 									await deleteAgendaEvent({
@@ -358,7 +359,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 					ui.selectedEvent.resource.deviationId &&
 					ui.selectedEvent.resource.eventId &&
 					ui.selectedEvent.resource.originalDate &&
-					isOwnAgenda &&
+					canManageAgenda &&
 					user
 						? async () => {
 								await notifyAgendaOpResult(
