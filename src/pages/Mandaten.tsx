@@ -17,13 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserSelectSingle } from '@/components/ui/user-select';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { supabase } from '@/integrations/supabase/client';
@@ -153,7 +147,11 @@ function MandatenContent() {
 										<td className="p-3">{m.sequence_type}</td>
 										<td className="p-3 text-right space-x-2">
 											{m.status !== 'active' && (
-												<Button size="sm" variant="outline" onClick={() => handleActivate(m.id)}>
+												<Button
+													size="sm"
+													variant="outline"
+													onClick={() => handleActivate(m.id)}
+												>
 													Activeren
 												</Button>
 											)}

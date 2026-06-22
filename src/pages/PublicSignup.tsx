@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { formatIban, isValidIban, normalizeIban } from '@/lib/incasso/iban';
 import { frequencyLabels } from '@/lib/frequencies';
+import { formatIban, isValidIban, normalizeIban } from '@/lib/incasso/iban';
 import type { LessonTypeOptionRow } from '@/types/lesson-agreements';
 
 interface LessonType {
@@ -59,7 +59,6 @@ export default function PublicSignup() {
 	const [sepaHolder, setSepaHolder] = useState('');
 	const [sepaBic, setSepaBic] = useState('');
 	const [sepaConsent, setSepaConsent] = useState(false);
-
 
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -457,11 +456,7 @@ export default function PublicSignup() {
 											onChange={setSepaHolder}
 											required={sepaEnabled}
 										/>
-										<Field
-											label="BIC (optioneel)"
-											value={sepaBic}
-											onChange={setSepaBic}
-										/>
+										<Field label="BIC (optioneel)" value={sepaBic} onChange={setSepaBic} />
 										<label className="flex items-start gap-2 cursor-pointer">
 											<input
 												type="checkbox"
@@ -470,11 +465,11 @@ export default function PublicSignup() {
 												onChange={(e) => setSepaConsent(e.target.checked)}
 											/>
 											<span className="text-xs text-muted-foreground">
-												Door ondertekening van dit machtigingsformulier geef ik toestemming
-												aan POPschool Harderwijk om doorlopend incasso-opdrachten naar mijn
-												bank te sturen om een bedrag van mijn rekening af te schrijven
-												wegens lesgeld, en aan mijn bank om doorlopend een bedrag van mijn
-												rekening af te schrijven overeenkomstig die opdracht.
+												Door ondertekening van dit machtigingsformulier geef ik toestemming aan
+												POPschool Harderwijk om doorlopend incasso-opdrachten naar mijn bank te
+												sturen om een bedrag van mijn rekening af te schrijven wegens lesgeld,
+												en aan mijn bank om doorlopend een bedrag van mijn rekening af te
+												schrijven overeenkomstig die opdracht.
 											</span>
 										</label>
 									</div>

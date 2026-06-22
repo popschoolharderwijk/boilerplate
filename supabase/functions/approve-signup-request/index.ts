@@ -131,7 +131,6 @@ Deno.serve(async (req) => {
 		}
 	}
 
-
 	let createdAgreementId: string | null = null;
 
 	const targetGroupId = body.override_lesson_group_id ?? reqRow.lesson_group_id;
