@@ -61,6 +61,19 @@ export function AccountingSettingsManager() {
 				sepa_collection_day: form.sepa_collection_day,
 				sepa_remittance_template: form.sepa_remittance_template,
 				sepa_mandate_prefix: form.sepa_mandate_prefix,
+				company_name: form.company_name,
+				company_address: form.company_address,
+				company_postcode: form.company_postcode,
+				company_city: form.company_city,
+				company_kvk: form.company_kvk,
+				company_btw_nummer: form.company_btw_nummer,
+				company_iban: form.company_iban,
+				company_email: form.company_email,
+				company_phone: form.company_phone,
+				company_logo_url: form.company_logo_url,
+				invoice_number_prefix: form.invoice_number_prefix,
+				invoice_payment_term_days: form.invoice_payment_term_days,
+				invoice_footer_text: form.invoice_footer_text,
 			})
 			.eq('id', true);
 		setSaving(false);
@@ -90,7 +103,9 @@ export function AccountingSettingsManager() {
 			<Card>
 				<CardHeader>
 					<CardTitle>Betaalwijze</CardTitle>
-					<CardDescription>Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.</CardDescription>
+					<CardDescription>
+						Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.
+					</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					<div className="space-y-1.5">
@@ -185,8 +200,58 @@ export function AccountingSettingsManager() {
 							disabled={!canEdit}
 							value={form.school_year_start_month}
 							onChange={(e) =>
-								update('school_year_start_month', Math.min(12, Math.max(1, Number(e.target.value) || 1)))
+								update(
+									'school_year_start_month',
+									Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+								)
 							}
+						/>
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Bedrijfsgegevens & factuur</CardTitle>
+					<CardDescription>Verschijnen op alle facturen (PDF + e-mail).</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 sm:grid-cols-2">
+					{field('Bedrijfsnaam', 'company_name', 'popschool harderwijk')}
+					{field('E-mailadres', 'company_email', 'info@popschoolharderwijk.nl')}
+					{field('Telefoon', 'company_phone', '0341 - 123456')}
+					{field('Adres', 'company_address', 'Hoofdstraat 1')}
+					{field('Postcode', 'company_postcode', '3841 AB')}
+					{field('Plaats', 'company_city', 'Harderwijk')}
+					{field('KvK-nummer', 'company_kvk', '12345678')}
+					{field('BTW-nummer', 'company_btw_nummer', 'NL123456789B01')}
+					{field('IBAN', 'company_iban', 'NL00BANK0123456789')}
+					{field('Logo-URL (optioneel)', 'company_logo_url')}
+					{field('Factuurnummer-prefix', 'invoice_number_prefix', 'INV-')}
+					<div className="space-y-1.5">
+						<Label htmlFor="acc-pay-term">Betaaltermijn (dagen)</Label>
+						<Input
+							id="acc-pay-term"
+							type="number"
+							min={1}
+							max={90}
+							disabled={!canEdit}
+							value={form.invoice_payment_term_days}
+							onChange={(e) =>
+								update(
+									'invoice_payment_term_days',
+									Math.min(90, Math.max(1, Number(e.target.value) || 14)),
+								)
+							}
+						/>
+					</div>
+					<div className="space-y-1.5 sm:col-span-2">
+						<Label htmlFor="acc-footer">Footer-tekst (optioneel)</Label>
+						<Input
+							id="acc-footer"
+							value={form.invoice_footer_text ?? ''}
+							disabled={!canEdit}
+							onChange={(e) => update('invoice_footer_text', e.target.value)}
+							placeholder="bv. Bedankt voor je aanmelding bij popschool harderwijk!"
 						/>
 					</div>
 				</CardContent>

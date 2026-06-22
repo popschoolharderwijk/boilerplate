@@ -31,6 +31,7 @@ const adminNavItems = [
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/incasso', label: NAV_LABELS.incasso, icon: NAV_ICONS.incasso },
 	{ href: '/mandaten', label: NAV_LABELS.mandaten, icon: NAV_ICONS.mandaten },
+	{ href: '/facturen', label: NAV_LABELS.invoices, icon: NAV_ICONS.invoices },
 	{ href: '/boekhouding', label: NAV_LABELS.accounting, icon: NAV_ICONS.accounting },
 	{ href: '/data-import', label: NAV_LABELS.dataImport, icon: NAV_ICONS.dataImport },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
@@ -150,6 +151,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 											href="/my-trial"
 											label={NAV_LABELS.myTrial}
 											icon={NAV_ICONS.myTrial}
+											collapsed={collapsed}
+										/>
+										<NavItem
+											href="/mijn-facturen"
+											label={NAV_LABELS.myInvoices}
+											icon={NAV_ICONS.myInvoices}
 											collapsed={collapsed}
 										/>
 									</>

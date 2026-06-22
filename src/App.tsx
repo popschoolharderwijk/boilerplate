@@ -18,6 +18,7 @@ import EmailTemplates from './pages/EmailTemplates';
 import Incasso from './pages/Incasso';
 import IncassoBatchDetail from './pages/IncassoBatchDetail';
 import IncassoStart from './pages/IncassoStart';
+import Invoices from './pages/Invoices';
 import LegacyImport from './pages/LegacyImport';
 import LessonGroups from './pages/LessonGroups';
 import LessonGroupWizard from './pages/LessonGroupWizard';
@@ -26,6 +27,7 @@ import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
 import Mandaten from './pages/Mandaten';
 import MyAvailability from './pages/MyAvailability';
+import MyInvoices from './pages/MyInvoices';
 import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
@@ -109,6 +111,8 @@ const App = () => (
 						<Route path="/incasso" element={<Incasso />} />
 						<Route path="/incasso/batches/:id" element={<IncassoBatchDetail />} />
 						<Route path="/mandaten" element={<Mandaten />} />
+						<Route path="/facturen" element={<Invoices />} />
+						<Route path="/mijn-facturen" element={<MyInvoices />} />
 						<Route path="/data-import" element={<LegacyImport />} />
 						<Route path="/announcements" element={<Announcements />} />
 						<Route path="/manual" element={<UserManual />} />
