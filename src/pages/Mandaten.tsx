@@ -139,15 +139,6 @@ function MandatenContent() {
 										</td>
 										<td className="p-3">{m.sequence_type}</td>
 										<td className="p-3 text-right space-x-2">
-											{m.status !== 'active' && (
-												<Button
-													size="sm"
-													variant="outline"
-													onClick={() => handleActivate(m.id)}
-												>
-													Activeren
-												</Button>
-											)}
 											<Button size="sm" variant="ghost" onClick={() => handleDelete(m.id)}>
 												<LuTrash2 className="h-4 w-4" />
 											</Button>
