@@ -43,6 +43,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	const effectiveUserId = viewUserId ?? user?.id;
 	const canEdit = canEditProp ?? (!!user && (isPrivileged || isTeacher));
 	const isOwnAgenda = !viewUserId;
+	const canManageAgenda = isOwnAgenda || isPrivileged;
 
 	const {
 		agendaEvents,
