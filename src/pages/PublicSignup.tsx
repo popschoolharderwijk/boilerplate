@@ -54,6 +54,13 @@ export default function PublicSignup() {
 		notes: '',
 	});
 
+	const [sepaEnabled, setSepaEnabled] = useState(false);
+	const [sepaIban, setSepaIban] = useState('');
+	const [sepaHolder, setSepaHolder] = useState('');
+	const [sepaBic, setSepaBic] = useState('');
+	const [sepaConsent, setSepaConsent] = useState(false);
+
+
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [done, setDone] = useState(false);
