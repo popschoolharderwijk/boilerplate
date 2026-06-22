@@ -102,7 +102,7 @@ export function PaymentMethodSection({
 					<RadioGroupItem value="sepa" id="pm-sepa" className="mt-1" />
 					<div className="flex-1">
 						<div className="flex items-center gap-2 font-medium">
-							<LuFileSignature className="h-4 w-4" /> SEPA-incasso
+							<LuSignature className="h-4 w-4" /> SEPA-incasso
 						</div>
 						<p className="text-xs text-muted-foreground">
 							Maandelijks automatisch incasseren via een SEPA-mandaat.
