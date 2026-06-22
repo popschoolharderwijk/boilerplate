@@ -70,6 +70,13 @@ function buildSignupColumns(
 						<Badge variant="outline">Wachtlijst</Badge>
 					) : null}
 					{r.option_label && <div className="text-xs text-muted-foreground">{r.option_label}</div>}
+					{r.sepa_iban && (
+						<div className="mt-1">
+							<Badge variant="secondary" className="font-mono text-[10px]">
+								SEPA · {r.sepa_iban}
+							</Badge>
+						</div>
+					)}
 				</div>
 			),
 		},
