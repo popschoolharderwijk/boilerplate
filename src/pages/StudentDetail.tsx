@@ -108,7 +108,6 @@ export default function StudentDetail() {
 				description="Alle overeenkomsten van deze leerling"
 				emptyMessage="Geen lesovereenkomsten"
 				studentUserId={userId}
-				showSubscription={isPrivileged}
 			/>
 
 			<StudentSignupRequestsCard
