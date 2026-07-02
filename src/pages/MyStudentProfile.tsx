@@ -213,8 +213,6 @@ export default function MyStudentProfile() {
 				agreements={agreements}
 				description="Overzicht van je lesovereenkomsten"
 				emptyMessage="Geen lesovereenkomsten gevonden"
-				showSubscription
-				hideStartAction
 			/>
 
 			<StudentSignupRequestsCard
