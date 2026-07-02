@@ -510,7 +510,7 @@ export function AgendaEventFormDialog({
 					)}
 
 					<DialogFooter
-						className={`flex-wrap gap-2 ${canDelete || canCancelLesson ? 'sm:justify-between' : 'sm:justify-end'}`}
+						className={`flex-wrap gap-2 ${canDelete || canCancelLesson || canMarkTrialCompleted ? 'sm:justify-between' : 'sm:justify-end'}`}
 					>
 						<div className="flex gap-2 order-last sm:order-none">
 							{canDelete && (
