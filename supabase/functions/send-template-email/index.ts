@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
 	// Signup confirmations go out before staff approves the request, so no auth user
 	// exists yet and signInWithOtp({ shouldCreateUser: false }) would silently no-op.
 	const { data: profile } = await admin.from('profiles').select('user_id').eq('email', body.to).maybeSingle();
-	const footer = profile ? buildPortalFooter(getSiteBaseUrl(req), body.to) : buildPendingFooter();
+	const baseUrl = resolveAllowedSiteUrl(body.site_url) ?? getSiteBaseUrl(req);
+	const footer = profile ? buildPortalFooter(baseUrl, body.to) : buildPendingFooter();
 	const html = appendFooter(renderedHtml, footer);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
