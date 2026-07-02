@@ -29,7 +29,7 @@ export function formPatchFromAgreement(agreement: AgreementTableRow, defaultEndD
 			totalOccurrences: 0,
 			occupiedOccurrences: 0,
 		},
-		paymentMethod: (agreement.payment_method ?? 'stripe') as 'stripe' | 'sepa' | 'manual',
+		paymentMethod: (agreement.payment_method ?? 'sepa') as 'stripe' | 'sepa' | 'manual',
 		sepaMandateId: agreement.sepa_mandate_id ?? null,
 	};
 }
