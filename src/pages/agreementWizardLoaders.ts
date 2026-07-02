@@ -3,7 +3,9 @@ import { toast } from 'sonner';
 import { WizardStep } from '@/components/agreements/WizardStepIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
+import { sendAgreementCreatedMails } from '@/lib/email/sendAgreementCreatedMails';
 import type { AgreementTableRow, LessonFrequency, WizardTeacherInfo } from '@/types/lesson-agreements';
+
 
 type AgreementLoadParams = {
 	id: string;
