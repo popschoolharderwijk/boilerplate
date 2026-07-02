@@ -6,10 +6,8 @@
 // Auth required. Toegestaan: admin, site_admin, teacher (staff).
 import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
+import { sendTemplateEmail } from '../_shared/sendTemplateEmail.ts';
 import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 const DAY_NAMES_NL = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 const FREQUENCY_LABELS: Record<string, string> = {
