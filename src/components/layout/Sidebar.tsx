@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LuChevronDown, LuChevronLeft, LuMusic, LuShieldCheck } from 'react-icons/lu';
+import { LuChevronDown, LuChevronLeft, LuMusic, LuShieldCheck, LuWallet } from 'react-icons/lu';
 import { useLocation } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
 import { NavItem } from '@/components/layout/NavItem';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_GAP = '1rem';
 const BEHEER_OPEN_KEY = 'sidebar:beheer-open';
+const FINANCE_OPEN_KEY = 'sidebar:finance-open';
 
 // Admin-only items shown ABOVE the "Beheer" header (frequently used operations)
 const adminOperationalNavItems = [
@@ -24,15 +25,19 @@ const adminOperationalNavItems = [
 	{ href: '/trial-lessons', label: NAV_LABELS.trialLessons, icon: NAV_ICONS.trialLessons },
 ];
 
+// Finance sub-group (nested under Beheer)
+const financeNavItems = [
+	{ href: '/incasso', label: NAV_LABELS.incasso, icon: NAV_ICONS.incasso },
+	{ href: '/mandaten', label: NAV_LABELS.mandaten, icon: NAV_ICONS.mandaten },
+	{ href: '/facturen', label: NAV_LABELS.invoices, icon: NAV_ICONS.invoices },
+	{ href: '/boekhouding', label: NAV_LABELS.accounting, icon: NAV_ICONS.accounting },
+];
+
 // Admin-only items shown UNDER the "Beheer" header (true administration)
 const adminNavItems = [
 	{ href: '/users', label: NAV_LABELS.users, icon: NAV_ICONS.users },
 	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
 	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
-	{ href: '/incasso', label: NAV_LABELS.incasso, icon: NAV_ICONS.incasso },
-	{ href: '/mandaten', label: NAV_LABELS.mandaten, icon: NAV_ICONS.mandaten },
-	{ href: '/facturen', label: NAV_LABELS.invoices, icon: NAV_ICONS.invoices },
-	{ href: '/boekhouding', label: NAV_LABELS.accounting, icon: NAV_ICONS.accounting },
 	{ href: '/data-import', label: NAV_LABELS.dataImport, icon: NAV_ICONS.dataImport },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
@@ -40,7 +45,8 @@ const adminNavItems = [
 	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
 ];
 
-const adminHrefs = adminNavItems.map((i) => i.href);
+const adminHrefs = [...adminNavItems, ...financeNavItems].map((i) => i.href);
+const financeHrefs = financeNavItems.map((i) => i.href);
 
 interface SidebarProps {
 	collapsed?: boolean;
@@ -60,6 +66,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
 	const { pathname } = useLocation();
 	const isInBeheer = adminHrefs.some((h) => pathname === h || pathname.startsWith(`${h}/`));
+	const isInFinance = financeHrefs.some((h) => pathname === h || pathname.startsWith(`${h}/`));
 
 	// Persisted open/closed state for the Beheer group
 	const [beheerOpen, setBeheerOpen] = useState<boolean>(() => {
@@ -68,16 +75,32 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 		if (stored !== null) return stored === '1';
 		return false;
 	});
+	const [financeOpen, setFinanceOpen] = useState<boolean>(() => {
+		if (typeof window === 'undefined') return false;
+		const stored = window.localStorage.getItem(FINANCE_OPEN_KEY);
+		if (stored !== null) return stored === '1';
+		return false;
+	});
 
 	// Auto-open when navigating into a Beheer route
 	useEffect(() => {
 		if (isInBeheer) setBeheerOpen(true);
 	}, [isInBeheer]);
+	useEffect(() => {
+		if (isInFinance) {
+			setFinanceOpen(true);
+			setBeheerOpen(true);
+		}
+	}, [isInFinance]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		window.localStorage.setItem(BEHEER_OPEN_KEY, beheerOpen ? '1' : '0');
 	}, [beheerOpen]);
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+		window.localStorage.setItem(FINANCE_OPEN_KEY, financeOpen ? '1' : '0');
+	}, [financeOpen]);
 
 	return (
 		<TooltipProvider delayDuration={0}>
@@ -232,6 +255,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									(collapsed ? (
 										<>
 											<Separator />
+											{financeNavItems.map((item) => (
+												<NavItem key={item.href} {...item} collapsed={collapsed} />
+											))}
 											{adminNavItems.map((item) => (
 												<NavItem key={item.href} {...item} collapsed={collapsed} />
 											))}
@@ -260,6 +286,38 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 												className="flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
 												style={{ gap: NAV_GAP } as React.CSSProperties}
 											>
+												<Collapsible open={financeOpen} onOpenChange={setFinanceOpen}>
+													<CollapsibleTrigger asChild>
+														<button
+															type="button"
+															className={cn(
+																'flex w-full items-center rounded-lg text-sm font-medium transition-colors',
+																isInFinance
+																	? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90'
+																	: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+															)}
+														>
+															<span className="grid size-10 shrink-0 place-items-center">
+																<LuWallet className="h-5 w-5" />
+															</span>
+															<span className="truncate">Financiën</span>
+															<LuChevronDown
+																className={cn(
+																	'ml-auto mr-3 h-3.5 w-3.5 transition-transform duration-200',
+																	financeOpen ? 'rotate-0' : '-rotate-90',
+																)}
+															/>
+														</button>
+													</CollapsibleTrigger>
+													<CollapsibleContent
+														className="flex flex-col pl-4 pt-2 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+														style={{ gap: NAV_GAP } as React.CSSProperties}
+													>
+														{financeNavItems.map((item) => (
+															<NavItem key={item.href} {...item} collapsed={false} />
+														))}
+													</CollapsibleContent>
+												</Collapsible>
 												{adminNavItems.map((item) => (
 													<NavItem key={item.href} {...item} collapsed={false} />
 												))}
