@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { supabase } from '@/integrations/supabase/client';
-import { BATCH_STATUS_LABELS, type IncassoBatch, formatCentsEUR } from '@/lib/incasso/types';
+import { BATCH_STATUS_LABELS, formatCentsEUR, type IncassoBatch } from '@/lib/incasso/types';
 
 export default function Incasso() {
 	return (
