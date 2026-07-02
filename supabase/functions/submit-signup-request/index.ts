@@ -183,28 +183,17 @@ Deno.serve(async (req) => {
 		}
 		const fullName = `${body.first_name.trim()} ${body.last_name.trim()}`.trim();
 		const recipientEmail = (body.parent_email?.trim() || body.email).toLowerCase();
-		const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-		const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-		const mailResp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${serviceKey}`,
+		await sendTemplateEmail({
+			event_key: 'signup_received',
+			to: recipientEmail,
+			vars: {
+				leerling_naam: fullName,
+				les_type: ltName?.name ?? '',
+				frequentie,
+				prijs_per_les: prijs,
 			},
-			body: JSON.stringify({
-				event_key: 'signup_received',
-				to: recipientEmail,
-				vars: {
-					leerling_naam: fullName,
-					les_type: ltName?.name ?? '',
-					frequentie,
-					prijs_per_les: prijs,
-				},
-			}),
+			origin: req.headers.get('Origin'),
 		});
-		if (!mailResp.ok) {
-			console.error('signup_received mail failed', mailResp.status, await mailResp.text());
-		}
 	} catch (mailErr) {
 		console.error('signup_received mail exception', mailErr);
 	}
