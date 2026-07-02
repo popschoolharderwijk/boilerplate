@@ -255,6 +255,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									(collapsed ? (
 										<>
 											<Separator />
+											{financeNavItems.map((item) => (
+												<NavItem key={item.href} {...item} collapsed={collapsed} />
+											))}
 											{adminNavItems.map((item) => (
 												<NavItem key={item.href} {...item} collapsed={collapsed} />
 											))}
@@ -283,6 +286,38 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 												className="flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
 												style={{ gap: NAV_GAP } as React.CSSProperties}
 											>
+												<Collapsible open={financeOpen} onOpenChange={setFinanceOpen}>
+													<CollapsibleTrigger asChild>
+														<button
+															type="button"
+															className={cn(
+																'flex w-full items-center rounded-lg text-sm font-medium transition-colors',
+																isInFinance
+																	? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90'
+																	: 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+															)}
+														>
+															<span className="grid size-10 shrink-0 place-items-center">
+																<LuWallet className="h-5 w-5" />
+															</span>
+															<span className="truncate">Financiën</span>
+															<LuChevronDown
+																className={cn(
+																	'ml-auto mr-3 h-3.5 w-3.5 transition-transform duration-200',
+																	financeOpen ? 'rotate-0' : '-rotate-90',
+																)}
+															/>
+														</button>
+													</CollapsibleTrigger>
+													<CollapsibleContent
+														className="flex flex-col pl-4 pt-2 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+														style={{ gap: NAV_GAP } as React.CSSProperties}
+													>
+														{financeNavItems.map((item) => (
+															<NavItem key={item.href} {...item} collapsed={false} />
+														))}
+													</CollapsibleContent>
+												</Collapsible>
 												{adminNavItems.map((item) => (
 													<NavItem key={item.href} {...item} collapsed={false} />
 												))}
