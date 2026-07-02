@@ -21,14 +21,24 @@ interface SendBody {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function appendPortalFooter(html: string, baseUrl: string, recipient: string): string {
+function buildPortalFooter(baseUrl: string, recipient: string): string {
 	const loginUrl = `${baseUrl}/login?email=${encodeURIComponent(recipient)}`;
-	const footer = `
+	return `
 <div style="margin-top:32px;padding:16px 20px;border-top:1px solid #e5e5e5;font-family:Arial,sans-serif;font-size:13px;color:#555;text-align:center;">
   <p style="margin:0 0 8px;">Log in op het portaal voor meer informatie:</p>
   <p style="margin:0;"><a href="${loginUrl}" style="color:#ea580c;text-decoration:none;font-weight:600;">Open het portaal</a></p>
   <p style="margin:8px 0 0;font-size:11px;color:#999;">Je ontvangt direct een inloglink op ${recipient}.</p>
 </div>`;
+}
+
+function buildPendingFooter(): string {
+	return `
+<div style="margin-top:32px;padding:16px 20px;border-top:1px solid #e5e5e5;font-family:Arial,sans-serif;font-size:13px;color:#555;text-align:center;">
+  <p style="margin:0;">Je kunt inloggen op het portaal zodra je aanmelding is verwerkt. We nemen zo snel mogelijk contact met je op.</p>
+</div>`;
+}
+
+function appendFooter(html: string, footer: string): string {
 	if (/<\/body>/i.test(html)) {
 		return html.replace(/<\/body>/i, `${footer}</body>`);
 	}
@@ -110,7 +120,13 @@ Deno.serve(async (req) => {
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
 	const renderedHtml = renderTemplate(template.body_html, vars);
-	const html = appendPortalFooter(renderedHtml, getSiteBaseUrl(req), body.to);
+
+	// Only show the "Open het portaal" link if an account exists for this email.
+	// Signup confirmations go out before staff approves the request, so no auth user
+	// exists yet and signInWithOtp({ shouldCreateUser: false }) would silently no-op.
+	const { data: profile } = await admin.from('profiles').select('user_id').eq('email', body.to).maybeSingle();
+	const footer = profile ? buildPortalFooter(getSiteBaseUrl(req), body.to) : buildPendingFooter();
+	const html = appendFooter(renderedHtml, footer);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
 		method: 'POST',
