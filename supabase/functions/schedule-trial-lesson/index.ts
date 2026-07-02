@@ -12,8 +12,6 @@ import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabas
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-
-
 interface Body {
 	signup_request_id?: string | null;
 	teacher_user_id: string;
@@ -268,7 +266,6 @@ Deno.serve(async (req) => {
 				console.error(`${event_key} mail`, mailErr);
 			}
 		};
-
 
 		// Email to student (or parent)
 		await sendMail('trial_scheduled', (parentEmail || studentEmail).toLowerCase(), sharedVars);
