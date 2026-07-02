@@ -125,21 +125,6 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
-		icon: NAV_ICONS.subscriptions,
-		title: 'Incasso & abonnementen',
-		description:
-			'Maandelijkse SEPA-incasso per lesovereenkomst, gekoppeld aan Stripe. Eerste betaling via iDEAL voor het mandaat, daarna automatisch.',
-		details: [
-			'Uitnodiging sturen: open een overeenkomst en klik "Stuur betaaluitnodiging" in de Incasso-kaart. De leerling/ouder krijgt een mail met magic link.',
-			'Klantbeleving: link aanklikken → automatisch ingelogd → Stripe Checkout → iDEAL-betaling van €0,01 voor het SEPA-mandaat → bevestiging.',
-			'Statuslabels: scheduled (mandaat actief, eerste incasso nog niet uitgevoerd), active, past_due, canceled.',
-			'Bestaand mandaat hergebruiken: bij een tweede overeenkomst kies "Activeer op bestaand mandaat" — geen iDEAL-stap nodig.',
-			'Pas nieuwe tarieven toe: na prijswijziging klikt de admin deze knop; alleen toekomstige maanden worden herberekend.',
-			'Beheer betaling: klant en admin openen via "Beheer betaling" de Stripe Customer Portal voor betaalmethode, facturen en annulering.',
-			'Facturen: de incasso-kaart toont de laatste facturen met bedrag, status en link naar de hosted Stripe-factuur.',
-		],
-	},
-	{
 		icon: NAV_ICONS.invoices,
 		title: NAV_LABELS.invoices,
 		description:

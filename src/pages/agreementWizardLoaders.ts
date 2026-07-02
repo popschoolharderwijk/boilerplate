@@ -109,7 +109,7 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 			duration_minutes: data.duration_minutes,
 			frequency: data.frequency,
 			price_per_lesson: data.price_per_lesson,
-			payment_method: (data as { payment_method?: string }).payment_method ?? 'stripe',
+			payment_method: (data as { payment_method?: string }).payment_method ?? 'sepa',
 			sepa_mandate_id: (data as { sepa_mandate_id?: string | null }).sepa_mandate_id ?? null,
 			student: {
 				first_name: studentProfile.data?.first_name ?? null,
@@ -340,16 +340,7 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 		await sendAgreementCreatedMails(insertResult.data.id);
 	}
 
-	if (!agreement && insertResult.data?.id && form.paymentMethod === 'stripe') {
-		const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
-			body: { lesson_agreement_id: insertResult.data.id },
-		});
-		if (inviteErr) {
-			toast.warning('Overeenkomst opgeslagen, maar betaaluitnodiging kon niet worden verstuurd');
-		} else {
-			toast.success('Overeenkomst toegevoegd — betaaluitnodiging verstuurd naar de leerling');
-		}
-	} else if (!agreement && form.paymentMethod === 'sepa') {
+	if (!agreement && form.paymentMethod === 'sepa') {
 		toast.success('Overeenkomst toegevoegd — SEPA-incasso gekoppeld');
 	} else if (!agreement && form.paymentMethod === 'manual') {
 		toast.success('Overeenkomst toegevoegd — handmatige facturatie');

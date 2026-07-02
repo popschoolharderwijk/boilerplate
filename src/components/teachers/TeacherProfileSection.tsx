@@ -73,7 +73,11 @@ export function TeacherProfileSection({
 					console.error('Error loading profile:', profileError);
 					toast.error('Fout bij laden profiel');
 				} else {
-					const t = teacherData as unknown as { bio: string | null; has_vog?: boolean | null; vog_expires_at?: string | null } | null;
+					const t = teacherData as unknown as {
+						bio: string | null;
+						has_vog?: boolean | null;
+						vog_expires_at?: string | null;
+					} | null;
 					setBio(t?.bio || '');
 					setHasVog(t?.has_vog ?? false);
 					setVogExpiresAt(t?.vog_expires_at ?? '');

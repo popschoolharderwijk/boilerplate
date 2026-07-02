@@ -149,7 +149,7 @@ export default function AccountingReportPage() {
 			<div className="flex items-start justify-between gap-4">
 				<PageHeader
 					title={NAV_LABELS.accounting}
-					subtitle="Journaalposten voor Exact Online op basis van Stripe-facturen"
+					subtitle="Journaalposten voor Exact Online op basis van facturen"
 				/>
 				<Button asChild variant="outline" size="sm">
 					<Link to="/boekhouding/instellingen">

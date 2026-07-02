@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { AccountingSettings, PaymentProvider } from '@/lib/accounting/types';
+import type { AccountingSettings } from '@/lib/accounting/types';
 
 export function AccountingSettingsManager() {
 	const { isAdmin, isSiteAdmin } = useAuth();
@@ -102,33 +101,6 @@ export function AccountingSettingsManager() {
 		<div className="space-y-6">
 			<Card>
 				<CardHeader>
-					<CardTitle>Betaalwijze</CardTitle>
-					<CardDescription>
-						Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-1.5">
-						<Label>Standaard betaalwijze</Label>
-						<Select
-							value={form.payment_provider}
-							disabled={!canEdit}
-							onValueChange={(v) => update('payment_provider', v as PaymentProvider)}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="stripe">Stripe (online betaling)</SelectItem>
-								<SelectItem value="sepa">SEPA-incasso (eigen bestand)</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
 					<CardTitle>Dagboeken</CardTitle>
 					<CardDescription>Exact Online dagboek-codes</CardDescription>
 				</CardHeader>
@@ -145,7 +117,7 @@ export function AccountingSettingsManager() {
 				</CardHeader>
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					{field('Debiteuren', 'account_debiteuren', 'bv. 1300')}
-					{field('Bank Stripe', 'account_bank_stripe', 'bv. 1100')}
+
 					{field('Bank SEPA-incasso', 'account_bank_sepa', 'bv. 1102')}
 					{field('Omzet <21 (vrijgesteld)', 'account_omzet_under_21', 'bv. 8000')}
 					{field('Omzet 21+ (excl. BTW)', 'account_omzet_21_plus', 'bv. 8010')}

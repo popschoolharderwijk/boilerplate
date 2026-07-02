@@ -67,7 +67,7 @@ export function mapRawAgreementToTableRow(
 		frequency: a.frequency,
 		price_per_lesson: a.price_per_lesson,
 		duo_pair_id: a.duo_pair_id,
-		payment_method: a.payment_method ?? 'stripe',
+		payment_method: a.payment_method ?? 'sepa',
 		sepa_mandate_id: a.sepa_mandate_id ?? null,
 		student: studentProfile ?? emptyStudent,
 		teacher: teacherProfile ?? emptyTeacher,

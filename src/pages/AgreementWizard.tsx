@@ -8,7 +8,7 @@ import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepC
 import { UserStepContent } from '@/components/agreements/UserStepContent';
 import { STEP_ORDER, WizardStep, WizardStepIndicator } from '@/components/agreements/WizardStepIndicator';
 import { NavPageHeaderIcon } from '@/components/layout/NavPageHeaderIcon';
-import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -194,7 +194,7 @@ export default function AgreementWizard() {
 		slot: null as SlotWithStatus | null,
 		partnerStudentUserId: null as string | null,
 		partnerUser: null as User | null,
-		paymentMethod: 'stripe' as 'stripe' | 'sepa' | 'manual',
+		paymentMethod: 'sepa' as 'stripe' | 'sepa' | 'manual',
 		sepaMandateId: null as string | null,
 	});
 
@@ -551,7 +551,6 @@ export default function AgreementWizard() {
 							onPaymentMethodChange={(v) => setForm((f) => ({ ...f, paymentMethod: v }))}
 							onSepaMandateIdChange={(v) => setForm((f) => ({ ...f, sepaMandateId: v }))}
 						/>
-						{isEditMode && agreement && <SubscriptionCard lessonAgreementId={agreement.id} />}
 					</div>
 				)}
 			</div>

@@ -6,21 +6,14 @@ import { AdminSiteGuard } from '@/components/auth/AdminSiteGuard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { supabase } from '@/integrations/supabase/client';
-import { BATCH_STATUS_LABELS, type IncassoBatch, formatCentsEUR } from '@/lib/incasso/types';
+import { BATCH_STATUS_LABELS, formatCentsEUR, type IncassoBatch } from '@/lib/incasso/types';
 
 export default function Incasso() {
 	return (

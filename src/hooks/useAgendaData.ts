@@ -192,7 +192,8 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 						}>({ data: [], error: null }),
 			]);
 
-			const agreementsData: LessonAgreementQuery[] = (agreementsResult.data ?? []) as unknown as LessonAgreementQuery[];
+			const agreementsData: LessonAgreementQuery[] = (agreementsResult.data ??
+				[]) as unknown as LessonAgreementQuery[];
 			const agreementsError = agreementsResult.error;
 
 			// Build projects map
