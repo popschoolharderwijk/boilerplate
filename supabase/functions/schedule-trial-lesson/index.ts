@@ -246,35 +246,25 @@ Deno.serve(async (req) => {
 			duur: String(body.duration_minutes),
 		};
 
-		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
-			try {
-				const resp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${serviceKey}`,
-					},
-					body: JSON.stringify({ event_key, to, vars }),
-				});
-				if (!resp.ok) {
-					const text = await resp.text().catch(() => '');
-					console.error(`${event_key} mail non-2xx`, resp.status, text);
-				}
-			} catch (mailErr) {
-				console.error(`${event_key} mail`, mailErr);
-			}
-		};
+		const origin = req.headers.get('Origin');
 
 		// Email to student (or parent)
-		await sendMail('trial_scheduled', (parentEmail || studentEmail).toLowerCase(), sharedVars);
+		await sendTemplateEmail({
+			event_key: 'trial_scheduled',
+			to: (parentEmail || studentEmail).toLowerCase(),
+			vars: sharedVars,
+			origin,
+		});
 
 		// Email to teacher
 		if (teacherProfile?.email) {
 			const docentNaam =
 				`${teacherProfile.first_name ?? ''} ${teacherProfile.last_name ?? ''}`.trim() || 'docent';
-			await sendMail('trial_scheduled_teacher', teacherProfile.email.toLowerCase(), {
-				...sharedVars,
-				docent_naam: docentNaam,
+			await sendTemplateEmail({
+				event_key: 'trial_scheduled_teacher',
+				to: teacherProfile.email.toLowerCase(),
+				vars: { ...sharedVars, docent_naam: docentNaam },
+				origin,
 			});
 		}
 
