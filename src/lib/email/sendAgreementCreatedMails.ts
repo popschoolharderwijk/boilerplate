@@ -47,9 +47,7 @@ export interface SendAgreementCreatedMailsResult {
 	teacherSent: boolean;
 }
 
-export async function sendAgreementCreatedMails(
-	agreementId: string,
-): Promise<SendAgreementCreatedMailsResult> {
+export async function sendAgreementCreatedMails(agreementId: string): Promise<SendAgreementCreatedMailsResult> {
 	const result: SendAgreementCreatedMailsResult = { studentSent: false, teacherSent: false };
 
 	const { data: agreement, error } = await supabase

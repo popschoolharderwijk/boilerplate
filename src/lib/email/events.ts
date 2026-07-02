@@ -108,7 +108,6 @@ const EMAIL_EVENTS = {
 	},
 } as const satisfies Record<string, EmailEventDefinition>;
 
-
 export function listEmailEvents(): EmailEventDefinition[] {
 	return Object.values(EMAIL_EVENTS);
 }

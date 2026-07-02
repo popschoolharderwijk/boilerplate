@@ -36,7 +36,6 @@ function formatDate(iso: string): string {
 	return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
 }
 
-
 interface Body {
 	student_user_id_a: string;
 	student_user_id_b: string;
@@ -265,4 +264,3 @@ Deno.serve(async (req) => {
 		agreement_ids: [rowA.id, rowB.id],
 	});
 });
-

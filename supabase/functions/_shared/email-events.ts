@@ -61,7 +61,6 @@ export const EMAIL_EVENTS: Record<string, EmailEventDefinition> = {
 	},
 };
 
-
 export function getEmailEvent(key: string): EmailEventDefinition | null {
 	return EMAIL_EVENTS[key] ?? null;
 }
