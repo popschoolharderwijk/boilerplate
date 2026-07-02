@@ -1,4 +1,4 @@
-import { LuShieldCheck } from 'react-icons/lu';
+import { LuDatabase, LuShieldCheck } from 'react-icons/lu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
