@@ -1,7 +1,6 @@
 import type { LessonAgreement } from '@/components/students/LessonAgreementItem';
 import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import type { SignupRequestDetail } from '@/components/students/SignupRequestDialog';
-import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface StudentAgreementsCardProps {
@@ -9,8 +8,6 @@ interface StudentAgreementsCardProps {
 	description: string;
 	emptyMessage: string;
 	studentUserId?: string;
-	showSubscription?: boolean;
-	hideStartAction?: boolean;
 }
 
 export function StudentAgreementsCard({
@@ -18,8 +15,6 @@ export function StudentAgreementsCard({
 	description,
 	emptyMessage,
 	studentUserId,
-	showSubscription = false,
-	hideStartAction = false,
 }: StudentAgreementsCardProps) {
 	return (
 		<Card>
@@ -33,19 +28,12 @@ export function StudentAgreementsCard({
 				) : (
 					<div className="space-y-4">
 						{agreements.map((agreement) => (
-							<div key={agreement.id} className="space-y-2">
-								<LessonAgreementItem
-									agreement={agreement}
-									studentUserId={studentUserId}
-									lessonTypeId={agreement.lesson_type.id}
-								/>
-								{showSubscription && (
-									<SubscriptionCard
-										lessonAgreementId={agreement.id}
-										hideStartAction={hideStartAction}
-									/>
-								)}
-							</div>
+							<LessonAgreementItem
+								key={agreement.id}
+								agreement={agreement}
+								studentUserId={studentUserId}
+								lessonTypeId={agreement.lesson_type.id}
+							/>
 						))}
 					</div>
 				)}
