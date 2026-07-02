@@ -11,12 +11,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getEmailEvent } from '../_shared/email-events.ts';
-import { beginAuthenticatedPostRequest, getSiteBaseUrl, jsonResponse } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, getSiteBaseUrl, jsonResponse, resolveAllowedSiteUrl } from '../_shared/http.ts';
 
 interface SendBody {
 	event_key: string;
 	to: string;
 	vars?: Record<string, string | number | null | undefined>;
+	site_url?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -125,7 +126,8 @@ Deno.serve(async (req) => {
 	// Signup confirmations go out before staff approves the request, so no auth user
 	// exists yet and signInWithOtp({ shouldCreateUser: false }) would silently no-op.
 	const { data: profile } = await admin.from('profiles').select('user_id').eq('email', body.to).maybeSingle();
-	const footer = profile ? buildPortalFooter(getSiteBaseUrl(req), body.to) : buildPendingFooter();
+	const baseUrl = resolveAllowedSiteUrl(body.site_url) ?? getSiteBaseUrl(req);
+	const footer = profile ? buildPortalFooter(baseUrl, body.to) : buildPendingFooter();
 	const html = appendFooter(renderedHtml, footer);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
