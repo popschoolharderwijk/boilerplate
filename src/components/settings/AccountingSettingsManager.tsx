@@ -102,33 +102,6 @@ export function AccountingSettingsManager() {
 		<div className="space-y-6">
 			<Card>
 				<CardHeader>
-					<CardTitle>Betaalwijze</CardTitle>
-					<CardDescription>
-						Kies of nieuwe overeenkomsten standaard via Stripe of via eigen SEPA-incasso lopen.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-1.5">
-						<Label>Standaard betaalwijze</Label>
-						<Select
-							value={form.payment_provider}
-							disabled={!canEdit}
-							onValueChange={(v) => update('payment_provider', v as PaymentProvider)}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="stripe">Stripe (online betaling)</SelectItem>
-								<SelectItem value="sepa">SEPA-incasso (eigen bestand)</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
 					<CardTitle>Dagboeken</CardTitle>
 					<CardDescription>Exact Online dagboek-codes</CardDescription>
 				</CardHeader>
