@@ -101,6 +101,8 @@ export function AgendaEventFormDialog({
 	cancellationType: cancelType,
 	needsReschedule,
 	onMarkRescheduled,
+	onMarkTrialCompleted,
+	isMarkingTrialCompleted = false,
 }: AgendaEventFormDialogProps) {
 	const { user, isPrivileged } = useAuth();
 
