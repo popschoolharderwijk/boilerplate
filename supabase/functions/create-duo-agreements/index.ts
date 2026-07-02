@@ -8,6 +8,35 @@ import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
 import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
 
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+const DAY_NAMES_NL = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+const FREQUENCY_LABELS: Record<string, string> = {
+	weekly: 'wekelijks',
+	biweekly: 'om de week',
+	monthly: 'maandelijks',
+};
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+	stripe: 'Automatische incasso via Stripe',
+	sepa: 'SEPA-incasso',
+	manual: 'Handmatige facturatie',
+};
+
+function formatPrice(value: number): string {
+	return new Intl.NumberFormat('nl-NL', {
+		style: 'currency',
+		currency: 'EUR',
+		minimumFractionDigits: 2,
+	}).format(value);
+}
+
+function formatDate(iso: string): string {
+	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+	return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
+}
+
+
 interface Body {
 	student_user_id_a: string;
 	student_user_id_b: string;
