@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { WizardStep } from '@/components/agreements/WizardStepIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
+import { sendAgreementCreatedMails } from '@/lib/email/sendAgreementCreatedMails';
 import type { AgreementTableRow, LessonFrequency, WizardTeacherInfo } from '@/types/lesson-agreements';
 
 type AgreementLoadParams = {
@@ -332,6 +333,11 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 				created_agreement_id: insertResult.data.id,
 			})
 			.eq('id', fromTrialId);
+	}
+
+	if (!agreement && insertResult.data?.id) {
+		// Bevestigingsmails naar leerling en docent (best-effort, blockt de flow niet).
+		await sendAgreementCreatedMails(insertResult.data.id);
 	}
 
 	if (!agreement && insertResult.data?.id && form.paymentMethod === 'stripe') {
