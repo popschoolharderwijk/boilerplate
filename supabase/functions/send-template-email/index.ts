@@ -120,7 +120,13 @@ Deno.serve(async (req) => {
 	const vars = normalizeVars(body.vars);
 	const subject = renderTemplate(template.subject, vars);
 	const renderedHtml = renderTemplate(template.body_html, vars);
-	const html = appendPortalFooter(renderedHtml, getSiteBaseUrl(req), body.to);
+
+	// Only show the "Open het portaal" link if an account exists for this email.
+	// Signup confirmations go out before staff approves the request, so no auth user
+	// exists yet and signInWithOtp({ shouldCreateUser: false }) would silently no-op.
+	const { data: profile } = await admin.from('profiles').select('user_id').eq('email', body.to).maybeSingle();
+	const footer = profile ? buildPortalFooter(getSiteBaseUrl(req), body.to) : buildPendingFooter();
+	const html = appendFooter(renderedHtml, footer);
 
 	const resendResp = await fetch('https://api.resend.com/emails', {
 		method: 'POST',
