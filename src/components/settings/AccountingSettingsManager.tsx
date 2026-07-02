@@ -118,7 +118,7 @@ export function AccountingSettingsManager() {
 				</CardHeader>
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					{field('Debiteuren', 'account_debiteuren', 'bv. 1300')}
-					{field('Bank Stripe', 'account_bank_stripe', 'bv. 1100')}
+					
 					{field('Bank SEPA-incasso', 'account_bank_sepa', 'bv. 1102')}
 					{field('Omzet <21 (vrijgesteld)', 'account_omzet_under_21', 'bv. 8000')}
 					{field('Omzet 21+ (excl. BTW)', 'account_omzet_21_plus', 'bv. 8010')}
