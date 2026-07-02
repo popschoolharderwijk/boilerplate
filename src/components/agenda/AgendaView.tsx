@@ -416,10 +416,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 						: undefined
 				}
 				onMarkTrialCompleted={
-					ui.editingEvent?.source_type === 'trial_lesson' &&
-					ui.editingEvent.source_id &&
-					canEdit &&
-					user
+					ui.editingEvent?.source_type === 'trial_lesson' && ui.editingEvent.source_id && canEdit && user
 						? async () => {
 								const trialId = ui.editingEvent?.source_id;
 								if (!trialId) return;
