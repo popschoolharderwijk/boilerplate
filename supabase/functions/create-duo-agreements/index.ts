@@ -207,24 +207,7 @@ Deno.serve(async (req) => {
 		const teacher = profMap.get(body.teacher_user_id);
 		const teacherName = `${teacher?.first_name ?? ''} ${teacher?.last_name ?? ''}`.trim() || 'docent';
 
-		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
-			try {
-				const resp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${serviceKey}`,
-					},
-					body: JSON.stringify({ event_key, to, vars }),
-				});
-				if (!resp.ok) {
-					const text = await resp.text().catch(() => '');
-					console.error(`${event_key} mail non-2xx`, resp.status, text);
-				}
-			} catch (mailErr) {
-				console.error(`${event_key} mail`, mailErr);
-			}
-		};
+		const origin = req.headers.get('Origin');
 
 		const baseVars = {
 			docent_naam: teacherName,
@@ -241,14 +224,18 @@ Deno.serve(async (req) => {
 			const s = profMap.get(studentId);
 			if (!s?.email) continue;
 			const studentName = `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'leerling';
-			await sendMail('agreement_created', s.email.toLowerCase(), {
-				...baseVars,
-				leerling_naam: studentName,
+			await sendTemplateEmail({
+				event_key: 'agreement_created',
+				to: s.email.toLowerCase(),
+				vars: { ...baseVars, leerling_naam: studentName },
+				origin,
 			});
 			if (teacher?.email) {
-				await sendMail('agreement_created_teacher', teacher.email.toLowerCase(), {
-					...baseVars,
-					leerling_naam: studentName,
+				await sendTemplateEmail({
+					event_key: 'agreement_created_teacher',
+					to: teacher.email.toLowerCase(),
+					vars: { ...baseVars, leerling_naam: studentName },
+					origin,
 				});
 			}
 		}
