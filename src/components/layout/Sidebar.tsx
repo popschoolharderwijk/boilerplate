@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LuChevronDown, LuChevronLeft, LuMusic, LuShieldCheck } from 'react-icons/lu';
+import { LuChevronDown, LuChevronLeft, LuMusic, LuShieldCheck, LuWallet } from 'react-icons/lu';
 import { useLocation } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
 import { NavItem } from '@/components/layout/NavItem';
