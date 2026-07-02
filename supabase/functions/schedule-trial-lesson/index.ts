@@ -9,6 +9,9 @@ import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
 import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
 
+const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
 interface Body {
 	signup_request_id?: string | null;
 	teacher_user_id: string;
@@ -247,7 +250,7 @@ Deno.serve(async (req) => {
 
 		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
 			try {
-				await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
+				const resp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -255,6 +258,10 @@ Deno.serve(async (req) => {
 					},
 					body: JSON.stringify({ event_key, to, vars }),
 				});
+				if (!resp.ok) {
+					const text = await resp.text().catch(() => '');
+					console.error(`${event_key} mail non-2xx`, resp.status, text);
+				}
 			} catch (mailErr) {
 				console.error(`${event_key} mail`, mailErr);
 			}
