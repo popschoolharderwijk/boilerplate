@@ -40,7 +40,7 @@ import Reports from './pages/Reports';
 import SignupRequests from './pages/SignupRequests';
 import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
-import Subscriptions from './pages/Subscriptions';
+
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
 import Teachers from './pages/Teachers';
