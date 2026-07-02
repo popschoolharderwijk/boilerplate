@@ -2138,6 +2138,10 @@ export type Database = {
       is_teacher: { Args: { _user_id: string }; Returns: boolean }
       is_valid_iban: { Args: { p_iban: string }; Returns: boolean }
       is_valid_phone_number: { Args: { p_phone: string }; Returns: boolean }
+      mark_trial_lesson_completed: {
+        Args: { _trial_id: string }
+        Returns: undefined
+      }
       next_invoice_number: { Args: never; Returns: string }
       next_mandate_reference: { Args: never; Returns: string }
       policy_exists: {

@@ -66,6 +66,10 @@ interface AgendaEventFormDialogProps {
 	needsReschedule?: boolean;
 	/** Called to mark a teacher-cancelled lesson as rescheduled */
 	onMarkRescheduled?: () => void;
+	/** Called to mark a trial lesson as given (teacher or staff). Only relevant for trial_lesson events. */
+	onMarkTrialCompleted?: () => void | Promise<void>;
+	/** Whether the mark-trial-completed action is in progress */
+	isMarkingTrialCompleted?: boolean;
 }
 
 interface ProjectOption {
