@@ -1,4 +1,4 @@
-import { LuShieldCheck } from 'react-icons/lu';
+import { LuDatabase, LuShieldCheck } from 'react-icons/lu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
@@ -17,9 +17,9 @@ const sections: ManualSection[] = [
 		description: 'Het dashboard is de startpagina na inloggen en toont alles wat vandaag aandacht vraagt.',
 		details: [
 			'Statistieken: aantal actieve leerlingen, docenten en lopende overeenkomsten in één oogopslag.',
-			'Actiepunten: openstaande aanmeldingen, ontbrekende beschikbaarheid, ontbrekende incassomandaten en mislukte betalingen.',
-			'Recente leerlingen: de laatst toegevoegde of gewijzigde leerlingen — klik op een naam voor het profiel.',
-			'Docent beschikbaarheid: snel zien welke docenten vandaag beschikbaar zijn.',
+			'Actiepunten: openstaande aanmeldingen, ontbrekende beschikbaarheid en ontbrekende incassomandaten.',
+			'Recente leerlingen: de vijf meest recent aangemaakte leerlingen (gesorteerd op aanmaakdatum, nieuwste eerst) — klik door naar de leerlingenlijst.',
+			'Docent beschikbaarheid: overzicht per docent van gekoppelde lessoorten en het aantal beschikbare tijdsblokken.',
 			'Nieuwsberichten: actieve berichten voor jouw rol verschijnen bovenaan met titel, datum en eventuele afbeelding.',
 			'Docenten en leerlingen zien een vereenvoudigde versie met alleen hun eigen relevante blokken.',
 		],
@@ -144,7 +144,34 @@ const sections: ManualSection[] = [
 			'Handmatige correctie: een factuur kan in de DB op status "cancelled" worden gezet; admins kunnen indien nodig een correctie-batch aanmaken (kind: correction) en opnieuw genereren.',
 		],
 	},
-
+	{
+		icon: NAV_ICONS.mandaten,
+		title: NAV_LABELS.mandaten,
+		description:
+			'Beheer SEPA-incassomandaten waarmee de school lesgeld automatisch mag afschrijven van de rekening van de leerling of ouder/verzorger.',
+		details: [
+			'Aanmaken: voer IBAN, tenaamstelling en (optioneel) BIC in. Het systeem genereert automatisch een unieke mandaatreferentie (UMR) en zet het mandaat op status "pending".',
+			'Uitnodigen: verstuur een mandaatuitnodiging per e-mail (template "incasso_invite") zodat de debiteur digitaal akkoord kan geven.',
+			'Activeren: na akkoord wordt het mandaat "active" met een signature date; alleen actieve mandaten worden meegenomen in een incasso-batch.',
+			'Intrekken: een mandaat kan handmatig op "revoked" gezet worden; toekomstige batches slaan de leerling dan over.',
+			'Zichtbaarheid: staff/admin zien alle mandaten; leerlingen/ouders zien alleen hun eigen mandaat (afgedwongen via RLS).',
+		],
+	},
+	{
+		icon: NAV_ICONS.incasso,
+		title: NAV_LABELS.incasso,
+		description:
+			'Bundel automatische incasso-opdrachten in batches, genereer een SEPA XML (pain.008) voor de bank en verwerk statusmeldingen (pain.002).',
+		details: [
+			'Batch aanmaken: kies een collection date, batch-type (first / recurring / final / one-off) en een omschrijving. De batch krijgt automatisch een uniek MessageId en PaymentInformationId.',
+			'Batch-items: voeg per leerling één of meer regels toe met bedrag (in centen) en remittance-informatie (bv. "Lesgeld november 2026").',
+			'Facturen genereren: bij goedkeuring van de batch worden per leerling automatisch facturen aangemaakt en gemaild (zie Facturen).',
+			'SEPA XML exporteren: de knop "Genereer SEPA XML" roept de edge function generate-sepa-xml aan en levert een pain.008.001.08-bestand dat je uploadt in je bankportaal.',
+			'Statusupdate importeren: upload het pain.002-terugmeldbestand van de bank via "Status importeren". De edge function import-sepa-status matcht per EndToEndId en zet items op paid / rejected inclusief reason code.',
+			'Correctiebatches: bij storneringen kun je een batch met kind "correction" aanmaken zonder de originele factuur te raken.',
+			'Toegang: alleen admin/site_admin. Alle acties zijn gelogd en idempotent (opnieuw uitvoeren maakt geen dubbele opdrachten).',
+		],
+	},
 	{
 		icon: NAV_ICONS.projects,
 		title: NAV_LABELS.projects,
@@ -208,13 +235,25 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.accountingSettings,
+		title: NAV_LABELS.accountingSettings,
+		description:
+			'Centrale plek voor boekhoudkundige instellingen: bedrijfsgegevens, factuurnummering, grootboekrekeningen en BTW-codes.',
+		details: [
+			'Bedrijfsgegevens & factuur: bedrijfsnaam, adres, KvK, BTW-nummer, IBAN, contactgegevens, factuurnummer-prefix, startnummer, betalingstermijn en footertekst — vereist voor factuurgeneratie.',
+			'Grootboekrekeningen: standaard-rekeningen per lessoort/BTW-categorie voor de Exact Online-export.',
+			'BTW-codes: koppel per categorie (vrijgesteld <21, belast 21+) een BTW-code die in het boekhoudrapport terugkomt.',
+			'Toegang: alleen admin/site_admin via Instellingen → Boekhouding-instellingen.',
+		],
+	},
+	{
 		icon: NAV_ICONS.dataImport,
 		title: NAV_LABELS.dataImport,
 		description: 'Eenmalige import van historische gegevens uit een Excel-bestand.',
 		details: [
 			'Template downloaden: gebruik het meegeleverde XLSX-sjabloon met tabbladen voor gebruikers, leerlingen, docenten en overeenkomsten.',
-			'Upload: kies een ingevuld bestand en start de import vanuit Instellingen → Data-import.',
-			"Idempotent: de import gebruikt legacy-id's; opnieuw uploaden van hetzelfde bestand maakt geen duplicaten.",
+			'Upload: kies een ingevuld bestand en start de import vanuit Instellingen → Data-import. De verwerking loopt via de edge function import-legacy-data.',
+			"Idempotent: de import gebruikt een aparte legacy_ids-tabel om externe id's te mappen op interne UUID's; opnieuw uploaden van hetzelfde bestand maakt geen duplicaten.",
 			'Foutmeldingen: per rij wordt teruggegeven of de import is geslaagd — corrigeer in Excel en upload opnieuw.',
 		],
 	},
@@ -258,12 +297,44 @@ const sections: ManualSection[] = [
 		title: 'Rollen & rechten',
 		description: 'Het systeem kent verschillende rollen die bepalen wat een gebruiker kan zien en doen.',
 		details: [
-			'Site Admin: volledige toegang inclusief gebruikersbeheer en systeeminstellingen.',
-			'Admin: alle beheersfuncties (gebruikers, lessoorten, docenten, leerlingen, overeenkomsten, rapportages, boekhouding).',
-			'Staff: leerlingen en docenten beheren, aanmeldingen verwerken en rapportages inzien — geen systeeminstellingen.',
+			'Site Admin: volledige toegang inclusief gebruikersbeheer, systeeminstellingen en incasso.',
+			'Admin: alle beheersfuncties (gebruikers, lessoorten, docenten, leerlingen, overeenkomsten, rapportages, boekhouding, incasso, mandaten).',
+			'Staff: leerlingen en docenten beheren, aanmeldingen verwerken, agenda bijhouden en rapportages inzien — geen boekhoud- of incasso-instellingen.',
 			'Docent: eigen profiel, beschikbaarheid, leerlingen, agenda en statistieken.',
-			'Leerling: eigen profiel, overeenkomsten en (indien van toepassing) ingeplande proefles.',
-			'Inloggen: passwordless via magic link — gebruikers vragen een loginlink aan en klikken op de link in hun mail.',
+			'Leerling: eigen profiel, overeenkomsten, facturen en (indien van toepassing) ingeplande proefles.',
+			'Rolopslag: rollen staan in een aparte tabel user_roles (één rol per gebruiker) om privilege-escalation te voorkomen; controle via de security-definer functie has_role.',
+			'Inloggen: passwordless via magic link — gebruikers vragen een loginlink aan en klikken op de link in hun mail. Geen wachtwoorden, geen social login.',
+		],
+	},
+	{
+		icon: NAV_ICONS.accountProfile,
+		title: 'Mijn account',
+		description: 'Persoonlijke instellingen die elke ingelogde gebruiker zelf kan aanpassen.',
+		details: [
+			'Profiel: eigen naam, telefoonnummer en avatar bijwerken (avatars in de publieke storage-bucket "avatars", max. 5 MB).',
+			'Weergave: schakel tussen licht, donker en systeem-thema; voorkeur wordt lokaal per browser opgeslagen.',
+			'Account verwijderen: verwijdert het eigen account inclusief docent-/leerlingprofiel (cascade). Het laatste site_admin-account kan niet verwijderd worden (databasetrigger).',
+		],
+	},
+	{
+		icon: LuDatabase,
+		title: 'Technische architectuur',
+		description:
+			'Achtergrond bij hoe POPschool intern werkt — handig voor beheerders en ontwikkelaars die de applicatie onderhouden of uitbreiden.',
+		details: [
+			'Frontend: React 18 + Vite + TypeScript, Tailwind CSS met een oranje huisstijl. UI-componenten uit shadcn/ui, iconen strikt uit react-icons/lu.',
+			'Backend: externe Supabase Pro (geen Lovable Cloud) met branching. Development draait tegen de mcp-dev branch, productie via de Supabase GitHub-integratie.',
+			'Autorisatie: alle tabellen hebben Row Level Security. Policies zijn PERMISSIVE en geconsolideerd; views draaien met security_invoker=on zodat RLS van de onderliggende tabellen geldt.',
+			'Toegangscontrole: has_role(user, role) en dedicated helpers (bv. is_project_teacher, is_project_participant) worden zowel in policies als in RPC-functies gebruikt.',
+			'RPC-functies: paginatie via get_students_paginated / get_teachers_paginated / get_users_paginated / get_lesson_agreements_paginated. Rapportage via get_hours_report (CTE-gebaseerd, polymorfe agenda-bron).',
+			'Agenda: polymorfe events met source_type + source_id (lesson_agreement, lesson_group, project, manual). Meerdere deelnemers via agenda_participants. Afwijkingen en annuleringen zitten in agenda_event_deviations, met onderscheid tussen docent- en leerling-annulering voor de urenrapportage.',
+			'Duo-lessen: aparte edge function create-duo-agreements maakt twee gekoppelde overeenkomsten in één transactie. Rapportage toont twee rijen (docentblok + les per leerling).',
+			'BTW-logica: leeftijd wordt berekend op basis van geboortedatum leerling versus lesdatum/collection date — <21 vrijgesteld, ≥21 belast. Onbekende geboortedatum → categorie "unknown", factuur met gemengde regels krijgt "mixed".',
+			'Facturen & incasso: edge functions generate-invoice, generate-sepa-xml en import-sepa-status. Facturen staan als PDF in de privé storage-bucket "invoices"; downloads via kortstondige signed URLs (60 sec).',
+			'E-mail: alle transactionele mails lopen via de edge function send-template-email (Resend). Templates staan in email_templates en zijn per project aanpasbaar. De helper sendTemplateEmail wordt hergebruikt vanuit meerdere functies (schedule-trial-lesson, submit-signup-request, create-duo-agreements, ...).',
+			'Migraties: elke schemawijziging staat als bestand in supabase/migrations/ (logische Nederlandse naam). Na een migratie regenereert bun run reset-db:dev de TypeScript-types in src/integrations/supabase/types.ts.',
+			'CI/CD: aparte workflows voor formattering (Biome), linting, unit-tests en RLS-testsuite. RLS-tests draaien tegen een Supabase Preview branch met een impersonatie-helper (signInAs) om echte rolgedrag te verifiëren.',
+			'Ontwikkelrichtlijnen: geen LLM/AI-componenten, geen Radix UI, TanStack Query of React Hook Form; wél DataTable, PageSkeleton, SectionSkeleton, en verplicht Biome-format vóór commit.',
 		],
 	},
 ];
