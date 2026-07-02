@@ -11,12 +11,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getEmailEvent } from '../_shared/email-events.ts';
-import { beginAuthenticatedPostRequest, getSiteBaseUrl, jsonResponse } from '../_shared/http.ts';
+import { beginAuthenticatedPostRequest, getSiteBaseUrl, jsonResponse, resolveAllowedSiteUrl } from '../_shared/http.ts';
 
 interface SendBody {
 	event_key: string;
 	to: string;
 	vars?: Record<string, string | number | null | undefined>;
+	site_url?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
