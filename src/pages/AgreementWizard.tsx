@@ -551,7 +551,7 @@ export default function AgreementWizard() {
 							onPaymentMethodChange={(v) => setForm((f) => ({ ...f, paymentMethod: v }))}
 							onSepaMandateIdChange={(v) => setForm((f) => ({ ...f, sepaMandateId: v }))}
 						/>
-						{isEditMode && agreement && <SubscriptionCard lessonAgreementId={agreement.id} />}
+						
 					</div>
 				)}
 			</div>
