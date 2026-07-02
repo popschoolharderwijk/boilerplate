@@ -66,6 +66,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
 	const { pathname } = useLocation();
 	const isInBeheer = adminHrefs.some((h) => pathname === h || pathname.startsWith(`${h}/`));
+	const isInFinance = financeHrefs.some((h) => pathname === h || pathname.startsWith(`${h}/`));
 
 	// Persisted open/closed state for the Beheer group
 	const [beheerOpen, setBeheerOpen] = useState<boolean>(() => {
@@ -74,16 +75,32 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 		if (stored !== null) return stored === '1';
 		return false;
 	});
+	const [financeOpen, setFinanceOpen] = useState<boolean>(() => {
+		if (typeof window === 'undefined') return false;
+		const stored = window.localStorage.getItem(FINANCE_OPEN_KEY);
+		if (stored !== null) return stored === '1';
+		return false;
+	});
 
 	// Auto-open when navigating into a Beheer route
 	useEffect(() => {
 		if (isInBeheer) setBeheerOpen(true);
 	}, [isInBeheer]);
+	useEffect(() => {
+		if (isInFinance) {
+			setFinanceOpen(true);
+			setBeheerOpen(true);
+		}
+	}, [isInFinance]);
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		window.localStorage.setItem(BEHEER_OPEN_KEY, beheerOpen ? '1' : '0');
 	}, [beheerOpen]);
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+		window.localStorage.setItem(FINANCE_OPEN_KEY, financeOpen ? '1' : '0');
+	}, [financeOpen]);
 
 	return (
 		<TooltipProvider delayDuration={0}>
