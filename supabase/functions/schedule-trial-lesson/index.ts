@@ -7,10 +7,8 @@
 
 import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse, UUID_RE } from '../_shared/http.ts';
+import { sendTemplateEmail } from '../_shared/sendTemplateEmail.ts';
 import { requireAuthenticatedClients, requireUserRole } from '../_shared/supabase.ts';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
 interface Body {
 	signup_request_id?: string | null;
