@@ -87,7 +87,7 @@ const App = () => (
 						<Route path="/aanmeldingen" element={<SignupRequests />} />
 						<Route path="/trial-lessons" element={<TrialLessons />} />
 						<Route path="/my-trial" element={<MyTrial />} />
-						
+
 						<Route path="/lesvrije-periodes" element={<NoLessonPeriods />} />
 						<Route path="/email-templates" element={<EmailTemplates />} />
 						<Route path="/account" element={<Account defaultTab="profile" />} />
