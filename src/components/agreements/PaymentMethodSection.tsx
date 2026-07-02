@@ -72,21 +72,6 @@ export function PaymentMethodSection({
 				className="grid gap-2"
 			>
 				<label
-					htmlFor="pm-stripe"
-					className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer hover:bg-accent/40"
-				>
-					<RadioGroupItem value="stripe" id="pm-stripe" className="mt-1" />
-					<div className="flex-1">
-						<div className="flex items-center gap-2 font-medium">
-							<LuCreditCard className="h-4 w-4" /> Stripe (iDEAL / kaart)
-						</div>
-						<p className="text-xs text-muted-foreground">
-							Leerling betaalt via Stripe-abonnement na uitnodiging.
-						</p>
-					</div>
-				</label>
-
-				<label
 					htmlFor="pm-sepa"
 					className="flex items-start gap-3 rounded-md border bg-background p-3 cursor-pointer hover:bg-accent/40"
 				>
