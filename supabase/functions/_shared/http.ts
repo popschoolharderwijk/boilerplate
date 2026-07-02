@@ -120,20 +120,27 @@ const ALLOWED_SITE_HOSTS = new Set([
 	'098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com',
 ]);
 
+/** Return `candidate` as an origin string if it is an https URL on the allow-list, else null. */
+export function resolveAllowedSiteUrl(candidate: string | null | undefined): string | null {
+	if (!candidate) return null;
+	try {
+		const url = new URL(candidate);
+		if (url.protocol === 'https:' && ALLOWED_SITE_HOSTS.has(url.hostname)) {
+			return url.origin;
+		}
+	} catch {
+		// invalid URL
+	}
+	return null;
+}
+
 /** Resolve HTTPS site origin from request Origin header or SITE_URL env. */
 export function getSiteBaseUrl(req: Request, fallback = FALLBACK_SITE_URL): string {
 	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), fallback];
 
 	for (const candidate of candidates) {
-		if (!candidate) continue;
-		try {
-			const url = new URL(candidate);
-			if (url.protocol === 'https:' && ALLOWED_SITE_HOSTS.has(url.hostname)) {
-				return url.origin;
-			}
-		} catch {
-			// Ignore invalid environment/header values and continue with the next candidate.
-		}
+		const resolved = resolveAllowedSiteUrl(candidate);
+		if (resolved) return resolved;
 	}
 
 	return fallback;
