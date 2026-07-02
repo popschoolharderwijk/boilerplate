@@ -172,6 +172,8 @@ export function AgendaEventFormDialog({
 	const canRevert = !!deviationInfo && !!onRevert;
 	const canCancelLesson =
 		(isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
+	const isTrialEvent = event?.source_type === 'trial_lesson';
+	const canMarkTrialCompleted = isTrialEvent && !isCancelledEvent && !!onMarkTrialCompleted;
 
 	type FormAction =
 		| { kind: 'submit'; e: FormEvent }
