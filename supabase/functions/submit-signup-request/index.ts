@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { UUID_RE } from '../_shared/http.ts';
+import { sendTemplateEmail } from '../_shared/sendTemplateEmail.ts';
 
 interface SignupRequest {
 	lesson_type_id: string;
