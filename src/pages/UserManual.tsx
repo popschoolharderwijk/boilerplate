@@ -235,13 +235,25 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
+		icon: NAV_ICONS.accountingSettings,
+		title: NAV_LABELS.accountingSettings,
+		description:
+			'Centrale plek voor boekhoudkundige instellingen: bedrijfsgegevens, factuurnummering, grootboekrekeningen en BTW-codes.',
+		details: [
+			'Bedrijfsgegevens & factuur: bedrijfsnaam, adres, KvK, BTW-nummer, IBAN, contactgegevens, factuurnummer-prefix, startnummer, betalingstermijn en footertekst — vereist voor factuurgeneratie.',
+			'Grootboekrekeningen: standaard-rekeningen per lessoort/BTW-categorie voor de Exact Online-export.',
+			'BTW-codes: koppel per categorie (vrijgesteld <21, belast 21+) een BTW-code die in het boekhoudrapport terugkomt.',
+			'Toegang: alleen admin/site_admin via Instellingen → Boekhouding-instellingen.',
+		],
+	},
+	{
 		icon: NAV_ICONS.dataImport,
 		title: NAV_LABELS.dataImport,
 		description: 'Eenmalige import van historische gegevens uit een Excel-bestand.',
 		details: [
 			'Template downloaden: gebruik het meegeleverde XLSX-sjabloon met tabbladen voor gebruikers, leerlingen, docenten en overeenkomsten.',
-			'Upload: kies een ingevuld bestand en start de import vanuit Instellingen → Data-import.',
-			"Idempotent: de import gebruikt legacy-id's; opnieuw uploaden van hetzelfde bestand maakt geen duplicaten.",
+			'Upload: kies een ingevuld bestand en start de import vanuit Instellingen → Data-import. De verwerking loopt via de edge function import-legacy-data.',
+			"Idempotent: de import gebruikt een aparte legacy_ids-tabel om externe id's te mappen op interne UUID's; opnieuw uploaden van hetzelfde bestand maakt geen duplicaten.",
 			'Foutmeldingen: per rij wordt teruggegeven of de import is geslaagd — corrigeer in Excel en upload opnieuw.',
 		],
 	},
