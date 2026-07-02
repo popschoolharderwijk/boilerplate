@@ -169,3 +169,42 @@ INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) V
 <p>Groet,<br/>Popschool Harderwijk</p>',
 	true
 ) ON CONFLICT (event_key) DO NOTHING;
+
+INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
+	'agreement_created',
+	'Je lesovereenkomst bij Popschool Harderwijk is aangemaakt',
+	'<p>Hoi {{leerling_naam}},</p>
+<p>Fijn dat je bij ons komt lessen! Je lesovereenkomst is aangemaakt met de volgende gegevens:</p>
+<ul>
+  <li><strong>Docent:</strong> {{docent_naam}}</li>
+  <li><strong>Lessoort:</strong> {{les_type}}</li>
+  <li><strong>Frequentie:</strong> {{frequentie}}</li>
+  <li><strong>Dag &amp; tijd:</strong> {{dag}} om {{tijd}}</li>
+  <li><strong>Startdatum:</strong> {{startdatum}}</li>
+  <li><strong>Prijs per les:</strong> {{prijs_per_les}}</li>
+  <li><strong>Betaalmethode:</strong> {{betaalmethode}}</li>
+</ul>
+<p>In het leerlingportaal vind je je agenda, facturen en overige informatie over je lessen.</p>
+<p>Veel muziekplezier!<br/>Popschool Harderwijk</p>',
+	true
+) ON CONFLICT (event_key) DO NOTHING;
+
+INSERT INTO public.email_templates (event_key, subject, body_html, is_enabled) VALUES (
+	'agreement_created_teacher',
+	'Nieuwe lesovereenkomst: {{leerling_naam}}',
+	'<p>Hoi {{docent_naam}},</p>
+<p>Er is een nieuwe lesovereenkomst aan je gekoppeld:</p>
+<ul>
+  <li><strong>Leerling:</strong> {{leerling_naam}}</li>
+  <li><strong>Lessoort:</strong> {{les_type}}</li>
+  <li><strong>Frequentie:</strong> {{frequentie}}</li>
+  <li><strong>Dag &amp; tijd:</strong> {{dag}} om {{tijd}}</li>
+  <li><strong>Startdatum:</strong> {{startdatum}}</li>
+  <li><strong>Prijs per les:</strong> {{prijs_per_les}}</li>
+  <li><strong>Betaalmethode:</strong> {{betaalmethode}}</li>
+</ul>
+<p>De lessen verschijnen automatisch in je agenda.</p>
+<p>Groet,<br/>Popschool Harderwijk</p>',
+	true
+) ON CONFLICT (event_key) DO NOTHING;
+
