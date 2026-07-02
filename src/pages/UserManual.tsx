@@ -144,7 +144,34 @@ const sections: ManualSection[] = [
 			'Handmatige correctie: een factuur kan in de DB op status "cancelled" worden gezet; admins kunnen indien nodig een correctie-batch aanmaken (kind: correction) en opnieuw genereren.',
 		],
 	},
-
+	{
+		icon: NAV_ICONS.mandaten,
+		title: NAV_LABELS.mandaten,
+		description:
+			'Beheer SEPA-incassomandaten waarmee de school lesgeld automatisch mag afschrijven van de rekening van de leerling of ouder/verzorger.',
+		details: [
+			'Aanmaken: voer IBAN, tenaamstelling en (optioneel) BIC in. Het systeem genereert automatisch een unieke mandaatreferentie (UMR) en zet het mandaat op status "pending".',
+			'Uitnodigen: verstuur een mandaatuitnodiging per e-mail (template "incasso_invite") zodat de debiteur digitaal akkoord kan geven.',
+			'Activeren: na akkoord wordt het mandaat "active" met een signature date; alleen actieve mandaten worden meegenomen in een incasso-batch.',
+			'Intrekken: een mandaat kan handmatig op "revoked" gezet worden; toekomstige batches slaan de leerling dan over.',
+			'Zichtbaarheid: staff/admin zien alle mandaten; leerlingen/ouders zien alleen hun eigen mandaat (afgedwongen via RLS).',
+		],
+	},
+	{
+		icon: NAV_ICONS.incasso,
+		title: NAV_LABELS.incasso,
+		description:
+			'Bundel automatische incasso-opdrachten in batches, genereer een SEPA XML (pain.008) voor de bank en verwerk statusmeldingen (pain.002).',
+		details: [
+			'Batch aanmaken: kies een collection date, batch-type (first / recurring / final / one-off) en een omschrijving. De batch krijgt automatisch een uniek MessageId en PaymentInformationId.',
+			'Batch-items: voeg per leerling één of meer regels toe met bedrag (in centen) en remittance-informatie (bv. "Lesgeld november 2026").',
+			'Facturen genereren: bij goedkeuring van de batch worden per leerling automatisch facturen aangemaakt en gemaild (zie Facturen).',
+			'SEPA XML exporteren: de knop "Genereer SEPA XML" roept de edge function generate-sepa-xml aan en levert een pain.008.001.08-bestand dat je uploadt in je bankportaal.',
+			'Statusupdate importeren: upload het pain.002-terugmeldbestand van de bank via "Status importeren". De edge function import-sepa-status matcht per EndToEndId en zet items op paid / rejected inclusief reason code.',
+			'Correctiebatches: bij storneringen kun je een batch met kind "correction" aanmaken zonder de originele factuur te raken.',
+			'Toegang: alleen admin/site_admin. Alle acties zijn gelogd en idempotent (opnieuw uitvoeren maakt geen dubbele opdrachten).',
+		],
+	},
 	{
 		icon: NAV_ICONS.projects,
 		title: NAV_LABELS.projects,
