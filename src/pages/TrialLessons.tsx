@@ -126,15 +126,15 @@ export default function TrialLessons() {
 				key: 'actions',
 				label: '',
 				render: (r) => (
-					<div className="flex gap-2 justify-end">
+					<div className="flex gap-2 justify-end whitespace-nowrap">
 						{r.status === 'scheduled' && (
 							<Button size="sm" variant="outline" onClick={() => setStatus(r, 'completed')}>
-								Markeer gegeven
+								Gegeven
 							</Button>
 						)}
 						{r.status === 'student_confirmed' && (
 							<Button size="sm" onClick={() => convert(r)}>
-								Maak overeenkomst
+								Overeenkomst
 							</Button>
 						)}
 						{(r.status === 'scheduled' || r.status === 'completed') && (
