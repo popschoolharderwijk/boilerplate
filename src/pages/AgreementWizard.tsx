@@ -8,7 +8,7 @@ import { TeacherSlotStepContent } from '@/components/agreements/TeacherSlotStepC
 import { UserStepContent } from '@/components/agreements/UserStepContent';
 import { STEP_ORDER, WizardStep, WizardStepIndicator } from '@/components/agreements/WizardStepIndicator';
 import { NavPageHeaderIcon } from '@/components/layout/NavPageHeaderIcon';
-import { SubscriptionCard } from '@/components/subscriptions/SubscriptionCard';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
