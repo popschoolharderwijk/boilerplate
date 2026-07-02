@@ -415,6 +415,28 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 							}
 						: undefined
 				}
+				onMarkTrialCompleted={
+					ui.editingEvent?.source_type === 'trial_lesson' && ui.editingEvent.source_id && canEdit && user
+						? async () => {
+								const trialId = ui.editingEvent?.source_id;
+								if (!trialId) return;
+								const { error } = await supabase.rpc('mark_trial_lesson_completed', {
+									_trial_id: trialId,
+								});
+								if (error) {
+									toast.error(
+										error.message === 'invalid_status_transition'
+											? 'Deze proefles kan niet meer als gegeven worden gemarkeerd'
+											: 'Kon proefles niet markeren als gegeven',
+									);
+									return;
+								}
+								toast.success('Proefles gemarkeerd als gegeven');
+								ui.setFormDialogOpen(false);
+								await reloadAgenda();
+							}
+						: undefined
+				}
 			/>
 		</div>
 	);

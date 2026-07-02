@@ -66,6 +66,10 @@ interface AgendaEventFormDialogProps {
 	needsReschedule?: boolean;
 	/** Called to mark a teacher-cancelled lesson as rescheduled */
 	onMarkRescheduled?: () => void;
+	/** Called to mark a trial lesson as given (teacher or staff). Only relevant for trial_lesson events. */
+	onMarkTrialCompleted?: () => void | Promise<void>;
+	/** Whether the mark-trial-completed action is in progress */
+	isMarkingTrialCompleted?: boolean;
 }
 
 interface ProjectOption {
@@ -97,6 +101,8 @@ export function AgendaEventFormDialog({
 	cancellationType: cancelType,
 	needsReschedule,
 	onMarkRescheduled,
+	onMarkTrialCompleted,
+	isMarkingTrialCompleted = false,
 }: AgendaEventFormDialogProps) {
 	const { user, isPrivileged } = useAuth();
 
@@ -166,6 +172,8 @@ export function AgendaEventFormDialog({
 	const canRevert = !!deviationInfo && !!onRevert;
 	const canCancelLesson =
 		(isLessonEvent || isLessonGroupEvent) && event?.id && (onCancelLesson || onOpenCancelConfirm);
+	const isTrialEvent = event?.source_type === 'trial_lesson';
+	const canMarkTrialCompleted = isTrialEvent && !isCancelledEvent && !!onMarkTrialCompleted;
 
 	type FormAction =
 		| { kind: 'submit'; e: FormEvent }
@@ -502,7 +510,7 @@ export function AgendaEventFormDialog({
 					)}
 
 					<DialogFooter
-						className={`flex-wrap gap-2 ${canDelete || canCancelLesson ? 'sm:justify-between' : 'sm:justify-end'}`}
+						className={`flex-wrap gap-2 ${canDelete || canCancelLesson || canMarkTrialCompleted ? 'sm:justify-between' : 'sm:justify-end'}`}
 					>
 						<div className="flex gap-2 order-last sm:order-none">
 							{canDelete && (
@@ -537,6 +545,17 @@ export function AgendaEventFormDialog({
 									disabled={saving || reverting || isCancelling}
 								>
 									{isCancelling ? 'Bezig...' : 'Les herstellen'}
+								</Button>
+							)}
+							{canMarkTrialCompleted && onMarkTrialCompleted && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => void onMarkTrialCompleted()}
+									disabled={saving || reverting || isCancelling || isMarkingTrialCompleted}
+								>
+									<LuCalendarCheck className="h-4 w-4 mr-2" />
+									{isMarkingTrialCompleted ? 'Bezig...' : 'Markeer als gegeven'}
 								</Button>
 							)}
 						</div>
