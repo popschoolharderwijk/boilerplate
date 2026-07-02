@@ -547,6 +547,17 @@ export function AgendaEventFormDialog({
 									{isCancelling ? 'Bezig...' : 'Les herstellen'}
 								</Button>
 							)}
+							{canMarkTrialCompleted && onMarkTrialCompleted && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => void onMarkTrialCompleted()}
+									disabled={saving || reverting || isCancelling || isMarkingTrialCompleted}
+								>
+									<LuCalendarCheck className="h-4 w-4 mr-2" />
+									{isMarkingTrialCompleted ? 'Bezig...' : 'Markeer als gegeven'}
+								</Button>
+							)}
 						</div>
 						<div className="flex gap-2">
 							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
