@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { AccountingSettings, PaymentProvider } from '@/lib/accounting/types';
+import type { AccountingSettings } from '@/lib/accounting/types';
 
 export function AccountingSettingsManager() {
 	const { isAdmin, isSiteAdmin } = useAuth();
