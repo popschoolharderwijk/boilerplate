@@ -195,9 +195,74 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: getSafeErrorMessage(errB ?? new Error('Aanmaken overeenkomst B mislukt')) });
 	}
 
+	// Bevestigingsmails naar beide leerlingen en de docent (best-effort).
+	try {
+		const { data: lt } = await admin
+			.from('lesson_types')
+			.select('name')
+			.eq('id', body.lesson_type_id)
+			.maybeSingle();
+		const { data: profs } = await admin
+			.from('profiles')
+			.select('user_id, email, first_name, last_name')
+			.in('user_id', [body.student_user_id_a, body.student_user_id_b, body.teacher_user_id]);
+		const profMap = new Map((profs ?? []).map((p) => [p.user_id, p]));
+		const teacher = profMap.get(body.teacher_user_id);
+		const teacherName = `${teacher?.first_name ?? ''} ${teacher?.last_name ?? ''}`.trim() || 'docent';
+
+		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
+			try {
+				const resp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${serviceKey}`,
+					},
+					body: JSON.stringify({ event_key, to, vars }),
+				});
+				if (!resp.ok) {
+					const text = await resp.text().catch(() => '');
+					console.error(`${event_key} mail non-2xx`, resp.status, text);
+				}
+			} catch (mailErr) {
+				console.error(`${event_key} mail`, mailErr);
+			}
+		};
+
+		const baseVars = {
+			docent_naam: teacherName,
+			les_type: lt?.name ?? '',
+			frequentie: FREQUENCY_LABELS[body.frequency] ?? body.frequency,
+			prijs_per_les: formatPrice(body.price_per_lesson),
+			dag: DAY_NAMES_NL[body.day_of_week] ?? '',
+			tijd: body.start_time.slice(0, 5),
+			startdatum: formatDate(body.start_date),
+			betaalmethode: PAYMENT_METHOD_LABELS.stripe, // duo loopt standaard via Stripe/incasso
+		};
+
+		for (const studentId of [body.student_user_id_a, body.student_user_id_b]) {
+			const s = profMap.get(studentId);
+			if (!s?.email) continue;
+			const studentName = `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'leerling';
+			await sendMail('agreement_created', s.email.toLowerCase(), {
+				...baseVars,
+				leerling_naam: studentName,
+			});
+			if (teacher?.email) {
+				await sendMail('agreement_created_teacher', teacher.email.toLowerCase(), {
+					...baseVars,
+					leerling_naam: studentName,
+				});
+			}
+		}
+	} catch (mailErr) {
+		console.error('duo agreement mail block', mailErr);
+	}
+
 	return jsonResponse(200, {
 		ok: true,
 		duo_pair_id: duoPairId,
 		agreement_ids: [rowA.id, rowB.id],
 	});
 });
+
