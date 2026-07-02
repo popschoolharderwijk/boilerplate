@@ -27,6 +27,7 @@ const adminOperationalNavItems = [
 
 // Finance sub-group (nested under Beheer)
 const financeNavItems = [
+	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/incasso', label: NAV_LABELS.incasso, icon: NAV_ICONS.incasso },
 	{ href: '/mandaten', label: NAV_LABELS.mandaten, icon: NAV_ICONS.mandaten },
 	{ href: '/facturen', label: NAV_LABELS.invoices, icon: NAV_ICONS.invoices },
@@ -37,7 +38,6 @@ const financeNavItems = [
 const adminNavItems = [
 	{ href: '/users', label: NAV_LABELS.users, icon: NAV_ICONS.users },
 	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
-	{ href: '/abonnementen', label: NAV_LABELS.subscriptions, icon: NAV_ICONS.subscriptions },
 	{ href: '/data-import', label: NAV_LABELS.dataImport, icon: NAV_ICONS.dataImport },
 	{ href: '/lesvrije-periodes', label: NAV_LABELS.noLessonPeriods, icon: NAV_ICONS.noLessonPeriods },
 	{ href: '/email-templates', label: NAV_LABELS.emailTemplates, icon: NAV_ICONS.emailTemplates },
