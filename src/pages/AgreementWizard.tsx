@@ -194,7 +194,7 @@ export default function AgreementWizard() {
 		slot: null as SlotWithStatus | null,
 		partnerStudentUserId: null as string | null,
 		partnerUser: null as User | null,
-		paymentMethod: 'stripe' as 'stripe' | 'sepa' | 'manual',
+		paymentMethod: 'sepa' as 'stripe' | 'sepa' | 'manual',
 		sepaMandateId: null as string | null,
 	});
 
