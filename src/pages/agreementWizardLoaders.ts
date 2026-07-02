@@ -340,16 +340,7 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 		await sendAgreementCreatedMails(insertResult.data.id);
 	}
 
-	if (!agreement && insertResult.data?.id && form.paymentMethod === 'stripe') {
-		const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
-			body: { lesson_agreement_id: insertResult.data.id },
-		});
-		if (inviteErr) {
-			toast.warning('Overeenkomst opgeslagen, maar betaaluitnodiging kon niet worden verstuurd');
-		} else {
-			toast.success('Overeenkomst toegevoegd — betaaluitnodiging verstuurd naar de leerling');
-		}
-	} else if (!agreement && form.paymentMethod === 'sepa') {
+	if (!agreement && form.paymentMethod === 'sepa') {
 		toast.success('Overeenkomst toegevoegd — SEPA-incasso gekoppeld');
 	} else if (!agreement && form.paymentMethod === 'manual') {
 		toast.success('Overeenkomst toegevoegd — handmatige facturatie');
