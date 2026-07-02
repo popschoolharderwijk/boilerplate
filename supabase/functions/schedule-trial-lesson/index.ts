@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
 
 		const sendMail = async (event_key: string, to: string, vars: Record<string, string>) => {
 			try {
-				await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
+				const resp = await fetch(`${supabaseUrl}/functions/v1/send-template-email`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -260,10 +260,15 @@ Deno.serve(async (req) => {
 					},
 					body: JSON.stringify({ event_key, to, vars }),
 				});
+				if (!resp.ok) {
+					const text = await resp.text().catch(() => '');
+					console.error(`${event_key} mail non-2xx`, resp.status, text);
+				}
 			} catch (mailErr) {
 				console.error(`${event_key} mail`, mailErr);
 			}
 		};
+
 
 		// Email to student (or parent)
 		await sendMail('trial_scheduled', (parentEmail || studentEmail).toLowerCase(), sharedVars);
