@@ -17,9 +17,9 @@ const sections: ManualSection[] = [
 		description: 'Het dashboard is de startpagina na inloggen en toont alles wat vandaag aandacht vraagt.',
 		details: [
 			'Statistieken: aantal actieve leerlingen, docenten en lopende overeenkomsten in één oogopslag.',
-			'Actiepunten: openstaande aanmeldingen, ontbrekende beschikbaarheid, ontbrekende incassomandaten en mislukte betalingen.',
-			'Recente leerlingen: de laatst toegevoegde of gewijzigde leerlingen — klik op een naam voor het profiel.',
-			'Docent beschikbaarheid: snel zien welke docenten vandaag beschikbaar zijn.',
+			'Actiepunten: openstaande aanmeldingen, ontbrekende beschikbaarheid en ontbrekende incassomandaten.',
+			'Recente leerlingen: de vijf meest recent aangemaakte leerlingen (gesorteerd op aanmaakdatum, nieuwste eerst) — klik door naar de leerlingenlijst.',
+			'Docent beschikbaarheid: overzicht per docent van gekoppelde lessoorten en het aantal beschikbare tijdsblokken.',
 			'Nieuwsberichten: actieve berichten voor jouw rol verschijnen bovenaan met titel, datum en eventuele afbeelding.',
 			'Docenten en leerlingen zien een vereenvoudigde versie met alleen hun eigen relevante blokken.',
 		],
