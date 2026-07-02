@@ -76,7 +76,7 @@ const EMAIL_EVENTS = {
 			dag: 'dinsdag',
 			tijd: '15:30',
 			startdatum: '2026-09-01',
-			betaalmethode: 'Automatische incasso via Stripe',
+			betaalmethode: 'Automatische incasso (SEPA)',
 		},
 	},
 	agreement_created_teacher: {
