@@ -336,6 +336,12 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 			.eq('id', fromTrialId);
 	}
 
+	if (!agreement && insertResult.data?.id) {
+		// Bevestigingsmails naar leerling en docent (best-effort, blockt de flow niet).
+		await sendAgreementCreatedMails(insertResult.data.id);
+	}
+
+
 	if (!agreement && insertResult.data?.id && form.paymentMethod === 'stripe') {
 		const { error: inviteErr } = await supabase.functions.invoke('send-incasso-invite', {
 			body: { lesson_agreement_id: insertResult.data.id },
