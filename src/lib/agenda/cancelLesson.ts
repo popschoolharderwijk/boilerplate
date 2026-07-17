@@ -2,9 +2,16 @@ import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog
 import type { CalendarEvent } from '@/components/agenda/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getAgendaLessonContext, lookupAgendaEvent } from '@/lib/agenda/agendaEventLookup';
+import {
+	buildCancelLessonDeviationInsert,
+	buildDeviationPayload,
+	cancelLessonSuccessMessage,
+	isPartialCancellation,
+	resolveCancelLessonOperation,
+	resolveOriginalOccurrence,
+	shouldRestoreCancelledLesson,
+} from '@/lib/agenda/cancelLessonHelpers';
 import type { AgendaAgreementLike } from '@/lib/agenda/moveAgendaEvent';
-import { formatDateToDb, now } from '@/lib/date/date-format';
-import { normalizeTime } from '@/lib/time/time-format';
 import type { AgendaEventRow, CancellationType } from '@/types/agenda-events';
 
 export interface CancelLessonParams {
@@ -29,58 +36,45 @@ export async function cancelLesson(params: CancelLessonParams): Promise<CancelLe
 
 	const recurring = scope === 'thisAndFuture';
 	const { baseStartTime } = getAgendaLessonContext(agendaEvent, agreementsMap);
-
+	const occurrence = resolveOriginalOccurrence(selectedEvent, baseStartTime);
+	const isPartialCancel = isPartialCancellation(cancelledParticipantIds);
 	const isExistingDeviation = selectedEvent.resource.deviationId;
-	let originalDateStr: string;
-	let originalStartTime: string;
-	if (selectedEvent.resource.originalDate && selectedEvent.resource.originalStartTime) {
-		originalDateStr = selectedEvent.resource.originalDate;
-		originalStartTime = selectedEvent.resource.originalStartTime;
-	} else {
-		originalDateStr = selectedEvent.start ? formatDateToDb(selectedEvent.start) : formatDateToDb(now());
-		originalStartTime = normalizeTime(baseStartTime);
-	}
 
-	const isPartialCancel = !!cancelledParticipantIds && cancelledParticipantIds.length > 0;
+	const shouldRestore = shouldRestoreCancelledLesson(
+		selectedEvent.resource.isCancelled,
+		isExistingDeviation,
+		isPartialCancel,
+	);
+	const operation = resolveCancelLessonOperation(shouldRestore, isExistingDeviation);
 
-	if (selectedEvent.resource.isCancelled && isExistingDeviation && !isPartialCancel) {
-		const { error } = await supabase
-			.from('agenda_event_deviations')
-			.delete()
-			.eq('id', selectedEvent.resource.deviationId);
+	if (operation === 'restore') {
+		const deviationId = selectedEvent.resource.deviationId;
+		if (!deviationId) return { ok: false, message: 'Fout bij herstellen les' };
+		const { error } = await supabase.from('agenda_event_deviations').delete().eq('id', deviationId);
 		if (error) return { ok: false, message: 'Fout bij herstellen les' };
 		return { ok: true, message: 'Les hersteld' };
 	}
 
-	if (isExistingDeviation) {
-		const { error } = await supabase
-			.from('agenda_event_deviations')
-			.update({
-				is_cancelled: !isPartialCancel,
-				actual_date: originalDateStr,
-				actual_start_time: originalStartTime,
-				spans_future_occurrences: recurring,
-				cancellation_type: cancellationType ?? null,
-				needs_reschedule: !isPartialCancel && needsReschedule,
-				cancelled_participant_ids: isPartialCancel ? cancelledParticipantIds : null,
-			})
-			.eq('id', selectedEvent.resource.deviationId);
+	const payload = buildDeviationPayload(
+		occurrence,
+		recurring,
+		cancellationType,
+		needsReschedule,
+		isPartialCancel,
+		cancelledParticipantIds ?? null,
+	);
+
+	if (operation === 'update') {
+		const deviationId = selectedEvent.resource.deviationId;
+		if (!deviationId) return { ok: false, message: 'Fout bij annuleren les' };
+		const { error } = await supabase.from('agenda_event_deviations').update(payload).eq('id', deviationId);
 		if (error) return { ok: false, message: 'Fout bij annuleren les' };
-		return { ok: true, message: isPartialCancel ? 'Deelnemer(s) geannuleerd' : 'Les geannuleerd' };
+		return { ok: true, message: cancelLessonSuccessMessage(isPartialCancel) };
 	}
 
-	const { error } = await supabase.from('agenda_event_deviations').insert({
-		event_id: agendaEvent.id,
-		original_date: originalDateStr,
-		original_start_time: originalStartTime,
-		actual_date: originalDateStr,
-		actual_start_time: originalStartTime,
-		is_cancelled: !isPartialCancel,
-		spans_future_occurrences: recurring,
-		cancellation_type: cancellationType ?? null,
-		needs_reschedule: !isPartialCancel && needsReschedule,
-		cancelled_participant_ids: isPartialCancel ? cancelledParticipantIds : null,
-	});
+	const { error } = await supabase
+		.from('agenda_event_deviations')
+		.insert(buildCancelLessonDeviationInsert(agendaEvent.id, occurrence, payload));
 	if (error) return { ok: false, message: 'Fout bij annuleren les' };
-	return { ok: true, message: isPartialCancel ? 'Deelnemer(s) geannuleerd' : 'Les geannuleerd' };
+	return { ok: true, message: cancelLessonSuccessMessage(isPartialCancel) };
 }

@@ -22,6 +22,11 @@ import { useTeacherAvailability } from '@/hooks/useTeacherAvailability';
 import { DEFAULT_END_TIME, DEFAULT_START_TIME } from '@/lib/availability';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import {
+	groupAvailabilityByDay,
+	resolveMyAvailabilityPageGate,
+	validateAvailabilityTimeRange,
+} from '@/lib/teachers/myAvailabilityHelpers';
+import {
 	deleteTeacherAvailability,
 	insertTeacherAvailability,
 	type TeacherAvailability,
@@ -29,6 +34,33 @@ import {
 import { formatTime } from '@/lib/time/time-format';
 
 const dayNames = DAY_NAMES;
+
+function MyAvailabilitySlotRow({
+	avail,
+	deletingId,
+	onDelete,
+}: {
+	avail: TeacherAvailability;
+	deletingId: string | null;
+	onDelete: (id: string) => void;
+}) {
+	return (
+		<div key={avail.id} className="flex items-center justify-between rounded-md border bg-muted/50 p-2 text-sm">
+			<div className="font-medium">
+				{formatTime(avail.start_time)} - {formatTime(avail.end_time)}
+			</div>
+			<Button
+				variant="ghost"
+				size="icon"
+				className="h-6 w-6 text-destructive hover:text-destructive"
+				onClick={() => onDelete(avail.id)}
+				disabled={deletingId === avail.id}
+			>
+				{deletingId === avail.id ? <LoadingSpinner size="sm" /> : <LuTrash2 className="h-3 w-3" />}
+			</Button>
+		</div>
+	);
+}
 
 export default function MyAvailability() {
 	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
@@ -41,15 +73,12 @@ export default function MyAvailability() {
 		end_time: DEFAULT_END_TIME,
 	});
 
-	// Redirect if not a teacher
-	if (!authLoading && !isTeacher) {
-		return <Navigate to="/" replace />;
-	}
+	const pageGate = resolveMyAvailabilityPageGate(authLoading, isTeacher);
 
 	const handleAdd = async () => {
 		if (!teacherUserId) return;
 
-		if (form.start_time >= form.end_time) {
+		if (!validateAvailabilityTimeRange(form.start_time, form.end_time)) {
 			toast.error('Eindtijd moet na starttijd zijn');
 			return;
 		}
@@ -86,17 +115,14 @@ export default function MyAvailability() {
 		loadAvailability();
 	};
 
-	// Group availability by day
-	const availabilityByDay: Record<number, TeacherAvailability[]> = {};
-	for (const avail of availability) {
-		if (!availabilityByDay[avail.day_of_week]) {
-			availabilityByDay[avail.day_of_week] = [];
-		}
-		availabilityByDay[avail.day_of_week].push(avail);
+	const availabilityByDay = groupAvailabilityByDay(availability);
+
+	if (pageGate === 'auth-loading' || loading) {
+		return <PageSkeleton variant="header-and-cards" />;
 	}
 
-	if (authLoading || loading) {
-		return <PageSkeleton variant="header-and-cards" />;
+	if (pageGate === 'denied') {
+		return <Navigate to="/" replace />;
 	}
 
 	return (
@@ -118,27 +144,10 @@ export default function MyAvailability() {
 				dayNames={dayNames}
 				availabilityByDay={availabilityByDay}
 				renderSlot={(avail) => (
-					<div
-						key={avail.id}
-						className="flex items-center justify-between rounded-md border bg-muted/50 p-2 text-sm"
-					>
-						<div className="font-medium">
-							{formatTime(avail.start_time)} - {formatTime(avail.end_time)}
-						</div>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-6 w-6 text-destructive hover:text-destructive"
-							onClick={() => handleDelete(avail.id)}
-							disabled={deletingId === avail.id}
-						>
-							{deletingId === avail.id ? <LoadingSpinner size="sm" /> : <LuTrash2 className="h-3 w-3" />}
-						</Button>
-					</div>
+					<MyAvailabilitySlotRow avail={avail} deletingId={deletingId} onDelete={handleDelete} />
 				)}
 			/>
 
-			{/* Add Availability Dialog */}
 			<Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
 				<DialogContent>
 					<DialogHeader>

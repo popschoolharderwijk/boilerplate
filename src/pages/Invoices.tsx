@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { supabase } from '@/integrations/supabase/client';
+import { downloadInvoicePdf, formatInvoiceStudentName } from '@/lib/invoices/invoicePdfDownloadHelpers';
+import { matchesInvoiceSearch } from '@/lib/invoices/invoiceSearchHelpers';
 import { formatCentsEUR, INVOICE_STATUS_LABELS, type Invoice } from '@/lib/invoices/types';
 
 interface Row extends Invoice {
@@ -46,26 +48,16 @@ function List() {
 
 	const handleDownload = async (id: string) => {
 		setDownloading(id);
-		const { data, error } = await supabase.functions.invoke('get-invoice-pdf', { body: { invoice_id: id } });
+		const result = await downloadInvoicePdf((body) => supabase.functions.invoke('get-invoice-pdf', { body }), id);
 		setDownloading(null);
-		if (error) {
-			toast.error(error.message);
+		if (result.ok === false) {
+			toast.error(result.message);
 			return;
 		}
-		const url = (data as { signed_url?: string } | null)?.signed_url;
-		if (url) window.open(url, '_blank');
+		window.open(result.url, '_blank');
 	};
 
-	const filtered = rows.filter((r) => {
-		if (!search) return true;
-		const q = search.toLowerCase();
-		const name = `${r.profiles?.first_name ?? ''} ${r.profiles?.last_name ?? ''}`.toLowerCase();
-		return (
-			r.invoice_number.toLowerCase().includes(q) ||
-			name.includes(q) ||
-			(r.profiles?.email ?? '').toLowerCase().includes(q)
-		);
-	});
+	const filtered = rows.filter((row) => matchesInvoiceSearch(row, search));
 
 	return (
 		<div className="space-y-6">
@@ -110,12 +102,7 @@ function List() {
 								{filtered.map((inv) => (
 									<tr key={inv.id} className="border-t">
 										<td className="p-3 font-medium">{inv.invoice_number}</td>
-										<td className="p-3">
-											{inv.profiles
-												? `${inv.profiles.first_name ?? ''} ${inv.profiles.last_name ?? ''}`.trim() ||
-													inv.profiles.email
-												: '—'}
-										</td>
+										<td className="p-3">{formatInvoiceStudentName(inv.profiles ?? null)}</td>
 										<td className="p-3">{inv.issue_date}</td>
 										<td className="p-3">
 											<Badge variant="secondary">{INVOICE_STATUS_LABELS[inv.status]}</Badge>

@@ -1,4 +1,10 @@
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export {
+	resolveLegacyPersonUserId,
+	upsertLegacyProfile,
+	upsertLegacyRole,
+} from './legacyImportHelpers.ts';
 
 export interface ImportSummary {
 	tab: string;
@@ -47,68 +53,4 @@ export async function upsertMappedEntity<TPayload extends Record<string, unknown
 	await saveLegacyMapping(admin, entityType, legacyId, data.id, importedBy);
 	mapping.set(legacyId, data.id);
 	summary.created++;
-}
-
-export async function upsertLegacyProfile(
-	admin: SupabaseClient,
-	userId: string,
-	email: string,
-	firstName: string | null,
-	lastName: string | null,
-	phone: string | null,
-): Promise<void> {
-	const { error } = await admin.from('profiles').upsert(
-		{
-			user_id: userId,
-			email,
-			first_name: firstName,
-			last_name: lastName,
-			phone_number: phone,
-		},
-		{ onConflict: 'user_id' },
-	);
-	if (error) throw error;
-}
-
-export async function upsertLegacyRole(
-	admin: SupabaseClient,
-	userId: string,
-	role: 'student' | 'teacher',
-): Promise<void> {
-	const { error } = await admin.from('user_roles').upsert({ user_id: userId, role }, { onConflict: 'user_id,role' });
-	if (error) throw error;
-}
-
-export async function resolveLegacyPersonUserId(options: {
-	admin: SupabaseClient;
-	personMap: Map<string, string>;
-	legacyId: string;
-	email: string;
-	firstName: string | null | undefined;
-	lastName: string | null | undefined;
-	phone: string | null | undefined;
-	role: 'student' | 'teacher';
-	ensureAuthUser: (
-		admin: SupabaseClient,
-		email: string,
-		firstName: string | null | undefined,
-		lastName: string | null | undefined,
-	) => Promise<string>;
-}): Promise<{ userId: string; created: boolean }> {
-	const existingUserId = options.personMap.get(options.legacyId);
-	const userId =
-		existingUserId ??
-		(await options.ensureAuthUser(options.admin, options.email, options.firstName, options.lastName));
-
-	await upsertLegacyProfile(
-		options.admin,
-		userId,
-		options.email,
-		options.firstName ?? null,
-		options.lastName ?? null,
-		options.phone ?? null,
-	);
-	await upsertLegacyRole(options.admin, userId, options.role);
-
-	return { userId, created: !existingUserId };
 }

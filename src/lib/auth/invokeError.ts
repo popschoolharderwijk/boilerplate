@@ -1,4 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { resolveFunctionsHttpErrorMessage, resolveGenericInvokeErrorMessage } from '@/lib/auth/invokeErrorHelpers';
 
 const DEFAULT_FALLBACK = 'Er is een onbekende fout opgetreden.';
 
@@ -8,21 +9,10 @@ export async function getInvokeErrorMessage(
 	options: { isSiteAdmin?: boolean; fallback?: string } = {},
 ): Promise<string> {
 	const { isSiteAdmin = false, fallback = DEFAULT_FALLBACK } = options;
-	let errorMessage = isSiteAdmin && invokeError instanceof Error ? invokeError.message : fallback;
 
 	if (invokeError instanceof FunctionsHttpError) {
-		try {
-			const errorBody = await invokeError.context.json();
-			const bodyError = typeof errorBody?.error === 'string' ? errorBody.error : null;
-			errorMessage = bodyError ?? errorMessage;
-		} catch {
-			if (isSiteAdmin && invokeError instanceof Error) {
-				errorMessage = invokeError.message || String(invokeError);
-			}
-		}
-	} else if (isSiteAdmin && invokeError instanceof Error) {
-		errorMessage = invokeError.message || String(invokeError);
+		return resolveFunctionsHttpErrorMessage(invokeError, isSiteAdmin, fallback);
 	}
 
-	return errorMessage;
+	return resolveGenericInvokeErrorMessage(invokeError, isSiteAdmin, fallback);
 }

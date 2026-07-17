@@ -3,19 +3,28 @@
 // Only admins / site_admins.
 // Idempotent via public.legacy_ids mapping table.
 
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as XLSX from 'npm:xlsx@0.18.5';
 import { z } from 'npm:zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
-import { resolveLegacyPersonUserId, saveLegacyMapping, upsertMappedEntity } from '../_shared/legacy-import.ts';
-
-type Action = 'template' | 'validate' | 'import';
-
-interface Body {
-	action: Action;
-	file_base64?: string;
-}
+import { upsertMappedEntity } from '../_shared/legacy-import.ts';
+import { handleLegacyImportRequest } from './handler.ts';
+import {
+	buildAgreementImportReferenceError,
+	buildLegacyAgreementUpsertPayload,
+	resolveAgreementImportReferences,
+} from './importAgreementsPure.ts';
+import {
+	buildLegacyLessonTypeImportError,
+	buildLegacyLessonTypeOptionImportError,
+	buildLegacyLessonTypeOptionPayload,
+	buildLegacyLessonTypePayload,
+	resolveLessonTypeOptionLessonTypeId,
+} from './importLessonTypesPure.ts';
+import { importStudents, importTeachers } from './importPeople.ts';
+import type { ImportSummary, RowError, StudentImportRow, Tab, TeacherImportRow } from './types.ts';
+import { TABS } from './types.ts';
 
 const FREQ = z.enum(['daily', 'weekly', 'biweekly', 'monthly']);
 
@@ -86,37 +95,6 @@ const agreementSchema = z.object({
 	notes: z.string().optional().nullable(),
 	signup_source: z.string().optional().nullable(),
 });
-
-const TABS = ['lesson_types', 'lesson_type_options', 'teachers', 'students', 'lesson_agreements'] as const;
-type Tab = (typeof TABS)[number];
-
-interface RowError {
-	tab: Tab;
-	row: number;
-	field?: string;
-	message: string;
-}
-
-interface ImportSummary {
-	tab: Tab;
-	created: number;
-	updated: number;
-	failed: number;
-}
-
-function json(body: unknown, status = 200, extra: HeadersInit = {}) {
-	return new Response(JSON.stringify(body), {
-		status,
-		headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extra },
-	});
-}
-
-function base64ToUint8Array(b64: string): Uint8Array {
-	const bin = atob(b64);
-	const out = new Uint8Array(bin.length);
-	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-	return out;
-}
 
 function sheetRows(wb: XLSX.WorkBook, name: string): Record<string, unknown>[] {
 	const sheet = wb.Sheets[name];
@@ -275,21 +253,6 @@ async function getMapping(admin: SupabaseClient, entity: string): Promise<Map<st
 	return map;
 }
 
-async function findAuthUserByEmail(admin: SupabaseClient, email: string): Promise<string | null> {
-	// Iterate pages — small workspaces, fine for first import.
-	const perPage = 1000;
-	for (let page = 1; page <= 20; page++) {
-		const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-		if (error) throw error;
-		const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-		if (found) return found.id;
-		if (data.users.length < perPage) return null;
-	}
-	return null;
-}
-
-// ---------- Import per entity ----------
-
 async function importLessonTypes(
 	admin: SupabaseClient,
 	rows: z.infer<typeof lessonTypeSchema>[],
@@ -307,20 +270,12 @@ async function importLessonTypes(
 				legacyId: row.legacy_id,
 				mapping,
 				importedBy,
-				payload: {
-					name: row.name,
-					icon: row.icon,
-					color: row.color,
-					is_group_lesson: row.is_group_lesson ?? false,
-					cost_center: row.cost_center ?? null,
-					description: row.description ?? null,
-					is_active: row.is_active ?? true,
-				},
+				payload: buildLegacyLessonTypePayload(row),
 				summary,
 			});
 		} catch (err) {
 			summary.failed++;
-			errors.push({ tab: 'lesson_types', row: i + 2, message: getSafeErrorMessage(err) });
+			errors.push(buildLegacyLessonTypeImportError('lesson_types', i + 2, getSafeErrorMessage(err)));
 		}
 	}
 	return summary;
@@ -337,16 +292,8 @@ async function importLessonTypeOptions(
 	const summary: ImportSummary = { tab: 'lesson_type_options', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const lessonTypeId = typeMap.get(row.lesson_type_legacy_id);
-			if (!lessonTypeId) throw new Error(`Geen lesson_type voor ${row.lesson_type_legacy_id}`);
-			const payload = {
-				lesson_type_id: lessonTypeId,
-				frequency: row.frequency,
-				duration_minutes: row.duration_minutes,
-				price_per_lesson: row.price_per_lesson,
-				price_per_lesson_adult_cents: row.price_per_lesson_adult_cents ?? null,
-				price_per_lesson_under_21_cents: row.price_per_lesson_under_21_cents ?? null,
-			};
+			const lessonTypeId = resolveLessonTypeOptionLessonTypeId(typeMap, row.lesson_type_legacy_id);
+			const payload = buildLegacyLessonTypeOptionPayload(row, lessonTypeId);
 			await upsertMappedEntity({
 				admin,
 				table: 'lesson_type_options',
@@ -359,149 +306,7 @@ async function importLessonTypeOptions(
 			});
 		} catch (err) {
 			summary.failed++;
-			errors.push({ tab: 'lesson_type_options', row: i + 2, message: getSafeErrorMessage(err) });
-		}
-	}
-	return summary;
-}
-
-async function ensureAuthUser(
-	admin: SupabaseClient,
-	email: string,
-	firstName: string | null | undefined,
-	lastName: string | null | undefined,
-): Promise<string> {
-	const { data: created, error } = await admin.auth.admin.createUser({
-		email,
-		email_confirm: true,
-		user_metadata: { first_name: firstName ?? null, last_name: lastName ?? null },
-	});
-	if (created?.user) return created.user.id;
-	if (error && (error.message.includes('already') || error.message.includes('exists'))) {
-		const existing = await findAuthUserByEmail(admin, email);
-		if (existing) return existing;
-	}
-	throw error ?? new Error('Gebruiker kon niet worden aangemaakt');
-}
-
-async function importTeachers(
-	admin: SupabaseClient,
-	rows: z.infer<typeof teacherSchema>[],
-	teacherMap: Map<string, string>,
-	typeMap: Map<string, string>,
-	importedBy: string | null,
-	errors: RowError[],
-): Promise<ImportSummary> {
-	const summary: ImportSummary = { tab: 'teachers', created: 0, updated: 0, failed: 0 };
-	for (const [i, row] of rows.entries()) {
-		try {
-			const hadMapping = teacherMap.has(row.legacy_id);
-			const { userId } = await resolveLegacyPersonUserId({
-				admin,
-				personMap: teacherMap,
-				legacyId: row.legacy_id,
-				email: row.email,
-				firstName: row.first_name,
-				lastName: row.last_name,
-				phone: row.phone_number,
-				role: 'teacher',
-				ensureAuthUser,
-			});
-			const { error: tErr } = await admin
-				.from('teachers')
-				.upsert(
-					{ user_id: userId, bio: row.bio ?? null, is_active: row.is_active ?? true },
-					{ onConflict: 'user_id' },
-				);
-			if (tErr) throw tErr;
-			// Lesson type links
-			if (row.lesson_type_legacy_ids) {
-				const wantedLegacyIds = row.lesson_type_legacy_ids
-					.split('|')
-					.map((s) => s.trim())
-					.filter(Boolean);
-				for (const lid of wantedLegacyIds) {
-					const ltId = typeMap.get(lid);
-					if (!ltId) {
-						errors.push({
-							tab: 'teachers',
-							row: i + 2,
-							field: 'lesson_type_legacy_ids',
-							message: `Onbekend: ${lid}`,
-						});
-						continue;
-					}
-					await admin
-						.from('teacher_lesson_types')
-						.upsert(
-							{ teacher_user_id: userId, lesson_type_id: ltId },
-							{ onConflict: 'teacher_user_id,lesson_type_id' },
-						);
-				}
-			}
-			if (!hadMapping) {
-				await saveLegacyMapping(admin, 'teacher', row.legacy_id, userId, importedBy);
-				teacherMap.set(row.legacy_id, userId);
-				summary.created++;
-			} else {
-				summary.updated++;
-			}
-		} catch (err) {
-			summary.failed++;
-			errors.push({ tab: 'teachers', row: i + 2, message: getSafeErrorMessage(err) });
-		}
-	}
-	return summary;
-}
-
-async function importStudents(
-	admin: SupabaseClient,
-	rows: z.infer<typeof studentSchema>[],
-	studentMap: Map<string, string>,
-	importedBy: string | null,
-	errors: RowError[],
-): Promise<ImportSummary> {
-	const summary: ImportSummary = { tab: 'students', created: 0, updated: 0, failed: 0 };
-	for (const [i, row] of rows.entries()) {
-		try {
-			const hadMapping = studentMap.has(row.legacy_id);
-			const { userId } = await resolveLegacyPersonUserId({
-				admin,
-				personMap: studentMap,
-				legacyId: row.legacy_id,
-				email: row.email,
-				firstName: row.first_name,
-				lastName: row.last_name,
-				phone: row.phone_number,
-				role: 'student',
-				ensureAuthUser,
-			});
-			const { error: sErr } = await admin.from('students').upsert(
-				{
-					user_id: userId,
-					date_of_birth: row.date_of_birth ?? null,
-					parent_name: row.parent_name ?? null,
-					parent_email: row.parent_email && row.parent_email !== '' ? row.parent_email : null,
-					parent_phone_number: row.parent_phone_number ?? null,
-					debtor_info_same_as_student: row.debtor_info_same_as_student ?? true,
-					debtor_name: row.debtor_name ?? null,
-					debtor_address: row.debtor_address ?? null,
-					debtor_postal_code: row.debtor_postal_code ?? null,
-					debtor_city: row.debtor_city ?? null,
-				},
-				{ onConflict: 'user_id' },
-			);
-			if (sErr) throw sErr;
-			if (!hadMapping) {
-				await saveLegacyMapping(admin, 'student', row.legacy_id, userId, importedBy);
-				studentMap.set(row.legacy_id, userId);
-				summary.created++;
-			} else {
-				summary.updated++;
-			}
-		} catch (err) {
-			summary.failed++;
-			errors.push({ tab: 'students', row: i + 2, message: getSafeErrorMessage(err) });
+			errors.push(buildLegacyLessonTypeOptionImportError(i + 2, getSafeErrorMessage(err)));
 		}
 	}
 	return summary;
@@ -520,26 +325,9 @@ async function importAgreements(
 	const summary: ImportSummary = { tab: 'lesson_agreements', created: 0, updated: 0, failed: 0 };
 	for (const [i, row] of rows.entries()) {
 		try {
-			const studentId = studentMap.get(row.student_legacy_id);
-			const teacherId = teacherMap.get(row.teacher_legacy_id);
-			const typeId = typeMap.get(row.lesson_type_legacy_id);
-			if (!studentId || !teacherId || !typeId)
-				throw new Error('Onbekende referentie (student/teacher/lesson_type)');
-			const payload = {
-				student_user_id: studentId,
-				teacher_user_id: teacherId,
-				lesson_type_id: typeId,
-				duration_minutes: row.duration_minutes,
-				frequency: row.frequency,
-				price_per_lesson: row.price_per_lesson,
-				day_of_week: row.day_of_week,
-				start_time: row.start_time.length === 5 ? `${row.start_time}:00` : row.start_time,
-				start_date: row.start_date,
-				end_date: row.end_date && row.end_date !== '' ? row.end_date : null,
-				notes: row.notes ?? null,
-				signup_source: row.signup_source ?? 'legacy-import',
-				is_active: true,
-			};
+			const refs = resolveAgreementImportReferences(row, studentMap, teacherMap, typeMap);
+			if (!refs) throw buildAgreementImportReferenceError();
+			const payload = buildLegacyAgreementUpsertPayload(row, refs);
 			await upsertMappedEntity({
 				admin,
 				table: 'lesson_agreements',
@@ -558,125 +346,52 @@ async function importAgreements(
 	return summary;
 }
 
-// ---------- HTTP handler ----------
+async function runEntityImports(
+	admin: SupabaseClient,
+	rows: Record<Tab, unknown[]>,
+	userId: string,
+): Promise<{ summaries: ImportSummary[]; errors: RowError[] }> {
+	const importErrors: RowError[] = [];
+	const typeMap = await getMapping(admin, 'lesson_type');
+	const optionMap = await getMapping(admin, 'lesson_type_option');
+	const teacherMap = await getMapping(admin, 'teacher');
+	const studentMap = await getMapping(admin, 'student');
+	const agreementMap = await getMapping(admin, 'lesson_agreement');
+
+	const summaries = [
+		await importLessonTypes(
+			admin,
+			rows.lesson_types as z.infer<typeof lessonTypeSchema>[],
+			typeMap,
+			userId,
+			importErrors,
+		),
+		await importLessonTypeOptions(
+			admin,
+			rows.lesson_type_options as z.infer<typeof lessonTypeOptionSchema>[],
+			typeMap,
+			optionMap,
+			userId,
+			importErrors,
+		),
+		await importTeachers(admin, rows.teachers as TeacherImportRow[], teacherMap, typeMap, userId, importErrors),
+		await importStudents(admin, rows.students as StudentImportRow[], studentMap, userId, importErrors),
+		await importAgreements(
+			admin,
+			rows.lesson_agreements as z.infer<typeof agreementSchema>[],
+			agreementMap,
+			studentMap,
+			teacherMap,
+			typeMap,
+			userId,
+			importErrors,
+		),
+	];
+
+	return { summaries, errors: importErrors };
+}
 
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
-
-	try {
-		const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-		const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-		const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-		const authHeader = req.headers.get('Authorization');
-		if (!authHeader) return json({ error: 'Missing authorization header' }, 401);
-
-		const userClient = createClient(supabaseUrl, anonKey, {
-			global: { headers: { Authorization: authHeader } },
-			auth: { autoRefreshToken: false, persistSession: false },
-		});
-		const {
-			data: { user },
-			error: authErr,
-		} = await userClient.auth.getUser();
-		if (authErr || !user) return json({ error: 'Invalid token' }, 401);
-
-		const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).single();
-		if (!roleRow || (roleRow.role !== 'admin' && roleRow.role !== 'site_admin')) {
-			return json({ error: 'Geen rechten voor data-import' }, 403);
-		}
-
-		const body: Body = req.method === 'GET' ? { action: 'template' } : await req.json();
-		const action = body.action;
-
-		if (action === 'template') {
-			const bytes = buildTemplate();
-			return new Response(bytes, {
-				headers: {
-					...corsHeaders,
-					'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-					'Content-Disposition': 'attachment; filename="legacy-import-template.xlsx"',
-				},
-			});
-		}
-
-		if (action !== 'validate' && action !== 'import') return json({ error: 'Onbekende action' }, 400);
-		if (!body.file_base64) return json({ error: 'file_base64 ontbreekt' }, 400);
-
-		const wb = XLSX.read(base64ToUint8Array(body.file_base64), { type: 'array' });
-		const { rows, errors } = validateWorkbook(wb);
-
-		const counts = Object.fromEntries(TABS.map((t) => [t, (rows[t] as unknown[]).length])) as Record<Tab, number>;
-
-		if (action === 'validate') return json({ ok: errors.length === 0, errors, counts });
-
-		if (errors.length > 0) return json({ error: 'Validatie faalt; fix eerst', errors }, 400);
-
-		const admin = createClient(supabaseUrl, serviceKey, {
-			auth: { autoRefreshToken: false, persistSession: false },
-		});
-
-		const typeMap = await getMapping(admin, 'lesson_type');
-		const optionMap = await getMapping(admin, 'lesson_type_option');
-		const teacherMap = await getMapping(admin, 'teacher');
-		const studentMap = await getMapping(admin, 'student');
-		const agreementMap = await getMapping(admin, 'lesson_agreement');
-
-		const importErrors: RowError[] = [];
-		const summaries: ImportSummary[] = [];
-		summaries.push(
-			await importLessonTypes(
-				admin,
-				rows.lesson_types as z.infer<typeof lessonTypeSchema>[],
-				typeMap,
-				user.id,
-				importErrors,
-			),
-		);
-		summaries.push(
-			await importLessonTypeOptions(
-				admin,
-				rows.lesson_type_options as z.infer<typeof lessonTypeOptionSchema>[],
-				typeMap,
-				optionMap,
-				user.id,
-				importErrors,
-			),
-		);
-		summaries.push(
-			await importTeachers(
-				admin,
-				rows.teachers as z.infer<typeof teacherSchema>[],
-				teacherMap,
-				typeMap,
-				user.id,
-				importErrors,
-			),
-		);
-		summaries.push(
-			await importStudents(
-				admin,
-				rows.students as z.infer<typeof studentSchema>[],
-				studentMap,
-				user.id,
-				importErrors,
-			),
-		);
-		summaries.push(
-			await importAgreements(
-				admin,
-				rows.lesson_agreements as z.infer<typeof agreementSchema>[],
-				agreementMap,
-				studentMap,
-				teacherMap,
-				typeMap,
-				user.id,
-				importErrors,
-			),
-		);
-
-		return json({ ok: importErrors.length === 0, summaries, errors: importErrors, counts });
-	} catch (err) {
-		console.error('[import-legacy-data]', err);
-		return json({ error: getSafeErrorMessage(err) }, 500);
-	}
+	return handleLegacyImportRequest(req, { buildTemplate, validateWorkbook, runEntityImports });
 });

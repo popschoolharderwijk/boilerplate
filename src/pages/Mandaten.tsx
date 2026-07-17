@@ -21,11 +21,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserSelectSingle } from '@/components/ui/user-select';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { supabase } from '@/integrations/supabase/client';
-import { isValidIban, normalizeIban } from '@/lib/incasso/iban';
+import {
+	executeNewMandateCreate,
+	resolveHolderFromStudentSelection,
+	resolveMandateValidationToast,
+} from '@/lib/incasso/mandateCreateHelpers';
+import { formatProfileFullName } from '@/lib/incasso/mandateDisplayHelpers';
 import { MANDATE_STATUS_LABELS, type SepaMandate } from '@/lib/incasso/types';
 
 interface MandateRow extends SepaMandate {
 	profiles: { first_name: string | null; last_name: string | null; email: string } | null;
+}
+
+function mandateStatusVariant(status: SepaMandate['status']): 'default' | 'destructive' | 'secondary' {
+	if (status === 'active') return 'default';
+	if (status === 'revoked') return 'destructive';
+	return 'secondary';
 }
 
 export default function Mandaten() {
@@ -113,24 +124,11 @@ function MandatenContent() {
 								{rows.map((m) => (
 									<tr key={m.id} className="border-t">
 										<td className="p-3 font-mono text-xs">{m.mandate_reference}</td>
-										<td className="p-3">
-											{m.profiles
-												? `${m.profiles.first_name ?? ''} ${m.profiles.last_name ?? ''}`.trim() ||
-													m.profiles.email
-												: '—'}
-										</td>
+										<td className="p-3">{formatProfileFullName(m.profiles)}</td>
 										<td className="p-3 font-mono text-xs">{m.iban}</td>
 										<td className="p-3">{m.account_holder}</td>
 										<td className="p-3">
-											<Badge
-												variant={
-													m.status === 'active'
-														? 'default'
-														: m.status === 'revoked'
-															? 'destructive'
-															: 'secondary'
-												}
-											>
+											<Badge variant={mandateStatusVariant(m.status)}>
 												{MANDATE_STATUS_LABELS[m.status]}
 											</Badge>
 										</td>
@@ -161,38 +159,24 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 	const [saving, setSaving] = useState(false);
 
 	const handleSubmit = async () => {
-		if (!studentId || !iban || !holder) {
-			toast.error('Vul leerling, IBAN en rekeninghouder in');
-			return;
-		}
-		const normalizedIban = normalizeIban(iban);
-		if (!isValidIban(normalizedIban)) {
-			toast.error('Ongeldig IBAN');
-			return;
-		}
 		setSaving(true);
-		const { data: refData, error: refErr } = await supabase.rpc('next_mandate_reference');
-		if (refErr || !refData) {
-			setSaving(false);
-			toast.error(`Kenmerk genereren mislukt: ${refErr?.message ?? 'onbekend'}`);
-			return;
-		}
-		const { error } = await supabase.from('sepa_mandates').insert({
-			student_user_id: studentId,
-			mandate_reference: refData as string,
-			iban: normalizedIban,
-			bic: bic || null,
-			account_holder: holder,
-			signed_at: signedAt,
-			signature_method: method,
-			status: 'active',
-			sequence_type: 'FRST',
+		const result = await executeNewMandateCreate(supabase, {
+			studentId,
+			iban,
+			bic,
+			holder,
+			signedAt,
+			method,
 		});
 		setSaving(false);
-		if (error) {
-			toast.error(error.message);
+
+		if (result.ok === false) {
+			if (result.kind === 'validation') toast.error(resolveMandateValidationToast(result.error));
+			else if (result.kind === 'reference') toast.error(`Kenmerk genereren mislukt: ${result.message}`);
+			else toast.error(result.message);
 			return;
 		}
+
 		toast.success('Mandaat aangemaakt');
 		onCreated();
 	};
@@ -210,10 +194,9 @@ function NewMandateDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 						value={studentId}
 						onChange={(u) => {
 							setStudentId(u?.user_id ?? null);
-							if (u && !holder) {
-								const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
-								if (name) setHolder(name);
-							}
+							setHolder((current) =>
+								resolveHolderFromStudentSelection(current, u?.first_name, u?.last_name),
+							);
 						}}
 						filter="students"
 						placeholder="Kies leerling..."

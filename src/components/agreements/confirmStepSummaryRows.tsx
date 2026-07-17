@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { LuTriangleAlert } from 'react-icons/lu';
 import { UserDisplay } from '@/components/ui/user-display';
 import type { SlotWithStatus } from '@/lib/agreementSlots';
+import { mapConfirmSelectedLessonTypeValues } from '@/lib/agreements/confirmStepSummaryRowsHelpers';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { frequencyLabels } from '@/lib/frequencies';
@@ -110,11 +111,12 @@ export function ConfirmSlotDiffValue({ slot }: { slot: SlotWithStatus | null }) 
 }
 
 export function ConfirmSelectedLessonTypeRows({ lessonType }: { lessonType: WizardLessonTypeInfo | undefined }) {
+	const values = mapConfirmSelectedLessonTypeValues(lessonType);
 	return (
 		<>
-			<ConfirmLessonTypeRow lessonTypeName={lessonType?.name} frequency={lessonType?.frequency} />
-			<ConfirmDurationRow minutes={lessonType?.duration_minutes} />
-			<ConfirmPriceRow price={lessonType?.price_per_lesson} />
+			<ConfirmLessonTypeRow lessonTypeName={values.lessonTypeName} frequency={values.frequency} />
+			<ConfirmDurationRow minutes={values.durationMinutes} />
+			<ConfirmPriceRow price={values.pricePerLesson} />
 		</>
 	);
 }

@@ -13,6 +13,12 @@ import { PageHeader } from '@/components/ui/page-header';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAccountingSettings } from '@/hooks/useAccounting';
 import { supabase } from '@/integrations/supabase/client';
+import {
+	buildIncassoBatchNumber,
+	computeDefaultCollectionDate,
+	mapIncassoBatchRows,
+	resolveIncassoBatchTableView,
+} from '@/lib/incasso/incassoPageHelpers';
 import { BATCH_STATUS_LABELS, formatCentsEUR, type IncassoBatch } from '@/lib/incasso/types';
 
 export default function Incasso() {
@@ -21,6 +27,56 @@ export default function Incasso() {
 			<IncassoContent />
 		</AdminSiteGuard>
 	);
+}
+
+function IncassoBatchTableBody({ rows }: { rows: IncassoBatch[] }) {
+	return (
+		<table className="w-full text-sm">
+			<thead className="bg-muted/50 text-left">
+				<tr>
+					<th className="p-3">Nummer</th>
+					<th className="p-3">Incassodatum</th>
+					<th className="p-3">Status</th>
+					<th className="p-3 text-right">Regels</th>
+					<th className="p-3 text-right">Totaal</th>
+					<th className="p-3" />
+				</tr>
+			</thead>
+			<tbody>
+				{rows.map((batch) => (
+					<tr key={batch.id} className="border-t">
+						<td className="p-3 font-mono">{batch.batch_number}</td>
+						<td className="p-3">{batch.collection_date}</td>
+						<td className="p-3">
+							<Badge variant={batch.status === 'draft' ? 'secondary' : 'default'}>
+								{BATCH_STATUS_LABELS[batch.status]}
+							</Badge>
+						</td>
+						<td className="p-3 text-right">{batch.item_count}</td>
+						<td className="p-3 text-right">{formatCentsEUR(batch.total_amount_cents)}</td>
+						<td className="p-3 text-right">
+							<Link to={`/incasso/batches/${batch.id}`}>
+								<Button size="sm" variant="outline">
+									Openen
+								</Button>
+							</Link>
+						</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
+	);
+}
+
+function IncassoBatchTableContent({ loading, rows }: { loading: boolean; rows: IncassoBatch[] }) {
+	const view = resolveIncassoBatchTableView(loading, rows.length);
+	if (view === 'loading') {
+		return <div className="p-8 text-center text-muted-foreground">Laden...</div>;
+	}
+	if (view === 'empty') {
+		return <div className="p-8 text-center text-muted-foreground">Nog geen batches</div>;
+	}
+	return <IncassoBatchTableBody rows={rows} />;
 }
 
 function IncassoContent() {
@@ -36,7 +92,7 @@ function IncassoContent() {
 			.select('*')
 			.order('collection_date', { ascending: false });
 		if (error) toast.error(error.message);
-		setRows((data ?? []) as unknown as IncassoBatch[]);
+		setRows(mapIncassoBatchRows(data));
 		setLoading(false);
 	}, []);
 
@@ -70,46 +126,7 @@ function IncassoContent() {
 
 			<Card>
 				<CardContent className="p-0">
-					{loading ? (
-						<div className="p-8 text-center text-muted-foreground">Laden...</div>
-					) : rows.length === 0 ? (
-						<div className="p-8 text-center text-muted-foreground">Nog geen batches</div>
-					) : (
-						<table className="w-full text-sm">
-							<thead className="bg-muted/50 text-left">
-								<tr>
-									<th className="p-3">Nummer</th>
-									<th className="p-3">Incassodatum</th>
-									<th className="p-3">Status</th>
-									<th className="p-3 text-right">Regels</th>
-									<th className="p-3 text-right">Totaal</th>
-									<th className="p-3" />
-								</tr>
-							</thead>
-							<tbody>
-								{rows.map((b) => (
-									<tr key={b.id} className="border-t">
-										<td className="p-3 font-mono">{b.batch_number}</td>
-										<td className="p-3">{b.collection_date}</td>
-										<td className="p-3">
-											<Badge variant={b.status === 'draft' ? 'secondary' : 'default'}>
-												{BATCH_STATUS_LABELS[b.status]}
-											</Badge>
-										</td>
-										<td className="p-3 text-right">{b.item_count}</td>
-										<td className="p-3 text-right">{formatCentsEUR(b.total_amount_cents)}</td>
-										<td className="p-3 text-right">
-											<Link to={`/incasso/batches/${b.id}`}>
-												<Button size="sm" variant="outline">
-													Openen
-												</Button>
-											</Link>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					)}
+					<IncassoBatchTableContent loading={loading} rows={rows} />
 				</CardContent>
 			</Card>
 		</div>
@@ -125,22 +142,13 @@ function NewBatchDialog({
 	onClose: () => void;
 	onCreated: () => void;
 }) {
-	const computeDefault = () => {
-		const d = new Date();
-		const year = d.getFullYear();
-		const month = d.getMonth() + 1;
-		return `${year}-${String(month).padStart(2, '0')}-${String(defaultCollectionDay).padStart(2, '0')}`;
-	};
-	const [collectionDate, setCollectionDate] = useState(computeDefault());
+	const [collectionDate, setCollectionDate] = useState(() => computeDefaultCollectionDate(defaultCollectionDay));
 	const [saving, setSaving] = useState(false);
 
 	const handleSubmit = async () => {
 		setSaving(true);
-		const yyyymm = collectionDate.slice(0, 7).replace('-', '');
-		const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-		const batch_number = `INC-${yyyymm}-${suffix}`;
 		const { error } = await supabase.from('incasso_batches').insert({
-			batch_number,
+			batch_number: buildIncassoBatchNumber(collectionDate),
 			collection_date: collectionDate,
 			status: 'draft',
 		});

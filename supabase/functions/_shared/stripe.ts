@@ -1,7 +1,5 @@
-// Shared Stripe helpers for Edge Functions.
-// Use Stripe's npm package directly to avoid esm.sh's Node polyfill that crashes
-// Supabase Edge Runtime with `Deno.core.runMicrotasks() is not supported`.
 import Stripe from 'npm:stripe@17.5.0';
+import { readGeneratedSepaDebitPaymentMethodId } from './stripePure.ts';
 
 export { getSafeErrorMessage } from './errors.ts';
 
@@ -29,16 +27,7 @@ export function getStripeId(value: unknown): string | null {
 }
 
 function getGeneratedSepaDebitPaymentMethodId(latestAttempt: unknown): string | null {
-	const details = asRecord(asRecord(latestAttempt)?.payment_method_details);
-	const direct = readStringProperty(details, 'generated_sepa_debit');
-	if (direct) return direct;
-
-	for (const value of Object.values(details ?? {})) {
-		const nested = readStringProperty(asRecord(value), 'generated_sepa_debit');
-		if (nested) return nested;
-	}
-
-	return null;
+	return readGeneratedSepaDebitPaymentMethodId(latestAttempt);
 }
 
 export function getReusablePaymentMethodIdFromSetupIntent(setupIntent: Stripe.SetupIntent): string | null {

@@ -5,6 +5,13 @@ import { getDisplayName } from '@/lib/display-name';
 
 type TrialLessonRow = Tables<'trial_lessons'>;
 
+type TrialLessonProfile = {
+	user_id: string;
+	first_name: string | null;
+	last_name: string | null;
+	email: string | null;
+};
+
 export type EnrichedTrialLessonStudent = TrialLessonRow & {
 	teacher_name: string;
 	lesson_type_name: string | null;
@@ -17,6 +24,31 @@ export type EnrichedTrialLessonStaff = EnrichedTrialLessonStudent & {
 
 interface EnrichOptions {
 	includeStudent?: boolean;
+}
+
+function enrichSingleTrialLesson<T extends TrialLessonRow>(
+	trial: T,
+	profileMap: Map<string, TrialLessonProfile>,
+	lessonTypeMap: Map<string, string>,
+	includeStudent: boolean,
+): (T & EnrichedTrialLessonStaff) | (T & EnrichedTrialLessonStudent) {
+	const teacherProfile = profileMap.get(trial.teacher_user_id);
+	const base = {
+		...trial,
+		teacher_name: teacherProfile ? getDisplayName(teacherProfile) : '—',
+		lesson_type_name: lessonTypeMap.get(trial.lesson_type_id) ?? null,
+	};
+
+	if (!includeStudent) {
+		return base;
+	}
+
+	const studentProfile = profileMap.get(trial.student_user_id);
+	return {
+		...base,
+		student_name: studentProfile ? getDisplayName(studentProfile) : '—',
+		student_email: studentProfile?.email ?? '',
+	};
 }
 
 export async function enrichTrialLessons<T extends TrialLessonRow>(
@@ -43,24 +75,11 @@ export async function enrichTrialLessons<T extends TrialLessonRow>(
 
 	const profileMap = indexByUserId(profilesRes.data ?? []);
 	const lessonTypeMap = new Map((lessonTypesRes.data ?? []).map((lt) => [lt.id, lt.name] as const));
+	const includeStudent = options.includeStudent ?? false;
 
-	return trials.map((trial) => {
-		const teacherProfile = profileMap.get(trial.teacher_user_id);
-		const base = {
-			...trial,
-			teacher_name: teacherProfile ? getDisplayName(teacherProfile) : '—',
-			lesson_type_name: lessonTypeMap.get(trial.lesson_type_id) ?? null,
-		};
-
-		if (!options.includeStudent) {
-			return base;
-		}
-
-		const studentProfile = profileMap.get(trial.student_user_id);
-		return {
-			...base,
-			student_name: studentProfile ? getDisplayName(studentProfile) : '—',
-			student_email: studentProfile?.email ?? '',
-		};
-	});
+	const enriched: ((T & EnrichedTrialLessonStaff) | (T & EnrichedTrialLessonStudent))[] = [];
+	for (const trial of trials) {
+		enriched.push(enrichSingleTrialLesson(trial, profileMap, lessonTypeMap, includeStudent));
+	}
+	return enriched;
 }

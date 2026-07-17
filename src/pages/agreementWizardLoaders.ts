@@ -1,9 +1,15 @@
 import type { NavigateFunction } from 'react-router-dom';
 import { toast } from 'sonner';
-import { WizardStep } from '@/components/agreements/WizardStepIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
-import { sendAgreementCreatedMails } from '@/lib/email/sendAgreementCreatedMails';
+import { loadWizardTeachers } from '@/lib/agreements/loadWizardTeachers';
+import type { RawAgreementRow } from '@/lib/agreements/mapAgreementTableRow';
+import {
+	fetchAgreementProfiles,
+	getTeacherUserIdFromJoin,
+	mapLoadedAgreementRow,
+} from '@/lib/agreements/wizardLoadHelpers';
+import { saveWizardAgreement, type WizardSaveForm } from '@/lib/agreements/wizardSaveHelpers';
 import type { AgreementTableRow, LessonFrequency, WizardTeacherInfo } from '@/types/lesson-agreements';
 
 type AgreementLoadParams = {
@@ -29,22 +35,7 @@ type TeachersLoadParams = {
 };
 
 type SaveParams = {
-	form: {
-		studentUserId: string | null;
-		lessonTypeId: string | null;
-		teacherUserId: string | null;
-		slot: SlotWithStatus | null;
-		partnerStudentUserId: string | null;
-		selectedOptionSnapshot: {
-			duration_minutes: number;
-			frequency: LessonFrequency;
-			price_per_lesson: number;
-		} | null;
-		startDate: string;
-		endDate: string;
-		paymentMethod: 'stripe' | 'sepa' | 'manual';
-		sepaMandateId: string | null;
-	};
+	form: WizardSaveForm;
 	agreement: AgreementTableRow | null;
 	isDuoLesson: boolean;
 	fromRequestId: string | null;
@@ -58,7 +49,7 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 	const { data, error } = await supabase
 		.from('lesson_agreements')
 		.select(
-			`id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, 
+			`id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, duo_pair_id,
 			student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson,
 			payment_method, sepa_mandate_id,
 			lesson_types(id, name, icon, color), 
@@ -73,63 +64,12 @@ async function loadAgreement(params: AgreementLoadParams): Promise<AgreementLoad
 		return null;
 	}
 
-	const teacher = Array.isArray(data.teachers) ? data.teachers[0] : data.teachers;
-	const teacherUserId = teacher?.user_id;
-	const lessonType = Array.isArray(data.lesson_types) ? data.lesson_types[0] : data.lesson_types;
-
-	const [teacherProfile, studentProfile] = await Promise.all([
-		teacherUserId
-			? supabase
-					.from('profiles')
-					.select('first_name, last_name, email, avatar_url')
-					.eq('user_id', teacherUserId)
-					.single()
-			: { data: null },
-		supabase
-			.from('profiles')
-			.select('first_name, last_name, email, avatar_url')
-			.eq('user_id', data.student_user_id)
-			.single(),
-	]);
+	const teacherUserId = getTeacherUserIdFromJoin(data.teachers);
+	const profileMap = await fetchAgreementProfiles(teacherUserId, data.student_user_id);
 
 	return {
 		loadedPeriod: { start_date: data.start_date, end_date: data.end_date ?? null },
-		agreement: {
-			id: data.id,
-			created_at: data.created_at,
-			day_of_week: data.day_of_week,
-			start_time: data.start_time,
-			start_date: data.start_date,
-			end_date: data.end_date,
-			is_active: data.is_active,
-			notes: data.notes,
-			student_user_id: data.student_user_id,
-			teacher_user_id: data.teacher_user_id,
-			lesson_type_id: data.lesson_type_id,
-			duration_minutes: data.duration_minutes,
-			frequency: data.frequency,
-			price_per_lesson: data.price_per_lesson,
-			payment_method: (data as { payment_method?: string }).payment_method ?? 'sepa',
-			sepa_mandate_id: (data as { sepa_mandate_id?: string | null }).sepa_mandate_id ?? null,
-			student: {
-				first_name: studentProfile.data?.first_name ?? null,
-				last_name: studentProfile.data?.last_name ?? null,
-				avatar_url: studentProfile.data?.avatar_url ?? null,
-				email: studentProfile.data?.email ?? '',
-			},
-			teacher: {
-				email: teacherProfile.data?.email ?? null,
-				first_name: teacherProfile.data?.first_name ?? null,
-				last_name: teacherProfile.data?.last_name ?? null,
-				avatar_url: teacherProfile.data?.avatar_url ?? null,
-			},
-			lesson_type: {
-				id: lessonType.id,
-				name: lessonType.name,
-				icon: lessonType.icon,
-				color: lessonType.color,
-			},
-		},
+		agreement: mapLoadedAgreementRow(data as RawAgreementRow, profileMap),
 	};
 }
 
@@ -173,183 +113,16 @@ async function loadTeacherSlots(params: TeacherSlotsLoadParams): Promise<SlotWit
 	);
 }
 
-async function loadTeachers(params: TeachersLoadParams): Promise<WizardTeacherInfo[]> {
-	const { data: tltData } = await supabase
-		.from('teacher_lesson_types')
-		.select('teacher_user_id')
-		.eq('lesson_type_id', params.lessonTypeId);
+type WizardLoadHandler = (
+	params: AgreementLoadParams | TeacherSlotsLoadParams | TeachersLoadParams | SaveParams,
+) => Promise<AgreementLoadResult | null | SlotWithStatus[] | null | WizardTeacherInfo[] | boolean>;
 
-	if (!tltData?.length) return [];
-
-	const teacherUserIds = tltData.map((r) => r.teacher_user_id);
-	const { data: teachersData } = await supabase
-		.from('teachers')
-		.select('user_id')
-		.in('user_id', teacherUserIds)
-		.eq('is_active', true);
-
-	if (!teachersData?.length) return [];
-
-	const userIds = teachersData.map((t) => t.user_id);
-	const { data: profiles } = await supabase
-		.from('profiles')
-		.select('user_id, first_name, last_name, email, avatar_url')
-		.in('user_id', userIds);
-
-	const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
-
-	return teachersData.map((t) => {
-		const p = profileMap.get(t.user_id);
-		return {
-			id: t.user_id,
-			userId: t.user_id,
-			firstName: p?.first_name ?? null,
-			lastName: p?.last_name ?? null,
-			email: p?.email ?? null,
-			avatarUrl: p?.avatar_url ?? null,
-		};
-	});
-}
-
-async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
-	const { form, agreement, isDuoLesson, fromRequestId, fromTrialId, navigate } = params;
-
-	if (
-		!form.studentUserId ||
-		!form.lessonTypeId ||
-		!form.teacherUserId ||
-		!form.slot ||
-		form.slot.status === 'occupied'
-	) {
-		toast.error('Selecteer alle verplichte velden');
-		return false;
-	}
-
-	const timeValue = form.slot.start_time.includes(':') ? form.slot.start_time : form.slot.start_time + ':00';
-
-	if (!agreement && isDuoLesson) {
-		if (!form.partnerStudentUserId || form.partnerStudentUserId === form.studentUserId) {
-			toast.error('Kies een duo-partner (verschillende leerling)');
-			return false;
-		}
-		if (!form.selectedOptionSnapshot) {
-			toast.error('Selecteer een lesoptie');
-			return false;
-		}
-		const { data: duoData, error: duoErr } = await supabase.functions.invoke<{
-			agreement_ids: string[];
-			duo_pair_id: string;
-		}>('create-duo-agreements', {
-			body: {
-				student_user_id_a: form.studentUserId,
-				student_user_id_b: form.partnerStudentUserId,
-				teacher_user_id: form.teacherUserId,
-				lesson_type_id: form.lessonTypeId,
-				day_of_week: form.slot.day_of_week,
-				start_time: timeValue,
-				duration_minutes: form.selectedOptionSnapshot.duration_minutes,
-				frequency: form.selectedOptionSnapshot.frequency,
-				price_per_lesson: form.selectedOptionSnapshot.price_per_lesson,
-				start_date: form.startDate,
-				end_date: form.endDate || null,
-				signup_source: fromRequestId ? 'public_form' : 'staff_duo',
-			},
-		});
-		if (duoErr || !duoData?.agreement_ids?.length) {
-			toast.error(duoErr?.message ?? 'Fout bij aanmaken duo-overeenkomsten');
-			return false;
-		}
-		const inviteResults = await Promise.all(
-			duoData.agreement_ids.map((aid) =>
-				supabase.functions.invoke('send-incasso-invite', { body: { lesson_agreement_id: aid } }),
-			),
-		);
-		const failedInvites = inviteResults.filter((r) => r.error).length;
-		if (failedInvites > 0) {
-			toast.warning(
-				`Duo-overeenkomsten opgeslagen, maar ${failedInvites} betaaluitnodiging(en) konden niet worden verstuurd`,
-			);
-		} else {
-			toast.success('Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd');
-		}
-		navigate('/agreements');
-		return true;
-	}
-
-	if (form.paymentMethod === 'sepa' && !form.sepaMandateId) {
-		toast.error('Kies een SEPA-mandaat of een andere betaalmethode');
-		return false;
-	}
-
-	const payload = {
-		teacher_user_id: form.teacherUserId,
-		day_of_week: form.slot.day_of_week,
-		start_time: timeValue,
-		start_date: form.startDate,
-		end_date: form.endDate || null,
-		payment_method: form.paymentMethod,
-		sepa_mandate_id: form.paymentMethod === 'sepa' ? form.sepaMandateId : null,
-	};
-
-	const insertResult = agreement
-		? await supabase.from('lesson_agreements').update(payload).eq('id', agreement.id).select('id').maybeSingle()
-		: await supabase
-				.from('lesson_agreements')
-				.insert({
-					...payload,
-					student_user_id: form.studentUserId,
-					lesson_type_id: form.lessonTypeId,
-					duration_minutes: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.duration_minutes : 30,
-					frequency: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.frequency : 'weekly',
-					price_per_lesson: form.selectedOptionSnapshot ? form.selectedOptionSnapshot.price_per_lesson : 30,
-					is_active: true,
-					signup_source: fromRequestId ? 'public_form' : 'staff',
-				})
-				.select('id')
-				.single();
-
-	if (insertResult.error) {
-		toast.error(insertResult.error.message.includes('unique') ? 'Deze combinatie bestaat al' : 'Fout bij opslagen');
-		return false;
-	}
-
-	if (fromRequestId && !agreement && insertResult.data?.id) {
-		await supabase
-			.from('lesson_signup_requests')
-			.update({
-				status: 'approved',
-				processed_at: new Date().toISOString(),
-				created_agreement_id: insertResult.data.id,
-			})
-			.eq('id', fromRequestId);
-	}
-
-	if (fromTrialId && !agreement && insertResult.data?.id) {
-		await supabase
-			.from('trial_lessons')
-			.update({
-				status: 'converted',
-				admin_processed_at: new Date().toISOString(),
-				created_agreement_id: insertResult.data.id,
-			})
-			.eq('id', fromTrialId);
-	}
-
-	if (!agreement && insertResult.data?.id) {
-		// Confirmation emails to student and teacher (best-effort; does not block the flow).
-		await sendAgreementCreatedMails(insertResult.data.id);
-	}
-
-	if (!agreement && form.paymentMethod === 'sepa') {
-		toast.success('Overeenkomst toegevoegd — SEPA-incasso gekoppeld');
-	} else if (!agreement && form.paymentMethod === 'manual') {
-		toast.success('Overeenkomst toegevoegd — handmatige facturatie');
-	} else {
-		toast.success(agreement ? 'Overeenkomst bijgewerkt' : 'Overeenkomst toegevoegd');
-	}
-	navigate(fromRequestId ? '/aanmeldingen' : fromTrialId ? '/trial-lessons' : '/agreements');
-	return true;
-}
+const wizardLoadHandlers: Record<WizardLoadPhase, WizardLoadHandler> = {
+	agreement: (params) => loadAgreement(params as AgreementLoadParams),
+	teacherSlots: (params) => loadTeacherSlots(params as TeacherSlotsLoadParams),
+	teachers: (params) => loadWizardTeachers((params as TeachersLoadParams).lessonTypeId),
+	save: (params) => saveWizardAgreement(params as SaveParams),
+};
 
 export async function runWizardLoad(
 	phase: 'agreement',
@@ -365,41 +138,11 @@ export async function runWizardLoad(
 	phase: WizardLoadPhase,
 	params: AgreementLoadParams | TeacherSlotsLoadParams | TeachersLoadParams | SaveParams,
 ): Promise<AgreementLoadResult | null | SlotWithStatus[] | null | WizardTeacherInfo[] | boolean> {
-	switch (phase) {
-		case 'agreement':
-			return loadAgreement(params as AgreementLoadParams);
-		case 'teacherSlots':
-			return loadTeacherSlots(params as TeacherSlotsLoadParams);
-		case 'teachers':
-			return loadTeachers(params as TeachersLoadParams);
-		case 'save':
-			return saveWizardAgreement(params as SaveParams);
-	}
-}
-
-/** Used by useTeachers to skip loading on early wizard steps. */
-export function shouldLoadTeachers(step: WizardStep, lessonTypeId: string | null): lessonTypeId is string {
-	return step !== WizardStep.User && step !== WizardStep.Period && lessonTypeId !== null;
-}
-
-type SelectedLessonTypeSnapshot = { duration_minutes: number; frequency: LessonFrequency };
-
-export function shouldLoadTeacherSlots(
-	step: WizardStep,
-	teacherUserId: string | null,
-	lessonTypeId: string | null,
-	startDate: string,
-	endDate: string,
-	selectedLessonType: SelectedLessonTypeSnapshot | undefined,
-): selectedLessonType is SelectedLessonTypeSnapshot {
-	return (
-		step === WizardStep.TeacherSlot &&
-		teacherUserId !== null &&
-		lessonTypeId !== null &&
-		startDate !== '' &&
-		endDate !== '' &&
-		selectedLessonType !== undefined
-	);
+	return wizardLoadHandlers[phase](params);
 }
 
 export { agreementBreadcrumbItems, wizardInitFromAgreement } from '@/lib/agreements/agreementWizardHelpers';
+export {
+	shouldLoadTeacherSlots,
+	shouldLoadTeachers,
+} from '@/lib/agreements/wizardLoadHelpers';

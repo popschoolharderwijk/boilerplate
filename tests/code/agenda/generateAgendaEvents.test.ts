@@ -3,6 +3,7 @@ import { generateAgendaEvents } from '../../../src/lib/agenda/eventGenerators';
 import { formatAgendaEventSaveError } from '../../../src/lib/agenda/formatAgendaEventSaveError';
 import { formatDateToDb } from '../../../src/lib/date/date-format';
 import type { AgendaEventRow } from '../../../src/types/agenda-events';
+import type { LessonAgreementWithStudent } from '../../../src/types/lesson-agreements';
 
 function mockAgendaEvent(overrides: Partial<AgendaEventRow> = {}): AgendaEventRow {
 	return {
@@ -68,6 +69,123 @@ describe('generateAgendaEvents', () => {
 		expect(formatDateToDb(events[0]?.start as Date)).toBe('2025-02-17');
 		expect(formatDateToDb(events[1]?.start as Date)).toBe('2025-02-24');
 	});
+
+	it('defaults end time to one hour when end_time is missing', () => {
+		const rangeStart = new Date('2025-02-01T00:00:00');
+		const rangeEnd = new Date('2025-02-28T23:59:59');
+		const events = generateAgendaEvents(
+			[mockAgendaEvent({ end_time: null, start_time: '14:00:00' })],
+			rangeStart,
+			rangeEnd,
+			new Map(),
+		);
+		expect(events).toHaveLength(1);
+		const event = events[0];
+		expect(event).toBeDefined();
+		expect((event.end as Date).getTime() - (event.start as Date).getTime()).toBe(60 * 60 * 1000);
+	});
+
+	it('marks lesson agreement events as lessons', () => {
+		const agreement: LessonAgreementWithStudent = {
+			id: 'agr-1',
+			day_of_week: 1,
+			start_time: '14:00',
+			start_date: '2025-02-01',
+			end_date: '2025-02-28',
+			is_active: true,
+			student_user_id: 'stu-1',
+			lesson_type_id: 'lt-1',
+			duration_minutes: 60,
+			frequency: 'weekly',
+			price_per_lesson: 30,
+			profiles: { first_name: 'Jan', last_name: 'Jansen', email: 'jan@example.com' },
+			lesson_types: {
+				id: 'lt-1',
+				name: 'Piano',
+				icon: 'piano',
+				color: '#10b981',
+				is_group_lesson: false,
+			},
+		};
+		const rangeStart = new Date('2025-02-01T00:00:00');
+		const rangeEnd = new Date('2025-02-28T23:59:59');
+		const events = generateAgendaEvents(
+			[
+				mockAgendaEvent({
+					recurring: true,
+					recurring_frequency: 'weekly',
+					source_type: 'lesson_agreement',
+					source_id: 'agr-1',
+					start_date: '2025-02-03',
+					start_time: '14:00:00',
+					end_time: '15:00:00',
+				}),
+			],
+			rangeStart,
+			rangeEnd,
+			new Map(),
+			undefined,
+			new Map([['agr-1', agreement]]),
+		);
+		expect(events.length).toBe(4);
+		expect(events[0]?.resource.isLesson).toBe(true);
+		expect(events[0]?.resource.agreementId).toBe('agr-1');
+	});
+
+	it('generates daily recurring events in range', () => {
+		const rangeStart = new Date('2025-02-10T00:00:00');
+		const rangeEnd = new Date('2025-02-14T23:59:59');
+		const events = generateAgendaEvents(
+			[
+				mockAgendaEvent({
+					recurring: true,
+					recurring_frequency: 'daily',
+					recurring_end_date: '2025-02-14',
+					start_date: '2025-02-10',
+				}),
+			],
+			rangeStart,
+			rangeEnd,
+			new Map(),
+		);
+		expect(events).toHaveLength(5);
+		expect(formatDateToDb(events[0]?.start as Date)).toBe('2025-02-10');
+		expect(formatDateToDb(events[4]?.start as Date)).toBe('2025-02-14');
+	});
+
+	it('generates biweekly recurring events in range', () => {
+		const rangeStart = new Date('2025-02-01T00:00:00');
+		const rangeEnd = new Date('2025-03-31T23:59:59');
+		const events = generateAgendaEvents(
+			[
+				mockAgendaEvent({
+					recurring: true,
+					recurring_frequency: 'biweekly',
+					recurring_end_date: '2025-03-31',
+				}),
+			],
+			rangeStart,
+			rangeEnd,
+			new Map(),
+		);
+		expect(events).toHaveLength(4);
+		expect(formatDateToDb(events[0]?.start as Date)).toBe('2025-02-17');
+		expect(formatDateToDb(events[1]?.start as Date)).toBe('2025-03-03');
+		expect(formatDateToDb(events[2]?.start as Date)).toBe('2025-03-17');
+		expect(formatDateToDb(events[3]?.start as Date)).toBe('2025-03-31');
+	});
+
+	it('treats recurring without frequency as non-recurring', () => {
+		const rangeStart = new Date('2025-02-01T00:00:00');
+		const rangeEnd = new Date('2025-02-28T23:59:59');
+		const events = generateAgendaEvents(
+			[mockAgendaEvent({ recurring: true, recurring_frequency: null })],
+			rangeStart,
+			rangeEnd,
+			new Map(),
+		);
+		expect(events).toHaveLength(1);
+	});
 });
 
 describe('formatAgendaEventSaveError', () => {
@@ -84,5 +202,13 @@ describe('formatAgendaEventSaveError', () => {
 	it('falls back to default message', () => {
 		expect(formatAgendaEventSaveError(new Error('unknown'))).toBe('unknown');
 		expect(formatAgendaEventSaveError(null)).toBe('Opslaan mislukt');
+	});
+
+	it('reads message from plain objects', () => {
+		expect(formatAgendaEventSaveError({ message: 'Validation failed' })).toBe('Validation failed');
+	});
+
+	it('returns the default message when the error message is empty', () => {
+		expect(formatAgendaEventSaveError(new Error(''))).toBe('Opslaan mislukt');
 	});
 });

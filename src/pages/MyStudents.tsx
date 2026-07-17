@@ -1,53 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import { MyStudentsAgreementsCell, MyStudentsLessonTypesCell } from '@/components/students/MyStudentsTableParts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getUserInitials } from '@/components/ui/user-display';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { useServerPaginatedListState } from '@/hooks/useServerPaginatedListState';
 import { supabase } from '@/integrations/supabase/client';
-import { getDisplayName } from '@/lib/display-name';
 import {
-	flattenStudentWithAgreements,
-	type PaginatedStudentsResponseRaw,
-	type StudentWithAgreements,
-} from '@/types/students';
-
-function studentDisplayName(s: StudentWithAgreements): string {
-	return getDisplayName({
-		first_name: s.first_name,
-		last_name: s.last_name,
-		email: s.email,
-	});
-}
-
-function studentInitials(s: StudentWithAgreements): string {
-	return getUserInitials({
-		first_name: s.first_name,
-		last_name: s.last_name,
-		email: s.email,
-	});
-}
-
-function lessonTypesForStudent(s: StudentWithAgreements) {
-	const types = new Map<string, { name: string; icon: string | null; color: string | null }>();
-	for (const agreement of s.agreements) {
-		if (agreement.lesson_type) {
-			types.set(agreement.lesson_type.id, {
-				name: agreement.lesson_type.name,
-				icon: agreement.lesson_type.icon,
-				color: agreement.lesson_type.color,
-			});
-		}
-	}
-	return Array.from(types.values());
-}
+	applyMyStudentsLoadOutcome,
+	buildMyStudentsLoadParams,
+	mapMyStudentsPaginatedResponse,
+	myStudentDisplayName,
+	myStudentInitials,
+	shouldRedirectMyStudents,
+	shouldShowMyStudentsSkeleton,
+	shouldSkipMyStudentsLoad,
+} from '@/lib/students/myStudentsPageHelpers';
+import type { StudentWithAgreements } from '@/types/students';
 
 export default function MyStudents() {
 	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
@@ -71,17 +44,17 @@ export default function MyStudents() {
 	});
 
 	useEffect(() => {
-		if (authLoading || !isTeacher || !teacherUserId) return;
+		if (shouldSkipMyStudentsLoad(authLoading, isTeacher, teacherUserId)) return;
 
 		let cancelled = false;
 		setLoading(true);
-		const offset = (currentPage - 1) * rowsPerPage;
+		const loadParams = buildMyStudentsLoadParams(currentPage, rowsPerPage, debouncedSearchQuery);
 
 		void supabase
 			.rpc('get_students_paginated', {
-				p_limit: rowsPerPage,
-				p_offset: offset,
-				p_search: debouncedSearchQuery || null,
+				p_limit: loadParams.limit,
+				p_offset: loadParams.offset,
+				p_search: loadParams.search,
 				p_status: 'all',
 				p_lesson_type_id: null,
 				p_sort_column: 'name',
@@ -95,9 +68,7 @@ export default function MyStudents() {
 					setLoading(false);
 					return;
 				}
-				const result = data as unknown as PaginatedStudentsResponseRaw;
-				setStudents((result.data ?? []).map(flattenStudentWithAgreements));
-				setTotalCount(result.total_count ?? 0);
+				applyMyStudentsLoadOutcome(mapMyStudentsPaginatedResponse(data), setStudents, setTotalCount);
 				setLoading(false);
 			});
 
@@ -122,12 +93,12 @@ export default function MyStudents() {
 				label: 'Leerling',
 				sortable: false,
 				className: 'w-56',
-				render: (s) => (
+				render: (student) => (
 					<div className="flex items-center gap-3">
 						<Avatar className="h-9 w-9 flex-shrink-0">
-							<AvatarImage src={s.avatar_url ?? undefined} alt={studentDisplayName(s)} />
+							<AvatarImage src={student.avatar_url ?? undefined} alt={myStudentDisplayName(student)} />
 							<AvatarFallback className="bg-primary/10 text-primary text-sm">
-								{studentInitials(s)}
+								{myStudentInitials(student)}
 							</AvatarFallback>
 						</Avatar>
 						<TooltipProvider delayDuration={200}>
@@ -135,17 +106,17 @@ export default function MyStudents() {
 								<TooltipTrigger asChild>
 									<div className="min-w-0 flex-1 overflow-hidden">
 										<Link
-											to={`/students/${s.user_id}`}
+											to={`/students/${student.user_id}`}
 											className="block font-medium truncate hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
 										>
-											{studentDisplayName(s)}
+											{myStudentDisplayName(student)}
 										</Link>
-										<p className="text-xs text-muted-foreground truncate">{s.email}</p>
+										<p className="text-xs text-muted-foreground truncate">{student.email}</p>
 									</div>
 								</TooltipTrigger>
 								<TooltipContent side="top" align="start">
-									<p className="font-medium">{studentDisplayName(s)}</p>
-									<p className="text-xs text-muted-foreground">{s.email}</p>
+									<p className="font-medium">{myStudentDisplayName(student)}</p>
+									<p className="text-xs text-muted-foreground">{student.email}</p>
 								</TooltipContent>
 							</Tooltip>
 						</TooltipProvider>
@@ -156,60 +127,31 @@ export default function MyStudents() {
 				key: 'phone_number',
 				label: 'Telefoon',
 				sortable: false,
-				render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
+				render: (student) => <span className="text-muted-foreground">{student.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'lesson_types',
 				label: 'Lessoorten',
 				sortable: false,
-				render: (s) => {
-					const lessonTypes = lessonTypesForStudent(s);
-					if (lessonTypes.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
-					return (
-						<div className="flex flex-wrap gap-1">
-							{lessonTypes.map((lt) => (
-								<Badge key={lt.name} variant="secondary" className="text-xs">
-									{lt.name}
-								</Badge>
-							))}
-						</div>
-					);
-				},
+				render: (student) => <MyStudentsLessonTypesCell student={student} />,
 			},
 			{
 				key: 'agreements',
 				label: 'Lesovereenkomsten',
 				sortable: false,
 				className: 'min-w-96',
-				render: (s) => {
-					if (s.agreements.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
-					return (
-						<div className="flex flex-wrap gap-2">
-							{s.agreements.map((agreement) => (
-								<LessonAgreementItem
-									key={agreement.id}
-									agreement={agreement}
-									className="flex-shrink-0"
-								/>
-							))}
-						</div>
-					);
-				},
+				render: (student) => <MyStudentsAgreementsCell student={student} />,
 			},
 		],
 		[],
 	);
 
-	if (!authLoading && !isTeacher) {
+	if (shouldRedirectMyStudents(authLoading, isTeacher)) {
 		return <Navigate to="/" replace />;
 	}
 
-	if (authLoading || loading) {
+	if (shouldShowMyStudentsSkeleton(authLoading, loading)) {
 		return <PageSkeleton variant="header-and-cards" />;
 	}
 
@@ -223,7 +165,7 @@ export default function MyStudents() {
 				searchQuery={searchQuery}
 				onSearchChange={handleSearchChange}
 				loading={loading}
-				getRowKey={(s) => s.user_id}
+				getRowKey={(student) => student.user_id}
 				emptyMessage="Geen leerlingen gevonden"
 				serverPagination={{
 					totalCount,

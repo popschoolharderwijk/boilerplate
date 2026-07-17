@@ -17,20 +17,33 @@ export function filterAgreementRows(rows: AgreementTableRow[], search: string): 
 	return filtered;
 }
 
+function getAgreementRowProfileName(row: AgreementTableRow, sortColumn: 'student' | 'teacher'): string {
+	const profile = sortColumn === 'student' ? row.student : row.teacher;
+	return `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.toLowerCase();
+}
+
+function compareAgreementRowsByProfile(
+	a: AgreementTableRow,
+	b: AgreementTableRow,
+	sortColumn: 'student' | 'teacher',
+	sortDirection: 'asc' | 'desc' | null,
+): number {
+	const aName = getAgreementRowProfileName(a, sortColumn);
+	const bName = getAgreementRowProfileName(b, sortColumn);
+	const asc = sortDirection === 'asc';
+	return asc ? aName.localeCompare(bName) : bName.localeCompare(aName);
+}
+
 function sortAgreementRowsByProfile(
 	rows: AgreementTableRow[],
 	sortColumn: 'student' | 'teacher',
 	sortDirection: 'asc' | 'desc' | null,
 ): AgreementTableRow[] {
 	const sorted = [...rows];
-	const asc = sortDirection === 'asc';
-	sorted.sort((a, b) => {
-		const profileA = sortColumn === 'student' ? a.student : a.teacher;
-		const profileB = sortColumn === 'student' ? b.student : b.teacher;
-		const aName = `${profileA.first_name ?? ''} ${profileA.last_name ?? ''}`.toLowerCase();
-		const bName = `${profileB.first_name ?? ''} ${profileB.last_name ?? ''}`.toLowerCase();
-		return asc ? aName.localeCompare(bName) : bName.localeCompare(aName);
-	});
+	function compareRows(a: AgreementTableRow, b: AgreementTableRow): number {
+		return compareAgreementRowsByProfile(a, b, sortColumn, sortDirection);
+	}
+	sorted.sort(compareRows);
 	return sorted;
 }
 

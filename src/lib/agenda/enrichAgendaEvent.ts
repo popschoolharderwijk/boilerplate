@@ -1,5 +1,8 @@
 import type { CalendarEvent } from '@/components/agenda/types';
-import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
+import {
+	buildLessonAgreementStudentInfo,
+	buildLessonAgreementTeacherName,
+} from '@/lib/agenda/enrichLessonAgreementHelpers';
 import { getDisplayName } from '@/lib/display-name';
 import type { User } from '@/types/users';
 import type { EnrichAgendaEventContext } from './enrichAgendaEventContext';
@@ -81,49 +84,35 @@ function enrichLessonGroupAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventC
 	};
 }
 
-function enrichLessonAgreementAgendaEvent(
-	ev: CalendarEvent,
-	ctx: EnrichAgendaEventContext,
-): CalendarEvent | null {
+function enrichLessonAgreementAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventContext): CalendarEvent | null {
 	if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return null;
 	const agreement = ctx.agreementsMap.get(ev.resource.agreementId);
 	if (!agreement) return null;
 
 	const teacherUid = agreement.teacherUserId;
-	const eventId = ev.resource.eventId;
-	const allParticipantIds = eventId ? (ctx.participantUserIdsByEventId.get(eventId) ?? []) : [];
-	const studentParticipantIds = allParticipantIds.filter((uid) => uid !== teacherUid);
-	const isDuo = studentParticipantIds.length > 1;
-	const studentUsers = isDuo
-		? studentParticipantIds
-				.map((uid) => buildParticipantInfo(ctx.profileMap.get(uid) ?? null, uid))
-				.filter((u): u is NonNullable<typeof u> => !!u)
-		: [];
-	const studentName = isDuo
-		? studentParticipantIds
-				.map((uid) => getDisplayName(ctx.profileMap.get(uid) ?? null))
-				.sort()
-				.join(' & ')
-		: getDisplayName(agreement.profiles);
-	const user = isDuo ? undefined : buildParticipantInfo(agreement.profiles, agreement.student_user_id);
-	const teacherName = agreement.teacherProfile ? getDisplayName(agreement.teacherProfile) : 'Docent onbekend';
+	const studentInfo = buildLessonAgreementStudentInfo(agreement, ev.resource.eventId, teacherUid, ctx);
+	const teacherName = buildLessonAgreementTeacherName(agreement.teacherProfile);
 
 	return {
 		...ev,
-		title: `${studentName} - ${agreement.lesson_types.name}`,
+		title: `${studentInfo.studentName} - ${agreement.lesson_types.name}`,
 		resource: {
 			...ev.resource,
-			studentName,
+			studentName: studentInfo.studentName,
 			teacherName,
 			viewerIsTeacher: ctx.viewerUserId === agreement.teacherUserId,
 			lessonTypeName: agreement.lesson_types.name,
 			lessonTypeColor: agreement.lesson_types.color,
 			lessonTypeIcon: agreement.lesson_types.icon,
 			isGroupLesson: agreement.lesson_types.is_group_lesson ?? false,
-			isDuoLesson: isDuo,
-			studentCount: isDuo ? studentUsers.length : agreement.lesson_types.is_group_lesson ? 1 : undefined,
-			user: user ?? undefined,
-			users: isDuo ? studentUsers : user ? [user] : undefined,
+			isDuoLesson: studentInfo.isDuo,
+			studentCount: studentInfo.isDuo
+				? studentInfo.studentUsers.length
+				: agreement.lesson_types.is_group_lesson
+					? 1
+					: undefined,
+			user: studentInfo.user ?? undefined,
+			users: studentInfo.isDuo ? studentInfo.studentUsers : studentInfo.user ? [studentInfo.user] : undefined,
 			isLesson: true,
 		},
 	};

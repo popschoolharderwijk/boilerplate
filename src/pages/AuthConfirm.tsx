@@ -3,14 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StandaloneErrorPage, StandaloneLoadingPage } from '@/components/auth/StandalonePageLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveAuthConfirmParams, resolveVerifyOtpErrorMessage } from '@/lib/auth/authConfirmHelpers';
 import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
-
-const EMAIL_OTP_TYPES = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email', 'email_change']);
-
-function getSafeNext(value: string | null): string {
-	if (!value?.startsWith('/') || value.startsWith('//')) return '/';
-	return value;
-}
 
 export default function AuthConfirm() {
 	const navigate = useNavigate();
@@ -29,30 +23,24 @@ export default function AuthConfirm() {
 			}
 
 			const params = new URLSearchParams(window.location.search);
-			const tokenHash = params.get('token_hash');
-			const typeParam = params.get('type') ?? 'email';
-			const next = getSafeNext(params.get('next'));
+			const confirmParams = resolveAuthConfirmParams(params);
 
-			if (!tokenHash || !EMAIL_OTP_TYPES.has(typeParam)) {
+			if (!confirmParams.isValid) {
 				setError('Ongeldige inloglink. Vraag een nieuwe link aan.');
 				return;
 			}
 
 			const { error: verifyError } = await supabase.auth.verifyOtp({
-				token_hash: tokenHash,
-				type: typeParam as EmailOtpType,
+				token_hash: confirmParams.tokenHash as string,
+				type: confirmParams.typeParam as EmailOtpType,
 			});
 
 			if (verifyError) {
-				setError(
-					verifyError.message.toLowerCase().includes('expired')
-						? 'Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe link aan.'
-						: verifyError.message,
-				);
+				setError(resolveVerifyOtpErrorMessage(verifyError.message));
 				return;
 			}
 
-			navigate(next, { replace: true });
+			navigate(confirmParams.next, { replace: true });
 		};
 
 		void confirm();

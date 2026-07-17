@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { shouldLoadAccountingReport } from '@/lib/accounting/accountingLoadHelpers';
 import type { AccountingReport, AccountingSettings } from '@/lib/accounting/types';
 
 export function useAccountingSettings() {
@@ -29,7 +30,7 @@ export function useAccountingReport(startDate: string, endDate: string, enabled:
 	const [error, setError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
-		if (!enabled || !startDate || !endDate) return;
+		if (!shouldLoadAccountingReport(enabled, startDate, endDate)) return;
 		setLoading(true);
 		setError(null);
 		const { data, error: rpcError } = await supabase.rpc('get_accounting_report', {

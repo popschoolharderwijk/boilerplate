@@ -6,10 +6,10 @@
  * Pure function, no IO. Reuses existing `getOccurrenceDatesInRange`.
  */
 
-import { addDaysToDateStr } from '@/lib/date/date-format';
 import { getOccurrenceDatesInRange } from '@/lib/lessonHelpers';
 import type { LessonFrequency } from '@/types/lesson-agreements';
-import { BILLING_MONTHS_PER_YEAR, isNonBillingMonthString } from './schoolYear';
+import { shiftDatePastNoLessonPeriods, splitYearlyAmountAcrossBillingMonths } from './calculateYearlyAmountHelpers';
+import { BILLING_MONTHS_PER_YEAR } from './schoolYear';
 
 export interface NoLessonPeriod {
 	/** YYYY-MM-DD (inclusive). */
@@ -47,19 +47,6 @@ export interface CalculateYearlyAmountResult {
 	lessonDates: string[];
 }
 
-function findNoLessonPeriod(dateStr: string, periods: ReadonlyArray<NoLessonPeriod>): NoLessonPeriod | undefined {
-	for (const p of periods) {
-		if (dateStr >= p.start_date && dateStr <= p.end_date) return p;
-	}
-	return undefined;
-}
-
-function periodLengthDays(p: NoLessonPeriod): number {
-	const start = Date.parse(`${p.start_date}T12:00:00`);
-	const end = Date.parse(`${p.end_date}T12:00:00`);
-	return Math.round((end - start) / 86_400_000) + 1;
-}
-
 export function calculateYearlyAmount(input: CalculateYearlyAmountInput): CalculateYearlyAmountResult {
 	const { periodStart, periodEnd, dayOfWeek, frequency, pricePerLessonCents } = input;
 	const billingMonths = input.billingMonths ?? BILLING_MONTHS_PER_YEAR;
@@ -69,34 +56,26 @@ export function calculateYearlyAmount(input: CalculateYearlyAmountInput): Calcul
 		return { lessonsCount: 0, yearlyCents: 0, monthlyCents: 0, leftoverCents: 0, lessonDates: [] };
 	}
 
-	// Generate all theoretical lesson dates in the window.
 	const start = new Date(`${periodStart}T12:00:00`);
 	const end = new Date(`${periodEnd}T12:00:00`);
 	const allDates = getOccurrenceDatesInRange(dayOfWeek, start, end, frequency);
 
-	// Apply shift logic: a no-lesson period pushes all subsequent lessons forward
-	// by exactly the length of the period. Lessons that shift past `periodEnd`
-	// are dropped. August remains a pure skip (no shift, no lesson).
 	const lessonDates: string[] = [];
 	let shiftDays = 0;
 	for (const original of allDates) {
-		let actual = shiftDays > 0 ? addDaysToDateStr(original, shiftDays) : original;
-		while (true) {
-			const period = findNoLessonPeriod(actual, noLessonPeriods);
-			if (!period) break;
-			const len = periodLengthDays(period);
-			shiftDays += len;
-			actual = addDaysToDateStr(actual, len);
-		}
-		if (actual > periodEnd) continue; // falls past hard end date
-		if (isNonBillingMonthString(actual)) continue; // August remains skipped
-		lessonDates.push(actual);
+		const { lessonDate, shiftDays: nextShiftDays } = shiftDatePastNoLessonPeriods(
+			original,
+			periodEnd,
+			noLessonPeriods,
+			shiftDays,
+		);
+		shiftDays = nextShiftDays;
+		if (lessonDate) lessonDates.push(lessonDate);
 	}
 
 	const lessonsCount = lessonDates.length;
 	const yearlyCents = lessonsCount * pricePerLessonCents;
-	const monthlyCents = billingMonths > 0 ? Math.floor(yearlyCents / billingMonths) : 0;
-	const leftoverCents = yearlyCents - monthlyCents * billingMonths;
+	const { monthlyCents, leftoverCents } = splitYearlyAmountAcrossBillingMonths(yearlyCents, billingMonths);
 
 	return { lessonsCount, yearlyCents, monthlyCents, leftoverCents, lessonDates };
 }

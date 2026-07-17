@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildAnnouncementsFetchState } from '@/lib/settings/announcementsQueryHelpers';
 
 export type AnnouncementAudience = 'teachers' | 'students';
 
@@ -38,20 +39,10 @@ export function useAnnouncements({ publishedOnly = false }: UseAnnouncementsOpti
 		}
 
 		const { data, error: queryError } = await query;
-		if (queryError) {
-			const missingSchema =
-				queryError.code === 'PGRST205' ||
-				queryError.code === '42P01' ||
-				queryError.message.toLowerCase().includes('announcements');
-
-			setIsSchemaMissing(missingSchema);
-			setError(queryError.message);
-			setAnnouncements([]);
-		} else {
-			setIsSchemaMissing(false);
-			setError(null);
-			setAnnouncements((data ?? []) as Announcement[]);
-		}
+		const fetchState = buildAnnouncementsFetchState(queryError, data);
+		setIsSchemaMissing(fetchState.isSchemaMissing);
+		setError(fetchState.error);
+		setAnnouncements(fetchState.announcements as Announcement[]);
 		setIsLoading(false);
 	}, [publishedOnly]);
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { runAuthCallback } from '@/lib/auth/authCallbackHelpers';
 import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
 export default function AuthCallback() {
@@ -9,39 +10,23 @@ export default function AuthCallback() {
 
 	useEffect(() => {
 		const handleCallback = async () => {
-			const hashError = readMagicLinkUrlError();
-			if (hashError) {
-				setError(hashError);
+			const outcome = await runAuthCallback({
+				readHashError: readMagicLinkUrlError,
+				getLocationHref: () => window.location.href,
+				getLocationHash: () => window.location.hash,
+				verifyOtp: (tokenHash) => supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' }),
+				exchangeCodeForSession: (href) => supabase.auth.exchangeCodeForSession(href),
+			});
+
+			if (outcome.kind === 'error') {
+				setError(outcome.message);
 				return;
 			}
 
-			if (window.location.hash.includes('token_hash=')) {
-				const hashParams = new URLSearchParams(window.location.hash.slice(1));
-				const tokenHash = hashParams.get('token_hash');
-				const type = hashParams.get('type') ?? 'email';
-				if (!tokenHash || type !== 'email') {
-					setError('Ongeldige inloglink. Vraag een nieuwe link aan.');
-					return;
-				}
-				const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
-				if (error) {
-					setError(error.message);
-					return;
-				}
-				navigate('/', { replace: true });
-				return;
-			}
-
-			const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-
-			if (error) {
-				setError(error.message);
-			} else {
-				navigate('/', { replace: true });
-			}
+			navigate('/', { replace: true });
 		};
 
-		handleCallback();
+		void handleCallback();
 	}, [navigate]);
 
 	if (error) {

@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-	StandaloneCenteredPage,
-	StandaloneErrorPage,
-	StandaloneLoadingPage,
-} from '@/components/auth/StandalonePageLayout';
+import { StandaloneErrorPage, StandaloneLoadingPage } from '@/components/auth/StandalonePageLayout';
+import { IncassoStartSuccessPanel } from '@/components/incasso/IncassoStartSuccessPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { consumeMagicLinkFromUrl, getFunctionErrorMessage, readMagicLinkUrlError } from '@/lib/auth/magicLink';
+import { runIncassoStartFlow } from '@/lib/incasso/incassoStartHelpers';
 
 /**
  * Landing page for the magic link from the direct-debit invitation email.
@@ -25,85 +23,33 @@ export default function IncassoStart() {
 		if (startedRef.current) return;
 		startedRef.current = true;
 
-		const run = async () => {
-			const agreementId = params.get('agreement');
-			const checkoutSessionId = params.get('session_id');
-			if (!agreementId) {
-				setError('Ongeldige uitnodigingslink (overeenkomst ontbreekt).');
+		const applyFlowResult = (result: Awaited<ReturnType<typeof runIncassoStartFlow>>) => {
+			if (result.status === 'error') {
+				setError(result.message);
 				return;
 			}
-
-			const hashError = readMagicLinkUrlError();
-			if (hashError) {
-				setError(hashError);
-				return;
-			}
-
-			const linkResult = await consumeMagicLinkFromUrl();
-			if (linkResult.ok === false) {
-				setError(linkResult.error);
-				return;
-			}
-
-			const { data: sessionData } = await supabase.auth.getSession();
-			if (!sessionData.session) {
-				setError('Geen actieve sessie. Open de link uit de mail opnieuw.');
-				return;
-			}
-
-			if (checkoutSessionId) {
-				const { data, error: completeErr } = await supabase.functions.invoke('create-subscription-checkout', {
-					body: {
-						lesson_agreement_id: agreementId,
-						mode: 'complete',
-						checkout_session_id: checkoutSessionId,
-					},
-				});
-				if (completeErr || (data as { error?: string })?.error) {
-					setError(await getFunctionErrorMessage(data, completeErr, 'Kon incasso niet afronden.'));
-					return;
-				}
+			if (result.status === 'success') {
 				setSuccess(true);
 				return;
 			}
-
-			const { data, error: invokeErr } = await supabase.functions.invoke('create-subscription-checkout', {
-				body: { lesson_agreement_id: agreementId, mode: 'checkout' },
-			});
-			if (invokeErr || (data as { error?: string })?.error) {
-				setError(await getFunctionErrorMessage(data, invokeErr, 'Kon incasso niet starten.'));
-				return;
-			}
-			const url = (data as { url?: string })?.url;
-			if (!url) {
-				setError('Geen checkout-URL ontvangen.');
-				return;
-			}
-			window.location.href = url;
+			window.location.href = result.url;
 		};
 
-		void run();
+		void runIncassoStartFlow(params, {
+			readMagicLinkUrlError,
+			consumeMagicLinkFromUrl,
+			getSession: async () => {
+				const { data } = await supabase.auth.getSession();
+				return { session: data.session };
+			},
+			invokeCreateSubscriptionCheckout: (body) =>
+				supabase.functions.invoke('create-subscription-checkout', { body }),
+			getFunctionErrorMessage,
+		}).then(applyFlowResult);
 	}, [params]);
 
 	if (success) {
-		return (
-			<StandaloneCenteredPage narrow>
-				<h1 className="font-bold text-2xl">Incasso is ingesteld</h1>
-				<p className="text-muted-foreground">
-					De betaalmethode is gekoppeld en het abonnement wordt aangemaakt.
-				</p>
-				<p className="text-muted-foreground text-sm">
-					Via het portaal van de Popschool kun je inloggen om al je gegevens over je lidmaatschap, facturen en
-					lessen in te zien.
-				</p>
-				<a
-					href="/login"
-					className="inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-				>
-					Naar het Popschool-portaal
-				</a>
-			</StandaloneCenteredPage>
-		);
+		return <IncassoStartSuccessPanel />;
 	}
 
 	if (error) {
@@ -118,5 +64,5 @@ export default function IncassoStart() {
 		);
 	}
 
-	return <StandaloneLoadingPage message="Bezig met doorsturen naar de betaalomgeving..." />;
+	return <StandaloneLoadingPage message="Incasso starten..." />;
 }

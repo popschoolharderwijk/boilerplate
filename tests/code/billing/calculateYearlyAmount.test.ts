@@ -1,9 +1,10 @@
-/**
- * Unit tests for billing helpers (step 3 of Stripe lesson fee billing).
- */
 import { describe, expect, it } from 'bun:test';
 import { pickAgeTariff, pickPriceCents } from '../../../src/lib/billing/ageTariff';
 import { calculateYearlyAmount } from '../../../src/lib/billing/calculateYearlyAmount';
+import {
+	shiftDatePastNoLessonPeriods,
+	splitYearlyAmountAcrossBillingMonths,
+} from '../../../src/lib/billing/calculateYearlyAmountHelpers';
 import {
 	clampToSchoolYear,
 	getSchoolYearForDateString,
@@ -69,32 +70,57 @@ describe('pickAgeTariff', () => {
 	});
 });
 
-describe('calculateYearlyAmount', () => {
-	it('counts weekly lessons in a full school year excluding August', () => {
-		// Mondays between 1 Sept 2026 and 31 Jul 2027; August does not count.
-		const result = calculateYearlyAmount({
-			periodStart: '2026-09-01',
-			periodEnd: '2027-07-31',
-			dayOfWeek: 1, // Monday
-			frequency: 'weekly',
-			pricePerLessonCents: 1950,
-		});
-		// Sanity: roughly 47-48 Mondays in a school year without holiday deductions.
-		expect(result.lessonsCount).toBeGreaterThan(40);
-		expect(result.lessonsCount).toBeLessThan(50);
-		expect(result.yearlyCents).toBe(result.lessonsCount * 1950);
-		expect(result.monthlyCents * 11 + result.leftoverCents).toBe(result.yearlyCents);
+describe('calculateYearlyAmountHelpers', () => {
+	it('shifts a lesson past a matching no-lesson period', () => {
+		const periods = [{ start_date: '2026-12-21', end_date: '2027-01-04' }];
+		const result = shiftDatePastNoLessonPeriods('2026-12-25', '2027-07-31', periods, 0);
+		expect(result.lessonDate).toBe('2027-01-09');
+		expect(result.shiftDays).toBe(15);
 	});
 
-	it('subtracts no-lesson periods (holidays)', () => {
-		const noPeriods = [{ start_date: '2026-12-21', end_date: '2027-01-04' }];
-		const without = calculateYearlyAmount({
+	it('leaves dates outside no-lesson periods unchanged', () => {
+		const periods = [{ start_date: '2026-12-21', end_date: '2027-01-04' }];
+		const result = shiftDatePastNoLessonPeriods('2026-12-20', '2027-07-31', periods, 0);
+		expect(result.lessonDate).toBe('2026-12-20');
+		expect(result.shiftDays).toBe(0);
+	});
+
+	it('returns null when a shifted lesson falls past the period end', () => {
+		const result = shiftDatePastNoLessonPeriods('2027-07-24', '2027-07-31', [], 10);
+		expect(result.lessonDate).toBeNull();
+		expect(result.shiftDays).toBe(10);
+	});
+
+	it('returns null for August lesson dates', () => {
+		const result = shiftDatePastNoLessonPeriods('2026-08-03', '2026-08-31', [], 0);
+		expect(result.lessonDate).toBeNull();
+	});
+
+	it('splits yearly cents across billing months with remainder', () => {
+		expect(splitYearlyAmountAcrossBillingMonths(91650, 11)).toEqual({
+			monthlyCents: 8331,
+			leftoverCents: 9,
+		});
+	});
+});
+
+describe('calculateYearlyAmount', () => {
+	it('counts weekly lessons in a full school year excluding August', () => {
+		const result = calculateYearlyAmount({
 			periodStart: '2026-09-01',
 			periodEnd: '2027-07-31',
 			dayOfWeek: 1,
 			frequency: 'weekly',
 			pricePerLessonCents: 1950,
 		});
+		expect(result.lessonsCount).toBe(47);
+		expect(result.yearlyCents).toBe(91650);
+		expect(result.monthlyCents).toBe(8331);
+		expect(result.leftoverCents).toBe(9);
+	});
+
+	it('subtracts no-lesson periods (holidays)', () => {
+		const noPeriods = [{ start_date: '2026-12-21', end_date: '2027-01-04' }];
 		const withVac = calculateYearlyAmount({
 			periodStart: '2026-09-01',
 			periodEnd: '2027-07-31',
@@ -103,10 +129,10 @@ describe('calculateYearlyAmount', () => {
 			pricePerLessonCents: 1950,
 			noLessonPeriods: noPeriods,
 		});
-		expect(withVac.lessonsCount).toBeLessThan(without.lessonsCount);
+		expect(withVac.lessonsCount).toBe(45);
 	});
 
-	it('counts biweekly lessons as roughly half of weekly', () => {
+	it('counts biweekly lessons as half of weekly', () => {
 		const weekly = calculateYearlyAmount({
 			periodStart: '2026-09-01',
 			periodEnd: '2027-07-31',
@@ -121,8 +147,8 @@ describe('calculateYearlyAmount', () => {
 			frequency: 'biweekly',
 			pricePerLessonCents: 2000,
 		});
-		expect(biweekly.lessonsCount).toBeGreaterThan(weekly.lessonsCount / 2 - 2);
-		expect(biweekly.lessonsCount).toBeLessThan(weekly.lessonsCount / 2 + 2);
+		expect(weekly.lessonsCount).toBe(48);
+		expect(biweekly.lessonsCount).toBe(24);
 	});
 
 	it('returns 0 for zero price or an inverted window', () => {
@@ -133,8 +159,14 @@ describe('calculateYearlyAmount', () => {
 				dayOfWeek: 1,
 				frequency: 'weekly',
 				pricePerLessonCents: 0,
-			}).yearlyCents,
-		).toBe(0);
+			}),
+		).toEqual({
+			lessonsCount: 0,
+			yearlyCents: 0,
+			monthlyCents: 0,
+			leftoverCents: 0,
+			lessonDates: [],
+		});
 		expect(
 			calculateYearlyAmount({
 				periodStart: '2027-09-01',
@@ -142,8 +174,14 @@ describe('calculateYearlyAmount', () => {
 				dayOfWeek: 1,
 				frequency: 'weekly',
 				pricePerLessonCents: 1950,
-			}).lessonsCount,
-		).toBe(0);
+			}),
+		).toEqual({
+			lessonsCount: 0,
+			yearlyCents: 0,
+			monthlyCents: 0,
+			leftoverCents: 0,
+			lessonDates: [],
+		});
 	});
 
 	it('always excludes August lessons', () => {

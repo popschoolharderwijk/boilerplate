@@ -53,7 +53,7 @@ export function DatePicker({
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					ref={triggerRef}
+					ref={triggerRef as React.Ref<HTMLButtonElement> | undefined}
 					id={id}
 					variant="outline"
 					disabled={disabled}

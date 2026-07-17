@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { planAuthSessionApply, runAuthSessionSideEffects } from '@/lib/auth/authSessionHelpers';
 import type { AppRole } from '@/lib/roles';
 
 interface AuthContextType {
@@ -63,17 +64,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		(session: Session | null, clearOnLogout: boolean) => {
 			setSession(session);
 			setUser(session?.user ?? null);
-			if (session?.user) {
-				Promise.all([fetchRole(session.user.id), fetchTeacher(session.user.id)]).finally(() => {
-					setIsLoading(false);
-				});
-			} else {
-				if (clearOnLogout) {
+			runAuthSessionSideEffects({
+				plan: planAuthSessionApply(session, clearOnLogout),
+				fetchRole,
+				fetchTeacher,
+				clearRoleState: () => {
 					setRole(null);
 					setTeacherUserId(null);
-				}
-				setIsLoading(false);
-			}
+				},
+				onLoadingComplete: () => setIsLoading(false),
+			});
 		},
 		[fetchRole, fetchTeacher],
 	);

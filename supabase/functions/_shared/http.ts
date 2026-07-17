@@ -73,43 +73,7 @@ export async function beginAuthenticatedPostWithUuidField<T>(
 	const uuid = getUuid(begun.body);
 	const invalidId = requireValidUuidField(uuid, fieldLabel);
 	if (invalidId) return { ok: false, response: invalidId };
-	return { ok: true, authHeader: begun.authHeader, body: begun.body, uuid };
-}
-
-export type LessonAgreementPostContext = {
-	req: Request;
-	authHeader: string;
-	lessonAgreementId: string;
-};
-
-/** Edge-function entry for authenticated POST handlers keyed by lesson_agreement_id. */
-export function serveLessonAgreementPost(handler: (ctx: LessonAgreementPostContext) => Promise<Response>): void {
-	Deno.serve(async (req) => {
-		const begun = await beginAuthenticatedPostWithUuidField<{ lesson_agreement_id?: string }>(
-			req,
-			(body) => body.lesson_agreement_id,
-			'lesson_agreement_id',
-		);
-		if (!begun.ok) return begun.response;
-		const { authHeader, uuid: lessonAgreementId } = begun;
-		return handler({ req, authHeader, lessonAgreementId });
-	});
-}
-
-/** JSON edge function with CORS preflight and required Authorization header. */
-export function serveAuthenticatedJsonRequest(handler: (req: Request, authHeader: string) => Promise<Response>): void {
-	Deno.serve(async (req) => {
-		const preflight = handleCorsPreflight(req);
-		if (preflight) return preflight;
-		const authHeader = requireAuthHeader(req);
-		if (authHeader instanceof Response) return authHeader;
-		try {
-			return await handler(req, authHeader);
-		} catch (error) {
-			console.error('Authenticated request error:', error);
-			return jsonResponse(500, { error: 'Internal server error' });
-		}
-	});
+	return { ok: true, authHeader: begun.authHeader, body: begun.body, uuid: uuid as string };
 }
 
 const FALLBACK_SITE_URL = 'https://mcp.mplifi.nl';
@@ -134,9 +98,13 @@ export function resolveAllowedSiteUrl(candidate: string | null | undefined): str
 	return null;
 }
 
-/** Resolve HTTPS site origin from request Origin header or SITE_URL env. */
-export function getSiteBaseUrl(req: Request, fallback = FALLBACK_SITE_URL): string {
-	const candidates = [req.headers.get('Origin'), Deno.env.get('SITE_URL'), fallback];
+/** Resolve HTTPS site origin from request Origin header or provided env/fallback values. */
+export function resolveSiteBaseUrl(
+	req: Request,
+	envSiteUrl: string | null | undefined,
+	fallback = FALLBACK_SITE_URL,
+): string {
+	const candidates = [req.headers.get('Origin'), envSiteUrl, fallback];
 
 	for (const candidate of candidates) {
 		const resolved = resolveAllowedSiteUrl(candidate);

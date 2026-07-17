@@ -1,5 +1,10 @@
 import { UserDisplay } from '@/components/ui/user-display';
 import type { SlotWithStatus } from '@/lib/agreementSlots';
+import {
+	hasConfirmStepSelectedUser,
+	resolveConfirmStepStudentHref,
+	resolveConfirmStepTeacherHref,
+} from '@/lib/agreements/confirmStepSingleViewHelpers';
 import type { WizardLessonTypeInfo, WizardTeacherInfo } from '@/types/lesson-agreements';
 import type { UserOptional } from '@/types/users';
 import { ConfirmStepRow } from './ConfirmStepRow';
@@ -30,7 +35,7 @@ export function ConfirmStepSingleView({
 	return (
 		<div className="space-y-4 rounded-lg border p-4">
 			<ConfirmStepRow label="Leerling">
-				{selectedUser ? (
+				{hasConfirmStepSelectedUser(selectedUser) ? (
 					<UserDisplay
 						profile={{
 							first_name: selectedUser.first_name,
@@ -38,7 +43,7 @@ export function ConfirmStepSingleView({
 							email: selectedUser.email,
 							avatar_url: selectedUser.avatar_url,
 						}}
-						href={selectedUser.user_id ? `/students/${selectedUser.user_id}` : undefined}
+						href={resolveConfirmStepStudentHref(selectedUser.user_id)}
 						showEmail
 					/>
 				) : (
@@ -49,7 +54,7 @@ export function ConfirmStepSingleView({
 			<ConfirmPeriodDisplayRow startDate={startDate} endDate={endDate} />
 			<ConfirmTeacherDisplayRow
 				teacher={selectedTeacher}
-				href={selectedTeacher?.userId ? `/teachers/${selectedTeacher.userId}` : undefined}
+				href={resolveConfirmStepTeacherHref(selectedTeacher?.userId)}
 			/>
 			<ConfirmSlotDisplayRow slot={effectiveSlot} />
 		</div>

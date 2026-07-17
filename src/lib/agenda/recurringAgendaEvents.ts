@@ -24,6 +24,33 @@ type RecurringContext = {
 	noLessonPeriods: NoLessonPeriod[] | undefined;
 };
 
+type RecurringScheduleParams = {
+	frequency: LessonFrequency;
+	dayOfWeek: number;
+	periodStart: Date;
+	periodEnd: Date | null;
+	baseStartTime: string;
+	durationMinutes: number | null;
+	getDurationMs: () => number;
+};
+
+type OccurrenceVisibility = {
+	shiftDays: number;
+	shiftedDate: Date | null;
+	isShifted: boolean;
+	skipOccurrence: boolean;
+};
+
+type OccurrenceEventTimes = { start: Date; end: Date; isCancelled: boolean };
+
+type OccurrenceDisplayMeta = {
+	resourceOriginalDate: string | undefined;
+	resourceOriginalStartTime: string | undefined;
+	displayTitle: string;
+	displayColor: string | null;
+	hasTimeOrDateChange: boolean;
+};
+
 function resolveRecurringFrequency(ev: AgendaEventRow, agreement: LessonAgreementWithStudent | null): LessonFrequency {
 	if (agreement) return agreement.frequency;
 	if (
@@ -35,6 +62,52 @@ function resolveRecurringFrequency(ev: AgendaEventRow, agreement: LessonAgreemen
 		return ev.recurring_frequency;
 	}
 	return 'weekly';
+}
+
+function resolveRecurringPeriodEnd(ev: AgendaEventRow, agreement: LessonAgreementWithStudent | null): Date | null {
+	if (agreement) {
+		return agreement.end_date ? new Date(agreement.end_date) : null;
+	}
+	return ev.recurring_end_date ? new Date(ev.recurring_end_date) : null;
+}
+
+function resolveRecurringScheduleParams(
+	ev: AgendaEventRow,
+	agreement: LessonAgreementWithStudent | null,
+): RecurringScheduleParams {
+	const frequency = resolveRecurringFrequency(ev, agreement);
+	const dayOfWeek = agreement ? agreement.day_of_week : new Date(`${ev.start_date}T12:00:00`).getDay();
+	const periodStart = agreement ? new Date(agreement.start_date) : new Date(ev.start_date);
+	const periodEnd = resolveRecurringPeriodEnd(ev, agreement);
+	const baseStartTime = agreement ? agreement.start_time : ev.start_time;
+	const durationMinutes = agreement ? agreement.duration_minutes : null;
+	return {
+		frequency,
+		dayOfWeek,
+		periodStart,
+		periodEnd,
+		baseStartTime,
+		durationMinutes,
+		getDurationMs: () => getEventDurationMs(ev, durationMinutes),
+	};
+}
+
+function shouldStopRecurringLoop(current: Date, periodEnd: Date | null, rangeEnd: Date, shiftDays: number): boolean {
+	if (periodEnd && current > periodEnd) return true;
+	if (current > rangeEnd && shiftDays === 0) return true;
+	return current > rangeEnd;
+}
+
+function findEffectiveDeviation(
+	dateStr: string,
+	eventDeviations: Map<string, AgendaEventDeviationRow> | undefined,
+	recurringList: AgendaEventDeviationRow[],
+): AgendaEventDeviationRow | undefined {
+	const deviation = eventDeviations?.get(dateStr);
+	const recurringDeviation = recurringList.find(
+		(d) => d.original_date <= dateStr && (!d.spans_end_date || d.spans_end_date >= dateStr),
+	);
+	return deviation ?? recurringDeviation;
 }
 
 function getEventDurationMs(ev: AgendaEventRow, durationMinutes: number | null): number {
@@ -70,13 +143,66 @@ function resolveShiftedLessonDate(
 	return { shiftedDate, shiftDays: days, isShifted };
 }
 
+function shouldSkipShiftedLessonOccurrence(shiftedDate: Date, periodEnd: Date | null): boolean {
+	if (periodEnd && shiftedDate > periodEnd) return true;
+	return isNonBillingMonthString(formatDateToDb(shiftedDate));
+}
+
+function evaluateLessonSourceOccurrenceVisibility(
+	current: Date,
+	shiftDays: number,
+	periodEnd: Date | null,
+	rangeStart: Date,
+	rangeEnd: Date,
+	noLessonPeriods: NoLessonPeriod[] | undefined,
+): OccurrenceVisibility {
+	const shift = resolveShiftedLessonDate(current, shiftDays, noLessonPeriods);
+	const nextShiftDays = shift.shiftDays;
+	const { shiftedDate, isShifted } = shift;
+
+	if (shouldSkipShiftedLessonOccurrence(shiftedDate, periodEnd)) {
+		return { shiftDays: nextShiftDays, shiftedDate, isShifted, skipOccurrence: true };
+	}
+
+	const outsideRenderWindow = shiftedDate < rangeStart || shiftedDate > rangeEnd;
+	return { shiftDays: nextShiftDays, shiftedDate, isShifted, skipOccurrence: outsideRenderWindow };
+}
+
+function evaluateOccurrenceVisibility(
+	current: Date,
+	shiftDays: number,
+	effective: AgendaEventDeviationRow | undefined,
+	isLessonSource: boolean,
+	periodEnd: Date | null,
+	rangeStart: Date,
+	rangeEnd: Date,
+	noLessonPeriods: NoLessonPeriod[] | undefined,
+): OccurrenceVisibility {
+	if (isLessonSource && !effective) {
+		return evaluateLessonSourceOccurrenceVisibility(
+			current,
+			shiftDays,
+			periodEnd,
+			rangeStart,
+			rangeEnd,
+			noLessonPeriods,
+		);
+	}
+
+	if (current < rangeStart) {
+		return { shiftDays, shiftedDate: null, isShifted: false, skipOccurrence: true };
+	}
+
+	return { shiftDays, shiftedDate: null, isShifted: false, skipOccurrence: false };
+}
+
 function buildDeviationEventTimes(
 	ctx: RecurringContext,
 	current: Date,
 	effective: AgendaEventDeviationRow,
 	durationMinutes: number | null,
 	getDurationMs: () => number,
-): { start: Date; end: Date; isCancelled: boolean } {
+): OccurrenceEventTimes {
 	if (effective.is_cancelled) {
 		const start = applyTimeToDate(new Date(current), effective.original_start_time);
 		const end =
@@ -117,6 +243,53 @@ function buildDefaultEventTimes(
 				? applyTimeToDate(new Date(base), ctx.ev.end_time)
 				: addMinutes(start, getDurationMs() / (60 * 1000));
 	return { start, end };
+}
+
+function buildOccurrenceEventTimes(
+	ctx: RecurringContext,
+	current: Date,
+	effective: AgendaEventDeviationRow | undefined,
+	shiftedDate: Date | null,
+	baseStartTime: string,
+	durationMinutes: number | null,
+	getDurationMs: () => number,
+): OccurrenceEventTimes {
+	if (effective) {
+		return buildDeviationEventTimes(ctx, current, effective, durationMinutes, getDurationMs);
+	}
+	return {
+		...buildDefaultEventTimes(ctx, shiftedDate ?? new Date(current), baseStartTime, durationMinutes, getDurationMs),
+		isCancelled: false,
+	};
+}
+
+function buildOccurrenceDisplayMeta(
+	effective: AgendaEventDeviationRow | undefined,
+	ev: AgendaEventRow,
+	dateStr: string,
+	isShifted: boolean,
+	baseStartTime: string,
+): OccurrenceDisplayMeta {
+	const resourceOriginalDate = effective?.spans_future_occurrences
+		? dateStr
+		: (effective?.original_date ?? (isShifted ? dateStr : undefined));
+	const resourceOriginalStartTime = effective?.spans_future_occurrences
+		? baseStartTime
+		: (effective?.original_start_time ?? (isShifted ? baseStartTime : undefined));
+	const displayTitle = effective?.title ?? ev.title;
+	const displayColor = effective?.color ?? ev.color ?? null;
+	const hasTimeOrDateChange =
+		!!effective &&
+		!effective.is_cancelled &&
+		(effective.actual_date !== effective.original_date ||
+			hasTimeChange(effective.actual_start_time, effective.original_start_time));
+	return {
+		resourceOriginalDate,
+		resourceOriginalStartTime,
+		displayTitle,
+		displayColor,
+		hasTimeOrDateChange,
+	};
 }
 
 function buildCalendarEventResource(
@@ -166,6 +339,93 @@ function buildCalendarEventResource(
 	};
 }
 
+function pushRecurringOccurrenceEvent(
+	ctx: RecurringContext,
+	events: CalendarEvent[],
+	params: {
+		dateStr: string;
+		effective: AgendaEventDeviationRow | undefined;
+		isShifted: boolean;
+		times: OccurrenceEventTimes;
+		display: OccurrenceDisplayMeta;
+		baseStartTime: string;
+	},
+): void {
+	const { dateStr, effective, isShifted, times, display, baseStartTime } = params;
+	events.push({
+		title: display.displayTitle,
+		start: times.start,
+		end: times.end,
+		resource: buildCalendarEventResource(ctx, {
+			dateStr,
+			effective,
+			isShifted,
+			isCancelled: times.isCancelled,
+			displayTitle: display.displayTitle,
+			displayColor: display.displayColor,
+			hasTimeOrDateChange: display.hasTimeOrDateChange,
+			resourceOriginalDate: display.resourceOriginalDate,
+			resourceOriginalStartTime: display.resourceOriginalStartTime,
+			baseStartTime,
+		}),
+	});
+}
+
+function appendRecurringOccurrence(
+	ctx: RecurringContext,
+	events: CalendarEvent[],
+	current: Date,
+	shiftDays: number,
+	schedule: RecurringScheduleParams,
+	rangeStart: Date,
+	rangeEnd: Date,
+): number {
+	const dateStr = formatDateToDb(current);
+	const effective = findEffectiveDeviation(dateStr, ctx.eventDeviations, ctx.recurringList);
+	const visibility = evaluateOccurrenceVisibility(
+		current,
+		shiftDays,
+		effective,
+		ctx.isLessonSource,
+		schedule.periodEnd,
+		rangeStart,
+		rangeEnd,
+		ctx.noLessonPeriods,
+	);
+
+	if (visibility.skipOccurrence) {
+		return visibility.shiftDays;
+	}
+
+	const times = buildOccurrenceEventTimes(
+		ctx,
+		current,
+		effective,
+		visibility.shiftedDate,
+		schedule.baseStartTime,
+		schedule.durationMinutes,
+		schedule.getDurationMs,
+	);
+	const display = buildOccurrenceDisplayMeta(
+		effective,
+		ctx.ev,
+		dateStr,
+		visibility.isShifted,
+		schedule.baseStartTime,
+	);
+
+	pushRecurringOccurrenceEvent(ctx, events, {
+		dateStr,
+		effective,
+		isShifted: visibility.isShifted,
+		times,
+		display,
+		baseStartTime: schedule.baseStartTime,
+	});
+
+	return visibility.shiftDays;
+}
+
 export function appendRecurringAgendaEvents(
 	ev: AgendaEventRow,
 	events: CalendarEvent[],
@@ -189,107 +449,19 @@ export function appendRecurringAgendaEvents(
 		isLessonSource,
 		noLessonPeriods,
 	};
-	const frequency = resolveRecurringFrequency(ev, agreement);
-	const dayOfWeek = agreement ? agreement.day_of_week : new Date(`${ev.start_date}T12:00:00`).getDay();
-	const periodStart = agreement ? new Date(agreement.start_date) : new Date(ev.start_date);
-	const periodEnd = agreement
-		? agreement.end_date
-			? new Date(agreement.end_date)
-			: null
-		: ev.recurring_end_date
-			? new Date(ev.recurring_end_date)
-			: null;
-	const baseStartTime = agreement ? agreement.start_time : ev.start_time;
-	const durationMinutes = agreement ? agreement.duration_minutes : null;
-	const getDurationMs = () => getEventDurationMs(ev, durationMinutes);
-
-	const current = getFirstOccurrenceInRangeHelper(dayOfWeek, periodStart, periodStart, frequency);
+	const schedule = resolveRecurringScheduleParams(ev, agreement);
+	const current = getFirstOccurrenceInRangeHelper(
+		schedule.dayOfWeek,
+		schedule.periodStart,
+		schedule.periodStart,
+		schedule.frequency,
+	);
 	let shiftDays = 0;
 
 	while (true) {
-		if (periodEnd && current > periodEnd) break;
-		if (current > rangeEnd && shiftDays === 0) break;
-		if (current > rangeEnd) break;
+		if (shouldStopRecurringLoop(current, schedule.periodEnd, rangeEnd, shiftDays)) break;
 
-		const dateStr = formatDateToDb(current);
-		const deviation = eventDeviations?.get(dateStr);
-		const recurringDeviation = recurringList.find(
-			(d) => d.original_date <= dateStr && (!d.spans_end_date || d.spans_end_date >= dateStr),
-		);
-		const effective = deviation ?? recurringDeviation;
-
-		let shiftedDate: Date | null = null;
-		let isShifted = false;
-		let outsideRenderWindow = false;
-
-		if (isLessonSource && !effective) {
-			const shift = resolveShiftedLessonDate(current, shiftDays, noLessonPeriods);
-			shiftDays = shift.shiftDays;
-			shiftedDate = shift.shiftedDate;
-			isShifted = shift.isShifted;
-			if (periodEnd && shiftedDate > periodEnd) {
-				addIntervalHelper(current, frequency);
-				continue;
-			}
-			if (isNonBillingMonthString(formatDateToDb(shiftedDate))) {
-				addIntervalHelper(current, frequency);
-				continue;
-			}
-			if (shiftedDate < rangeStart || shiftedDate > rangeEnd) outsideRenderWindow = true;
-		} else if (current < rangeStart) {
-			outsideRenderWindow = true;
-		}
-
-		if (outsideRenderWindow) {
-			addIntervalHelper(current, frequency);
-			continue;
-		}
-
-		const times = effective
-			? buildDeviationEventTimes(ctx, current, effective, durationMinutes, getDurationMs)
-			: {
-					...buildDefaultEventTimes(
-						ctx,
-						shiftedDate ?? new Date(current),
-						baseStartTime,
-						durationMinutes,
-						getDurationMs,
-					),
-					isCancelled: false,
-				};
-
-		const resourceOriginalDate = effective?.spans_future_occurrences
-			? dateStr
-			: (effective?.original_date ?? (isShifted ? dateStr : undefined));
-		const resourceOriginalStartTime = effective?.spans_future_occurrences
-			? baseStartTime
-			: (effective?.original_start_time ?? (isShifted ? baseStartTime : undefined));
-		const displayTitle = effective?.title ?? ev.title;
-		const displayColor = effective?.color ?? ev.color ?? null;
-		const hasTimeOrDateChange =
-			!!effective &&
-			!effective.is_cancelled &&
-			(effective.actual_date !== effective.original_date ||
-				hasTimeChange(effective.actual_start_time, effective.original_start_time));
-
-		events.push({
-			title: displayTitle,
-			start: times.start,
-			end: times.end,
-			resource: buildCalendarEventResource(ctx, {
-				dateStr,
-				effective,
-				isShifted,
-				isCancelled: times.isCancelled,
-				displayTitle,
-				displayColor,
-				hasTimeOrDateChange,
-				resourceOriginalDate,
-				resourceOriginalStartTime,
-				baseStartTime,
-			}),
-		});
-
-		addIntervalHelper(current, frequency);
+		shiftDays = appendRecurringOccurrence(ctx, events, current, shiftDays, schedule, rangeStart, rangeEnd);
+		addIntervalHelper(current, schedule.frequency);
 	}
 }

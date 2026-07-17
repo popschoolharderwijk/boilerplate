@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { LuCircleAlert } from 'react-icons/lu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { resolveConfirmStepRowDisplay } from '@/lib/agreements/confirmStepRowHelpers';
 import { cn } from '@/lib/utils';
 
 export interface ConfirmStepRowProps {
@@ -22,10 +23,14 @@ export function ConfirmStepRow({
 	newValue,
 	children,
 }: ConfirmStepRowProps) {
-	const value = children ?? newValue ?? oldValue;
-	// Apply muted styling when explicitly not changed (diff view) OR when alwaysSame
-	const isMuted = changed === false || alwaysSame;
-	const showChangedIcon = changed === true && !hideIcon;
+	const { value, isMuted, showChangedIcon } = resolveConfirmStepRowDisplay({
+		alwaysSame,
+		changed,
+		hideIcon,
+		oldValue,
+		newValue,
+		children,
+	});
 
 	return (
 		<div className={cn('flex flex-col gap-1 py-2 border-b border-border last:border-0', isMuted && 'opacity-60')}>

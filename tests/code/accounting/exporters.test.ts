@@ -134,6 +134,54 @@ describe('generateJournalLines', () => {
 		expect(lines.find((l) => l.account === '8000')?.credit).toBe(7500);
 		expect(lines.find((l) => l.account === '8010')).toBeUndefined();
 	});
+
+	it('omits VAT line when the 21+ invoice has zero VAT', () => {
+		const lines = generateJournalLines(
+			makeReport({
+				age_category: '21_plus',
+				amount_excl_btw_cents: 10000,
+				btw_amount_cents: 0,
+				amount_due_cents: 10000,
+				status: 'open',
+				paid_at: null,
+				amount_paid_cents: 0,
+			}),
+			SETTINGS,
+		);
+		expect(lines.filter((l) => l.account === SETTINGS.account_btw_21)).toHaveLength(0);
+		expect(lines).toHaveLength(2);
+	});
+
+	it('does not create bank lines for paid invoices with zero amount paid', () => {
+		const lines = generateJournalLines(
+			makeReport({
+				status: 'paid',
+				paid_at: '2026-06-03T10:00:00Z',
+				amount_paid_cents: 0,
+			}),
+			SETTINGS,
+		);
+		expect(lines.filter((l) => l.entryId.startsWith('PAY-'))).toHaveLength(0);
+		expect(lines).toHaveLength(3);
+	});
+
+	it('generates separate journal entries for multiple invoices', () => {
+		const firstInvoice = makeReport().invoices[0];
+		const secondInvoice = makeReport({
+			invoice_id: 'inv-2',
+			stripe_invoice_id: 'in_test_2',
+			student_name: 'Piet Pietersen',
+		}).invoices[0];
+		expect(firstInvoice).toBeDefined();
+		expect(secondInvoice).toBeDefined();
+		const report: AccountingReport = {
+			...makeReport(),
+			invoices: [firstInvoice, secondInvoice],
+		};
+		const lines = generateJournalLines(report, SETTINGS);
+		expect(lines.filter((l) => l.entryId === 'FACT-inv-1')).toHaveLength(3);
+		expect(lines.filter((l) => l.entryId === 'FACT-inv-2')).toHaveLength(3);
+	});
 });
 
 describe('generateCsv', () => {
@@ -148,6 +196,19 @@ describe('generateCsv', () => {
 		const lines = generateJournalLines(makeReport({ student_name: 'Naam; met;komma' }), SETTINGS);
 		const csv = generateCsv(lines);
 		expect(csv).toContain('"Naam; met;komma"');
+	});
+
+	it('renders empty cells for missing cost center values', () => {
+		const lines = generateJournalLines(
+			makeReport({
+				cost_center: '',
+			}),
+			SETTINGS,
+		);
+		const csv = generateCsv(lines);
+		const dataRow = csv.split('\r\n')[1] ?? '';
+		expect(dataRow.startsWith('FACT-inv-1;2026-06-01;90;1300;')).toBe(true);
+		expect(dataRow.includes('Piano')).toBe(false);
 	});
 });
 
@@ -167,5 +228,11 @@ describe('generateExactXml', () => {
 		const lines = generateJournalLines(makeReport({ student_name: 'A & B' }), SETTINGS);
 		const xml = generateExactXml(lines, SETTINGS);
 		expect(xml).toContain('A &amp; B');
+	});
+
+	it('includes cost center elements when present', () => {
+		const lines = generateJournalLines(makeReport({ cost_center: 'Piano' }), SETTINGS);
+		const xml = generateExactXml(lines, SETTINGS);
+		expect(xml).toContain('<CostCenter code="Piano" />');
 	});
 });

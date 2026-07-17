@@ -1,5 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
-import { addDaysToDateStr } from '@/lib/date/date-format';
+import {
+	buildCancelledDeviationUpsert,
+	getDeleteAgendaEventSuccessMessage,
+	isDeleteAgendaEventFetchMissing,
+	resolveDeleteAgendaEventPlan,
+} from '@/lib/agenda/deleteAgendaEventHelpers';
 import type { DeleteScope } from '@/types/agenda-events';
 
 export interface DeleteAgendaEventParams {
@@ -13,44 +18,40 @@ export type DeleteAgendaEventResult = { ok: true; message: string } | { ok: fals
 
 export async function deleteAgendaEvent(params: DeleteAgendaEventParams): Promise<DeleteAgendaEventResult> {
 	const { eventId, scope, occurrenceDate } = params;
+	const plan = resolveDeleteAgendaEventPlan(scope, occurrenceDate);
 
-	if (scope === 'all') {
+	if (plan.kind === 'all') {
 		const { error } = await supabase.from('agenda_events').delete().eq('id', eventId);
 		if (error) return { ok: false, message: 'Afspraak verwijderen mislukt' };
-		return { ok: true, message: 'Alle afspraken verwijderd' };
+		return { ok: true, message: getDeleteAgendaEventSuccessMessage(plan) };
 	}
 
-	if (scope === 'single' && occurrenceDate) {
+	if (plan.kind === 'single') {
 		const { data: eventData, error: fetchErr } = await supabase
 			.from('agenda_events')
 			.select('start_time')
 			.eq('id', eventId)
 			.single();
-		if (fetchErr || !eventData) return { ok: false, message: 'Afspraak niet gevonden' };
-		const { error } = await supabase.from('agenda_event_deviations').upsert(
-			{
-				event_id: eventId,
-				original_date: occurrenceDate,
-				original_start_time: eventData.start_time,
-				actual_date: occurrenceDate,
-				actual_start_time: eventData.start_time,
-				is_cancelled: true,
-			},
-			{ onConflict: 'event_id,original_date' },
-		);
+		if (isDeleteAgendaEventFetchMissing(fetchErr, eventData)) {
+			return { ok: false, message: 'Afspraak niet gevonden' };
+		}
+		const { error } = await supabase
+			.from('agenda_event_deviations')
+			.upsert(buildCancelledDeviationUpsert(eventId, plan.occurrenceDate, eventData.start_time), {
+				onConflict: 'event_id,original_date',
+			});
 		if (error) return { ok: false, message: 'Afspraak annuleren mislukt' };
-		return { ok: true, message: 'Afspraak geannuleerd' };
+		return { ok: true, message: getDeleteAgendaEventSuccessMessage(plan) };
 	}
 
-	if (scope === 'thisAndFuture' && occurrenceDate) {
-		const newEndDate = addDaysToDateStr(occurrenceDate, -1);
+	if (plan.kind === 'thisAndFuture') {
 		const { error } = await supabase
 			.from('agenda_events')
-			.update({ recurring_end_date: newEndDate })
+			.update({ recurring_end_date: plan.recurringEndDate })
 			.eq('id', eventId);
 		if (error) return { ok: false, message: 'Afspraken verwijderen mislukt' };
-		return { ok: true, message: 'Deze en toekomstige afspraken verwijderd' };
+		return { ok: true, message: getDeleteAgendaEventSuccessMessage(plan) };
 	}
 
-	return { ok: false, message: 'Ongeldige verwijderactie' };
+	return { ok: false, message: getDeleteAgendaEventSuccessMessage(plan) };
 }

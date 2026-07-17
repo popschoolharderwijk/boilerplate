@@ -2,7 +2,9 @@
 	"extends": "./tsconfig.node.json",
 	"compilerOptions": {
 		"noEmit": true,
-		"types": ["bun-types"]
+		"types": ["bun-types"],
+		"lib": ["ES2023", "DOM"],
+		"jsx": "react-jsx"
 	},
 	"include": ["tests/**/*.ts", "tests/**/*.test.ts"]
 }

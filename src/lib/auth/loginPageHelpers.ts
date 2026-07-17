@@ -1,0 +1,28 @@
+import type { LoginState } from '@/lib/auth/loginHelpers';
+
+export function buildMagicLinkRedirectUrl(origin: string): string {
+	return `${origin}/auth/callback`;
+}
+
+export function buildMagicLinkSignInOptions(origin: string) {
+	return {
+		shouldCreateUser: false,
+		emailRedirectTo: buildMagicLinkRedirectUrl(origin),
+	};
+}
+
+export function resolveLoginViewMode(state: LoginState): 'magic-link' | 'otp' {
+	return state === 'idle' || state === 'sending' ? 'magic-link' : 'otp';
+}
+
+export function shouldShowLoginLoadingScreen(isLoading: boolean): boolean {
+	return isLoading;
+}
+
+export type LoginPageContent = 'redirect' | 'loading' | 'form';
+
+export function resolveLoginPageContent(shouldRedirect: boolean, showLoadingScreen: boolean): LoginPageContent {
+	if (shouldRedirect) return 'redirect';
+	if (showLoadingScreen) return 'loading';
+	return 'form';
+}

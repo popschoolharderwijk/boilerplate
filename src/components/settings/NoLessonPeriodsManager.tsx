@@ -1,24 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LuCalendarOff, LuPencil, LuPlus, LuTrash2 } from 'react-icons/lu';
-import { toast } from 'sonner';
+import { LuCalendarOff, LuPlus } from 'react-icons/lu';
+import {
+	NoLessonPeriodEditorDialog,
+	type NoLessonPeriodListItem,
+	NoLessonPeriodsList,
+} from '@/components/settings/NoLessonPeriodsManagerParts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CrudFormDialogActions } from '@/components/ui/crud-form-dialog-actions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useFormCrudDialogActions, useFormCrudDialogState } from '@/hooks/useFormCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDbDateToUi } from '@/lib/date/date-format';
-
-interface NoLessonPeriod {
-	id: string;
-	name: string;
-	start_date: string;
-	end_date: string;
-	description: string | null;
-}
+import {
+	executeNoLessonPeriodDelete,
+	executeNoLessonPeriodFetch,
+	executeNoLessonPeriodSave,
+} from '@/lib/settings/noLessonPeriodsManagerControllerHelpers';
+import { isNoLessonPeriodFormValid } from '@/lib/settings/noLessonPeriodsManagerHelpers';
+import {
+	shouldShowNoLessonPeriodsEmpty,
+	shouldShowNoLessonPeriodsList,
+	shouldShowNoLessonPeriodsLoading,
+} from '@/lib/settings/noLessonPeriodsViewHelpers';
 
 interface FormState {
 	name: string;
@@ -30,9 +31,9 @@ interface FormState {
 const EMPTY_FORM: FormState = { name: '', start_date: '', end_date: '', description: '' };
 
 export function NoLessonPeriodsManager() {
-	const [periods, setPeriods] = useState<NoLessonPeriod[]>([]);
+	const [periods, setPeriods] = useState<NoLessonPeriodListItem[]>([]);
 	const [loading, setLoading] = useState(true);
-	const crud = useFormCrudDialogState<FormState, NoLessonPeriod>(EMPTY_FORM, (period) => ({
+	const crud = useFormCrudDialogState<FormState, NoLessonPeriodListItem>(EMPTY_FORM, (period) => ({
 		name: period.name,
 		start_date: period.start_date,
 		end_date: period.end_date,
@@ -52,74 +53,37 @@ export function NoLessonPeriodsManager() {
 	} = crud;
 
 	const fetchPeriods = useCallback(async () => {
-		const { data, error } = await supabase
-			.from('no_lesson_periods')
-			.select('id, name, start_date, end_date, description')
-			.order('start_date', { ascending: true });
-		if (error) {
-			toast.error('Fout bij laden lesvrije periodes');
-		} else {
-			setPeriods(data ?? []);
+		const outcome = await executeNoLessonPeriodFetch(supabase);
+		if (outcome.kind === 'success') {
+			setPeriods(outcome.periods);
 		}
 		setLoading(false);
 	}, []);
 
 	useEffect(() => {
-		fetchPeriods();
+		void fetchPeriods();
 	}, [fetchPeriods]);
 
-	const isFormValid =
-		form.name.trim().length > 0 &&
-		form.start_date.length > 0 &&
-		form.end_date.length > 0 &&
-		form.end_date >= form.start_date;
+	const isFormValid = isNoLessonPeriodFormValid(form.name, form.start_date, form.end_date);
 
 	const handleSave = async () => {
-		if (!isFormValid) return;
 		setSaving(true);
-
-		const payload = {
-			name: form.name.trim(),
-			start_date: form.start_date,
-			end_date: form.end_date,
-			description: form.description.trim() ? form.description.trim() : null,
-		};
-
-		if (editing) {
-			const { error } = await supabase.from('no_lesson_periods').update(payload).eq('id', editing.id);
-			if (error) {
-				toast.error('Fout bij bijwerken lesvrije periode');
-			} else {
-				toast.success('Lesvrije periode bijgewerkt');
-			}
-		} else {
-			const { error } = await supabase.from('no_lesson_periods').insert(payload);
-			if (error) {
-				toast.error('Fout bij aanmaken lesvrije periode');
-			} else {
-				toast.success('Lesvrije periode aangemaakt');
-			}
-		}
-
+		const outcome = await executeNoLessonPeriodSave({
+			isFormValid,
+			form,
+			editing,
+			supabase,
+		});
 		setSaving(false);
-		setDialogOpen(false);
-		await fetchPeriods();
+		if (outcome === 'success') {
+			setDialogOpen(false);
+			await fetchPeriods();
+		}
 	};
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return;
-		const { data, error } = await supabase
-			.from('no_lesson_periods')
-			.delete()
-			.eq('id', deleteTarget.id)
-			.select('id');
-		if (error || !data?.length) {
-			toast.error('Lesvrije periode niet verwijderd', {
-				description: 'Geen rechten om deze periode te verwijderen.',
-			});
-		} else {
-			toast.success('Lesvrije periode verwijderd');
-		}
+		await executeNoLessonPeriodDelete({ deleteTarget, supabase });
 		setDeleteTarget(null);
 		await fetchPeriods();
 	};
@@ -150,101 +114,23 @@ export function NoLessonPeriodsManager() {
 				</Button>
 			</CardHeader>
 			<CardContent>
-				{loading ? (
-					<p className="text-sm text-muted-foreground">Laden...</p>
-				) : periods.length === 0 ? (
+				{shouldShowNoLessonPeriodsLoading(loading) && <p className="text-sm text-muted-foreground">Laden...</p>}
+				{shouldShowNoLessonPeriodsEmpty(loading, periods.length) && (
 					<p className="text-sm text-muted-foreground">Er zijn nog geen lesvrije periodes ingesteld.</p>
-				) : (
-					<ul className="divide-y divide-border">
-						{periods.map((period) => (
-							<li key={period.id} className="flex items-center justify-between gap-3 py-3">
-								<div className="min-w-0 flex-1">
-									<p className="font-medium truncate">{period.name}</p>
-									<p className="text-sm text-muted-foreground">
-										{formatDbDateToUi(period.start_date)} t/m {formatDbDateToUi(period.end_date)}
-									</p>
-									{period.description && (
-										<p className="text-xs text-muted-foreground mt-0.5 truncate">
-											{period.description}
-										</p>
-									)}
-								</div>
-								<div className="flex shrink-0 gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => openEdit(period)}
-										aria-label="Bewerken"
-									>
-										<LuPencil className="h-4 w-4" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="text-destructive hover:text-destructive"
-										onClick={() => setDeleteTarget(period)}
-										aria-label="Verwijderen"
-									>
-										<LuTrash2 className="h-4 w-4" />
-									</Button>
-								</div>
-							</li>
-						))}
-					</ul>
+				)}
+				{shouldShowNoLessonPeriodsList(loading, periods.length) && (
+					<NoLessonPeriodsList periods={periods} onEdit={openEdit} onDelete={setDeleteTarget} />
 				)}
 			</CardContent>
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{editing ? 'Periode bewerken' : 'Nieuwe lesvrije periode'}</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4 py-2">
-						<div className="space-y-2">
-							<Label htmlFor="period-name">Naam</Label>
-							<Input
-								id="period-name"
-								value={form.name}
-								onChange={(e) => setForm({ ...form, name: e.target.value })}
-								placeholder="Bijv. Kerstvakantie 2025"
-							/>
-						</div>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="period-start">Startdatum</Label>
-								<Input
-									id="period-start"
-									type="date"
-									value={form.start_date}
-									onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="period-end">Einddatum</Label>
-								<Input
-									id="period-end"
-									type="date"
-									value={form.end_date}
-									onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-								/>
-							</div>
-						</div>
-						{form.start_date && form.end_date && form.end_date < form.start_date && (
-							<p className="text-xs text-destructive">Einddatum moet op of na startdatum liggen.</p>
-						)}
-						<div className="space-y-2">
-							<Label htmlFor="period-description">Beschrijving (optioneel)</Label>
-							<Textarea
-								id="period-description"
-								value={form.description}
-								onChange={(e) => setForm({ ...form, description: e.target.value })}
-								rows={2}
-							/>
-						</div>
-					</div>
-					<CrudFormDialogActions {...dialogActions} />
-				</DialogContent>
-			</Dialog>
+			<NoLessonPeriodEditorDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				editing={editing}
+				form={form}
+				onFormChange={setForm}
+				dialogActions={dialogActions}
+			/>
 		</Card>
 	);
 }

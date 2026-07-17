@@ -3,6 +3,11 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type Stripe from 'npm:stripe@17.5.0';
+import {
+	alignFuturePhasePayloads,
+	collectKeptSchedulePhases,
+	inheritSchedulePaymentMethod,
+} from './rebuildScheduleHelpers.ts';
 import { writeSubscriptionState } from './subscription-storage.ts';
 
 export type LessonFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
@@ -434,32 +439,7 @@ export async function rebuildScheduleForAgreement(
 
 	const nowUnix = Math.floor(Date.now() / 1000);
 	const existing = sched.phases ?? [];
-
-	// Past + currently active phase = keep verbatim with their existing price IDs.
-	const keptPayloads: Array<Record<string, unknown>> = [];
-	let firstFutureIndex = -1;
-	for (let i = 0; i < existing.length; i++) {
-		const p = existing[i];
-		const startsInFuture = (p.start_date ?? 0) > nowUnix;
-		if (startsInFuture) {
-			firstFutureIndex = i;
-			break;
-		}
-		const dpm = p.default_payment_method;
-		const dpmId = typeof dpm === 'string' ? dpm : (dpm as { id?: string } | null)?.id;
-		keptPayloads.push({
-			start_date: p.start_date,
-			end_date: p.end_date,
-			proration_behavior: 'none',
-			collection_method: 'charge_automatically',
-			items: p.items.map((it: Stripe.SubscriptionSchedule.Phase.Item) => ({
-				price: typeof it.price === 'string' ? it.price : (it.price as { id: string }).id,
-				quantity: it.quantity ?? 1,
-			})),
-			...(dpmId ? { default_payment_method: dpmId } : {}),
-			metadata: p.metadata ?? {},
-		});
-	}
+	const { keptPayloads, firstFutureIndex } = collectKeptSchedulePhases(existing, nowUnix);
 
 	if (firstFutureIndex === -1) {
 		return {
@@ -472,25 +452,12 @@ export async function rebuildScheduleForAgreement(
 		};
 	}
 
-	// Inherit default payment method from the active phase (if any).
-	const activePhase = keptPayloads[keptPayloads.length - 1];
-	const inheritedPm =
-		typeof activePhase?.default_payment_method === 'string'
-			? (activePhase.default_payment_method as string)
-			: undefined;
-
-	// Align the new future-phase payloads to the same month grid as the original schedule.
+	const inheritedPm = inheritSchedulePaymentMethod(keptPayloads);
 	const futurePhases = newPhases.slice(firstFutureIndex);
-	const futurePayloads = (await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm)).map(
-		(payload, idx) => {
-			const original = newPhases[firstFutureIndex + idx];
-			const { iterations: _ignored, ...rest } = payload;
-			return {
-				...rest,
-				start_date: original.startUnix,
-				end_date: original.endUnix,
-			};
-		},
+	const futurePayloads = alignFuturePhasePayloads(
+		await toStripePhasePayloads(stripe, futurePhases, lessonAgreementId, inheritedPm),
+		firstFutureIndex,
+		newPhases,
 	);
 
 	if (futurePayloads.length === 0) {

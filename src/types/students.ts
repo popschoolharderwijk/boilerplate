@@ -57,8 +57,8 @@ function transformAgreement(a: StudentAgreementRaw): LessonAgreementWithTeacher 
 		lesson_type: {
 			id: lesson_type.id,
 			name: lesson_type.name,
-			icon: lesson_type.icon,
-			color: lesson_type.color,
+			icon: lesson_type.icon ?? '',
+			color: lesson_type.color ?? '',
 		},
 	};
 }
