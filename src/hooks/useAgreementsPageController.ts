@@ -20,32 +20,58 @@ interface UseAgreementsPageControllerParams {
 }
 
 export function useAgreementsPageController(params: UseAgreementsPageControllerParams) {
+	const {
+		authLoading,
+		hasAccess,
+		navigate,
+		statusFilter,
+		selectedLessonTypeId,
+		debouncedSearchQuery,
+		sortColumn,
+		sortDirection,
+		currentPage,
+		rowsPerPage,
+		setLoading,
+		setTotalCount,
+	} = params;
 	const [agreements, setAgreements] = useState<AgreementTableRow[]>([]);
 	const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; agreement: AgreementTableRow | null } | null>(
 		null,
 	);
 
 	const loadAgreements = useCallback(async () => {
-		params.setLoading(true);
+		setLoading(true);
 		const shouldStopLoading = applyAgreementsPageLoadOutcome(
 			await executeAgreementsPageLoad({
-				authLoading: params.authLoading,
-				hasAccess: params.hasAccess,
-				statusFilter: params.statusFilter,
-				selectedLessonTypeId: params.selectedLessonTypeId,
-				debouncedSearchQuery: params.debouncedSearchQuery,
-				sortColumn: params.sortColumn,
-				sortDirection: params.sortDirection,
-				currentPage: params.currentPage,
-				rowsPerPage: params.rowsPerPage,
+				authLoading,
+				hasAccess,
+				statusFilter,
+				selectedLessonTypeId,
+				debouncedSearchQuery,
+				sortColumn,
+				sortDirection,
+				currentPage,
+				rowsPerPage,
 			}),
 			setAgreements,
-			params.setTotalCount,
+			setTotalCount,
 		);
 		if (shouldStopLoading) {
-			params.setLoading(false);
+			setLoading(false);
 		}
-	}, [params]);
+	}, [
+		authLoading,
+		hasAccess,
+		statusFilter,
+		selectedLessonTypeId,
+		debouncedSearchQuery,
+		sortColumn,
+		sortDirection,
+		currentPage,
+		rowsPerPage,
+		setLoading,
+		setTotalCount,
+	]);
 
 	useEffect(() => {
 		void loadAgreements();
@@ -53,7 +79,7 @@ export function useAgreementsPageController(params: UseAgreementsPageControllerP
 
 	const runAction = (action: AgreementAction) =>
 		runAgreementPageAction(action, deleteDialog, {
-			navigate: params.navigate,
+			navigate,
 			setDeleteDialog,
 			reloadAgreements: loadAgreements,
 		});

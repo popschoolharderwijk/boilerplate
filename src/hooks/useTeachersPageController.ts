@@ -22,6 +22,20 @@ interface UseTeachersPageControllerParams {
 }
 
 export function useTeachersPageController(params: UseTeachersPageControllerParams) {
+	const {
+		authLoading,
+		hasAccess,
+		navigate,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+	} = params;
 	const [teachers, setTeachers] = useState<TeacherWithLessonTypes[]>([]);
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -33,39 +47,50 @@ export function useTeachersPageController(params: UseTeachersPageControllerParam
 	}>({ open: false, teacher: null });
 
 	const loadTeachers = useCallback(async () => {
-		params.setLoading(true);
+		setLoading(true);
 		const shouldStopLoading = applyTeachersPageLoadOutcome(
 			await executeTeachersPageLoad({
-				hasAccess: params.hasAccess,
-				limit: params.rowsPerPage,
-				offset: (params.currentPage - 1) * params.rowsPerPage,
-				search: params.debouncedSearchQuery || null,
-				status: params.statusFilter ?? 'all',
-				lessonTypeId: params.selectedLessonTypeId,
-				sortColumn: params.sortColumn,
-				sortDirection: params.sortDirection,
+				hasAccess,
+				limit: rowsPerPage,
+				offset: (currentPage - 1) * rowsPerPage,
+				search: debouncedSearchQuery || null,
+				status: statusFilter ?? 'all',
+				lessonTypeId: selectedLessonTypeId,
+				sortColumn,
+				sortDirection,
 			}),
 			setTeachers,
-			params.setTotalCount,
+			setTotalCount,
 		);
 		if (shouldStopLoading) {
-			params.setLoading(false);
+			setLoading(false);
 		}
-	}, [params]);
+	}, [
+		hasAccess,
+		rowsPerPage,
+		currentPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+	]);
 
 	useEffect(() => {
-		if (!params.authLoading) {
+		if (!authLoading) {
 			void loadTeachers();
 		}
-	}, [params.authLoading, loadTeachers]);
+	}, [authLoading, loadTeachers]);
 
 	const columns = useMemo(() => buildTeachersColumns(), []);
 
 	const handleEdit = useCallback(
 		(teacher: TeacherWithLessonTypes) => {
-			params.navigate(`/teachers/${teacher.user_id}`);
+			navigate(`/teachers/${teacher.user_id}`);
 		},
-		[params.navigate],
+		[navigate],
 	);
 
 	const handleCreate = useCallback(() => {

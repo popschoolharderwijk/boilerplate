@@ -533,11 +533,8 @@ export function DataTable<T>({
 						<tbody className="text-sm">
 							{loading && paginatedData.length === 0 ? (
 								// Show skeleton loaders when loading and no data
-								Array.from({ length: effectiveRowsPerPage }, () => (
-									<tr
-										key={`skeleton-${Math.random().toString(36).substring(2, 9)}`}
-										className="border-b last:border-0"
-									>
+								Array.from({ length: effectiveRowsPerPage }, (_, skeletonIndex) => (
+									<tr key={`skeleton-${skeletonIndex}`} className="border-b last:border-0">
 										{hasExpandableRows && (
 											<td className={cn('pl-2', compactRows ? 'py-2' : 'py-4')}>
 												<Skeleton className="h-4 w-4" />

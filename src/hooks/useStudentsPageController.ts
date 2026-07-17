@@ -26,6 +26,20 @@ interface UseStudentsPageControllerParams {
 }
 
 export function useStudentsPageController(params: UseStudentsPageControllerParams) {
+	const {
+		authLoading,
+		hasAccess,
+		navigate,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+	} = params;
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [requestsByEmail, setRequestsByEmail] = useState<Map<string, SignupRequestDetail[]>>(new Map());
 	const [deleteDialog, setDeleteDialog] = useState<{
@@ -39,27 +53,39 @@ export function useStudentsPageController(params: UseStudentsPageControllerParam
 	}>({ open: false, student: null });
 
 	const loadStudents = useCallback(async () => {
-		params.setLoading(true);
+		setLoading(true);
 		const shouldStopLoading = applyStudentsPageLoadOutcome(
 			await executeStudentsPageLoad({
-				authLoading: params.authLoading,
-				hasAccess: params.hasAccess,
-				limit: params.rowsPerPage,
-				offset: (params.currentPage - 1) * params.rowsPerPage,
-				search: params.debouncedSearchQuery,
-				statusFilter: params.statusFilter,
-				lessonTypeId: params.selectedLessonTypeId,
-				sortColumn: params.sortColumn,
-				sortDirection: params.sortDirection,
+				authLoading,
+				hasAccess,
+				limit: rowsPerPage,
+				offset: (currentPage - 1) * rowsPerPage,
+				search: debouncedSearchQuery,
+				statusFilter,
+				lessonTypeId: selectedLessonTypeId,
+				sortColumn,
+				sortDirection,
 			}),
 			setStudents,
-			params.setTotalCount,
+			setTotalCount,
 			setRequestsByEmail,
 		);
 		if (shouldStopLoading) {
-			params.setLoading(false);
+			setLoading(false);
 		}
-	}, [params]);
+	}, [
+		authLoading,
+		hasAccess,
+		rowsPerPage,
+		currentPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+	]);
 
 	useEffect(() => {
 		void loadStudents();
@@ -72,7 +98,7 @@ export function useStudentsPageController(params: UseStudentsPageControllerParam
 			loadStudents,
 		});
 
-	const columns = buildStudentColumns(params.navigate, requestsByEmail);
+	const columns = buildStudentColumns(navigate, requestsByEmail);
 
 	return {
 		students,

@@ -21,6 +21,21 @@ interface UseUsersPageControllerParams {
 }
 
 export function useUsersPageController(params: UseUsersPageControllerParams) {
+	const {
+		hasAccess,
+		authLoading,
+		isSiteAdmin,
+		currentUserId,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		selectedRole,
+		sortColumn,
+		sortDirection,
+		setLoading,
+		setTotalCount,
+		setSelectedRole,
+	} = params;
 	const [users, setUsers] = useState<UserWithRole[]>([]);
 	const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: UserWithRole } | null>(null);
 	const [userFormDialog, setUserFormDialog] = useState<{ open: boolean; user: UserWithRole | null }>({
@@ -31,33 +46,43 @@ export function useUsersPageController(params: UseUsersPageControllerParams) {
 	const loadUsers = useCallback(
 		() =>
 			fetchUsersPage({
-				hasAccess: params.hasAccess,
-				currentPage: params.currentPage,
-				rowsPerPage: params.rowsPerPage,
-				debouncedSearchQuery: params.debouncedSearchQuery,
-				selectedRole: params.selectedRole,
-				sortColumn: params.sortColumn,
-				sortDirection: params.sortDirection,
+				hasAccess,
+				currentPage,
+				rowsPerPage,
+				debouncedSearchQuery,
+				selectedRole,
+				sortColumn,
+				sortDirection,
 				supabase,
-				setLoading: params.setLoading,
-				setTotalCount: params.setTotalCount,
+				setLoading,
+				setTotalCount,
 				setUsers,
 			}),
-		[params],
+		[
+			hasAccess,
+			currentPage,
+			rowsPerPage,
+			debouncedSearchQuery,
+			selectedRole,
+			sortColumn,
+			sortDirection,
+			setLoading,
+			setTotalCount,
+		],
 	);
 
 	useEffect(() => {
-		if (!params.authLoading) {
+		if (!authLoading) {
 			void loadUsers();
 		}
-	}, [params.authLoading, loadUsers]);
+	}, [authLoading, loadUsers]);
 
 	const quickFilterGroups = useMemo(
-		() => buildUsersQuickFilterGroups(params.selectedRole, params.setSelectedRole),
-		[params.selectedRole, params.setSelectedRole],
+		() => buildUsersQuickFilterGroups(selectedRole, setSelectedRole),
+		[selectedRole, setSelectedRole],
 	);
 
-	const columns = useMemo(() => buildUsersColumns(params.currentUserId), [params.currentUserId]);
+	const columns = useMemo(() => buildUsersColumns(currentUserId), [currentUserId]);
 
 	const handleEdit = useCallback((targetUser: UserWithRole) => {
 		setUserFormDialog({ open: true, user: targetUser });
@@ -75,12 +100,12 @@ export function useUsersPageController(params: UseUsersPageControllerParams) {
 		if (!deleteDialog?.user) return Promise.resolve();
 		return runUserDelete({
 			user: deleteDialog.user,
-			isSiteAdmin: params.isSiteAdmin,
+			isSiteAdmin,
 			supabase,
 			setDeleteDialog,
 			loadUsers,
 		});
-	}, [deleteDialog, params.isSiteAdmin, loadUsers]);
+	}, [deleteDialog, isSiteAdmin, loadUsers]);
 
 	return {
 		users,
