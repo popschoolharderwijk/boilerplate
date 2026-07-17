@@ -4,11 +4,7 @@
 //
 // Auth: admin or site_admin only.
 import { createHash } from 'node:crypto';
-import {
-	beginAuthenticatedPostWithUuidField,
-	handleCorsPreflight,
-	jsonResponse,
-} from '../_shared/http.ts';
+import { beginAuthenticatedPostWithUuidField, handleCorsPreflight, jsonResponse } from '../_shared/http.ts';
 import { requireAuthenticatedClients } from '../_shared/supabase.ts';
 
 interface Body {
@@ -70,11 +66,7 @@ Deno.serve(async (req) => {
 	if (!auth.ok) return auth.response;
 	const { userClient, admin, user } = auth;
 
-	const { data: roleRow } = await userClient
-		.from('user_roles')
-		.select('role')
-		.eq('user_id', user.id)
-		.maybeSingle();
+	const { data: roleRow } = await userClient.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
 	const role = roleRow?.role;
 	if (role !== 'admin' && role !== 'site_admin') {
 		return jsonResponse(403, { error: 'Geen rechten' });

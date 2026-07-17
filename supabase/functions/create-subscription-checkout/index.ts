@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 		const stripe = getStripe();
 
 		if (mode === 'complete') {
-			if (!body.checkout_session_id || !body.checkout_session_id.startsWith('cs_')) {
+			if (!body.checkout_session_id?.startsWith('cs_')) {
 				return jsonResponse(400, { error: 'Ongeldige checkout sessie' });
 			}
 

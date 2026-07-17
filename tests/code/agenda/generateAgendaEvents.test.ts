@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { formatAgendaEventSaveError } from '../../../src/lib/agenda/agendaEventFormSave';
 import { generateAgendaEvents } from '../../../src/lib/agenda/eventGenerators';
+import { formatAgendaEventSaveError } from '../../../src/lib/agenda/formatAgendaEventSaveError';
 import { formatDateToDb } from '../../../src/lib/date/date-format';
 import type { AgendaEventRow } from '../../../src/types/agenda-events';
 

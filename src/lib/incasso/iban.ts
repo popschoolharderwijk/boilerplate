@@ -1,13 +1,13 @@
 /**
- * Normaliseert een IBAN-invoer (verwijdert spaties, uppercase).
+ * Normalize an IBAN input (strip spaces, uppercase).
  */
 export function normalizeIban(input: string): string {
 	return input.replace(/\s+/g, '').toUpperCase();
 }
 
 /**
- * Mod-97 validatie voor een IBAN. Geeft alleen `true` als zowel de structuur
- * (2 letters + 2 cijfers + 11-30 alfanumeriek) als de checksum kloppen.
+ * Mod-97 validation for an IBAN. Returns `true` only when both the structure
+ * (2 letters + 2 digits + 11–30 alphanumeric) and the checksum are valid.
  */
 export function isValidIban(input: string): boolean {
 	const iban = normalizeIban(input);
@@ -26,7 +26,7 @@ export function isValidIban(input: string): boolean {
 }
 
 /**
- * Visuele opmaak van een IBAN met spaties per 4 tekens.
+ * Format an IBAN for display with a space every 4 characters.
  */
 export function formatIban(input: string): string {
 	const iban = normalizeIban(input);

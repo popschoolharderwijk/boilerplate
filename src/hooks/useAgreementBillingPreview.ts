@@ -1,12 +1,11 @@
 /**
- * Berekent een live preview van het jaar/maand-bedrag voor een lesovereenkomst,
- * gebaseerd op:
- *   - de matching `lesson_type_options` (voor leeftijdstarieven),
- *   - de geboortedatum van de leerling (om <21 vs adult te kiezen),
- *   - alle `no_lesson_periods` in het schooljaar.
+ * Computes a live yearly/monthly amount preview for a lesson agreement, based on:
+ *   - the matching `lesson_type_options` (for age tariffs),
+ *   - the student's date of birth (to choose under_21 vs adult),
+ *   - all `no_lesson_periods` in the school year.
  *
- * Het schooljaar is dat van vandaag (of de start_date als die in de toekomst ligt),
- * begrensd door agreement.start_date / end_date.
+ * The school year is today's (or start_date when that is in the future),
+ * clamped by agreement.start_date / end_date.
  */
 
 import { useEffect, useState } from 'react';

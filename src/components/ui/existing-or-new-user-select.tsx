@@ -30,7 +30,7 @@ export interface ExistingOrNewUserSelectProps {
 
 /**
  * Reusable block: select an existing user from a searchable dropdown, or create a new user via modal.
- * Used in agreement wizard (step 1 – leerling) and teacher form (add teacher).
+ * Used in agreement wizard (step 1 – student) and teacher form (add teacher).
  */
 export function ExistingOrNewUserSelect({
 	value,

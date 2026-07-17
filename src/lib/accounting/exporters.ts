@@ -31,14 +31,14 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 	const lines: JournalLine[] = [];
 
 	for (const inv of report.invoices) {
-		const factuurDatum = isoDate(inv.period_start);
+		const invoiceDate = isoDate(inv.period_start);
 		const desc = `Factuur ${inv.stripe_invoice_id} - ${inv.student_name}`;
-		const factuurEntryId = `FACT-${inv.invoice_id}`;
+		const invoiceEntryId = `FACT-${inv.invoice_id}`;
 
 		// 1) Accounts receivable (debit) — gross amount
 		lines.push({
-			entryId: factuurEntryId,
-			date: factuurDatum,
+			entryId: invoiceEntryId,
+			date: invoiceDate,
 			journalCode: settings.journal_code_memoriaal,
 			account: settings.account_debiteuren,
 			debit: inv.amount_due_cents,
@@ -53,8 +53,8 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 		// 2) Revenue under 21 (exempt) or 21+ (excl. VAT)
 		if (inv.age_category === '21_plus') {
 			lines.push({
-				entryId: factuurEntryId,
-				date: factuurDatum,
+				entryId: invoiceEntryId,
+				date: invoiceDate,
 				journalCode: settings.journal_code_memoriaal,
 				account: settings.account_omzet_21_plus,
 				debit: 0,
@@ -68,8 +68,8 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 			// 3) VAT payable
 			if (inv.btw_amount_cents > 0) {
 				lines.push({
-					entryId: factuurEntryId,
-					date: factuurDatum,
+					entryId: invoiceEntryId,
+					date: invoiceDate,
 					journalCode: settings.journal_code_memoriaal,
 					account: settings.account_btw_21,
 					debit: 0,
@@ -84,8 +84,8 @@ export function generateJournalLines(report: AccountingReport, settings: Account
 		} else {
 			// under_21 or unknown -> fully on exempt revenue
 			lines.push({
-				entryId: factuurEntryId,
-				date: factuurDatum,
+				entryId: invoiceEntryId,
+				date: invoiceDate,
 				journalCode: settings.journal_code_memoriaal,
 				account: settings.account_omzet_under_21,
 				debit: 0,

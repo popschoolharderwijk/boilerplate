@@ -286,7 +286,7 @@ export function TeacherAvailabilitySection({ teacherUserId, canEdit }: TeacherAv
 											return (
 												<button
 													type="button"
-													key={`${dayIndex}-${time}`}
+													key={`${dayName}-${time}`}
 													className="absolute left-0 right-0 hover:bg-primary/20 transition-colors border border-transparent hover:border-primary/40"
 													style={{
 														top: `${topPercent}%`,

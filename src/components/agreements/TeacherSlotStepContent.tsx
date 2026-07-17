@@ -146,7 +146,7 @@ export function TeacherSlotStepContent({
 													{DAY_NAMES[dayOfWeek]}
 												</div>
 												<div className="flex flex-wrap gap-1.5">
-													{daySlots.map((slot, idx) => {
+													{daySlots.map((slot) => {
 														const isSelected =
 															selectedSlot?.day_of_week === slot.day_of_week &&
 															selectedSlot?.start_time === slot.start_time;
@@ -163,7 +163,7 @@ export function TeacherSlotStepContent({
 																: SLOT_STATUS_TITLE[slot.status];
 														return (
 															<button
-																key={`${slot.day_of_week}-${slot.start_time}-${idx}`}
+																key={`${slot.day_of_week}-${slot.start_time}`}
 																type="button"
 																disabled={isOccupied}
 																onClick={() => onSlotClick(slot)}

@@ -1,12 +1,12 @@
 import type { JSX, ReactNode } from 'react';
 
 /**
- * Minimalistische, veilige markdown renderer voor nieuwsberichten.
- * Ondersteunt: paragrafen, regelafbrekingen, **bold**, *italic*, `code`,
- * [tekst](url), ![alt](url), ongeordende lijsten (- of *), kop niveaus # tot ###.
+ * Minimal, safe markdown renderer for announcements.
+ * Supports: paragraphs, line breaks, **bold**, *italic*, `code`,
+ * [text](url), ![alt](url), unordered lists (- or *), headings # to ###.
  *
- * Onbekende HTML wordt nooit gerenderd — we werken puur op tekst en bouwen JSX,
- * zodat XSS niet mogelijk is via raw HTML.
+ * Unknown HTML is never rendered — we parse plain text and build JSX,
+ * so XSS via raw HTML is not possible.
  */
 
 const URL_PATTERN = /^https?:\/\/[^\s)]+$/i;

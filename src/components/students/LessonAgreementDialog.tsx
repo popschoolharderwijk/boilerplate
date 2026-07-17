@@ -23,9 +23,9 @@ interface LessonAgreementDialogProps {
 	onOpenChange: (open: boolean) => void;
 	agreement: LessonAgreementWithTeacher | null;
 	/**
-	 * Optioneel: ID's nodig om een live incasso-preview te tonen.
-	 * Wanneer opgegeven verschijnt het blok "Incasso-preview" met
-	 * jaar/maandbedrag op basis van prijs per les × frequentie.
+	 * Optional: IDs needed to show a live direct-debit preview.
+	 * When provided, the "Incasso-preview" block appears with
+	 * yearly/monthly amount based on price per lesson × frequency.
 	 */
 	studentUserId?: string;
 	lessonTypeId?: string;

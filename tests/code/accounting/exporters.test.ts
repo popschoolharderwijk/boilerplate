@@ -1,5 +1,5 @@
 /**
- * Unit tests voor boekhouding journaalpost-generatie.
+ * Unit tests for accounting journal-line generation.
  */
 import { describe, expect, it } from 'bun:test';
 import { generateCsv, generateExactXml, generateJournalLines } from '../../../src/lib/accounting/exporters';
@@ -45,7 +45,6 @@ const SETTINGS: AccountingSettings = {
 	invoice_footer_text: null,
 };
 
-
 function makeReport(overrides: Partial<AccountingReport['invoices'][number]> = {}): AccountingReport {
 	return {
 		period: { start: '2026-06-01', end: '2026-06-30' },
@@ -87,18 +86,18 @@ function makeReport(overrides: Partial<AccountingReport['invoices'][number]> = {
 }
 
 describe('generateJournalLines', () => {
-	it('genereert 5 regels voor betaalde 21+ factuur (deb, omzet, btw, bank, deb-credit)', () => {
+	it('generates 5 lines for a paid 21+ invoice (AR, revenue, VAT, bank, AR credit)', () => {
 		const lines = generateJournalLines(makeReport(), SETTINGS);
 		expect(lines.length).toBe(5);
-		const factuur = lines.filter((l) => l.entryId === 'FACT-inv-1');
-		expect(factuur.length).toBe(3);
-		const sumDeb = factuur.reduce((s, l) => s + l.debit, 0);
-		const sumCred = factuur.reduce((s, l) => s + l.credit, 0);
+		const invoiceLines = lines.filter((l) => l.entryId === 'FACT-inv-1');
+		expect(invoiceLines.length).toBe(3);
+		const sumDeb = invoiceLines.reduce((s, l) => s + l.debit, 0);
+		const sumCred = invoiceLines.reduce((s, l) => s + l.credit, 0);
 		expect(sumDeb).toBe(sumCred);
 		expect(sumDeb).toBe(12100);
 	});
 
-	it('genereert 3 regels voor onbetaalde <21 factuur (deb + omzet vrijgesteld)', () => {
+	it('generates lines for an unpaid under-21 invoice (AR + exempt revenue)', () => {
 		const lines = generateJournalLines(
 			makeReport({
 				status: 'open',
@@ -115,11 +114,11 @@ describe('generateJournalLines', () => {
 		const sumDeb = lines.reduce((s, l) => s + l.debit, 0);
 		const sumCred = lines.reduce((s, l) => s + l.credit, 0);
 		expect(sumDeb).toBe(sumCred);
-		const omzet = lines.find((l) => l.account === '8000');
-		expect(omzet?.credit).toBe(5000);
+		const revenue = lines.find((l) => l.account === '8000');
+		expect(revenue?.credit).toBe(5000);
 	});
 
-	it('gebruikt vrijgestelde omzetrekening voor unknown leeftijd', () => {
+	it('uses the exempt revenue account for unknown age', () => {
 		const lines = generateJournalLines(
 			makeReport({
 				age_category: 'unknown',
@@ -138,14 +137,14 @@ describe('generateJournalLines', () => {
 });
 
 describe('generateCsv', () => {
-	it('bevat header en juiste delimiter', () => {
+	it('includes header and the correct delimiter', () => {
 		const csv = generateCsv(generateJournalLines(makeReport(), SETTINGS));
 		expect(csv.startsWith('Mutatienr;Datum;Dagboek;')).toBe(true);
 		expect(csv).toContain('1300');
 		expect(csv).toContain('Jan Jansen');
 	});
 
-	it('escapet velden met speciale tekens', () => {
+	it('escapes fields with special characters', () => {
 		const lines = generateJournalLines(makeReport({ student_name: 'Naam; met;komma' }), SETTINGS);
 		const csv = generateCsv(lines);
 		expect(csv).toContain('"Naam; met;komma"');
@@ -153,7 +152,7 @@ describe('generateCsv', () => {
 });
 
 describe('generateExactXml', () => {
-	it('bevat GLTransaction per entry en juiste journal codes', () => {
+	it('includes a GLTransaction per entry with the correct journal codes', () => {
 		const lines = generateJournalLines(makeReport(), SETTINGS);
 		const xml = generateExactXml(lines, SETTINGS);
 		expect(xml).toContain('<eExact');
@@ -164,7 +163,7 @@ describe('generateExactXml', () => {
 		expect(xml).toContain('vatcode="VH"');
 	});
 
-	it('escapet xml entities in beschrijvingen', () => {
+	it('escapes XML entities in descriptions', () => {
 		const lines = generateJournalLines(makeReport({ student_name: 'A & B' }), SETTINGS);
 		const xml = generateExactXml(lines, SETTINGS);
 		expect(xml).toContain('A &amp; B');

@@ -1,8 +1,7 @@
-// Verstuurt bevestigingsmails naar leerling en docent na aanmaken van een
-// lesovereenkomst. Wordt aangeroepen vanuit de agreement-wizard nadat de
-// insert in `lesson_agreements` is gelukt. Fouten worden bewust niet naar
-// buiten geworpen: de overeenkomst is al opgeslagen, de UI toont hooguit
-// een warning.
+// Sends confirmation emails to student and teacher after creating a lesson
+// agreement. Called from the agreement wizard once the insert into
+// `lesson_agreements` succeeds. Errors are intentionally not rethrown: the
+// agreement is already saved; the UI may show a warning at most.
 
 import { supabase } from '@/integrations/supabase/client';
 

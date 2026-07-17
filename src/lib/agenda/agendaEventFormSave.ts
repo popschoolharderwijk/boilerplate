@@ -4,6 +4,8 @@ import { normalizeTime } from '@/lib/time/time-format';
 import type { AgendaEventInsert, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
+export { formatAgendaEventSaveError } from './formatAgendaEventSaveError';
+
 export interface AgendaEventFormSaveInput {
 	userId: string;
 	startDate: string;
@@ -25,15 +27,6 @@ export interface AgendaEventFormSaveInput {
 	externalSourceType: AgendaEventSourceType | undefined;
 	externalSourceId: string | null | undefined;
 	scope: 'single' | 'thisAndFuture' | 'all';
-}
-
-export function formatAgendaEventSaveError(err: unknown): string {
-	const message = 'Opslaan mislukt';
-	const errMessage = err instanceof Error ? err.message : (err as { message?: string })?.message;
-	if (errMessage === 'NO_CHANGES') return 'Er zijn geen wijzigingen om op te slaan.';
-	if (!errMessage) return message;
-	if (errMessage.includes('row-level security')) return 'Je hebt geen toestemming om deze deelnemer toe te voegen';
-	return errMessage;
 }
 
 export async function saveAgendaEventForm(input: AgendaEventFormSaveInput): Promise<void> {

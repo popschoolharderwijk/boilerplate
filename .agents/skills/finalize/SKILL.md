@@ -178,6 +178,16 @@ Step 0 (`bun supabase:types`) must have completed successfully once before the l
 
 If fallow needed fixes, the winning outer pass is the **verification** run after the fallow inner loop turned green — not the inner-loop attempt alone.
 
+## Language: English vs Dutch
+
+**Enforce during finalize (before declaring success):**
+
+- All **code**, **tests**, **comments**, and **CLI tool** input/output must be in **English**.
+- **Only** the front-end UI (labels, buttons, error messages, placeholders, user-facing copy) is in **Dutch** in this project.
+- Docs under `./docs/` stay Dutch; that is outside this gate unless you touch them while fixing.
+
+If you find Dutch (or other non-English) in code identifiers, test names/`describe`/`it` strings, comments, or CLI strings while fixing, convert them to English. Do not change front-end UI copy to English.
+
 ## Agent rules
 
 1. **Use caveman mode** — see Communication section above; load caveman skill at start.
@@ -188,5 +198,6 @@ If fallow needed fixes, the winning outer pass is the **verification** run after
 6. **Prefer minimal fixes** over large refactors unless the failure clearly requires structural change.
 7. **Keep iterating** until the full pipeline is green; do not stop after a partial pass.
 8. **Fix in priority order** — Biome → type errors → code tests → Fallow; never edit tests while `tsc` fails.
-9. **Escalate, don't loop forever** — see "When to stop and escalate"; stop when the failure count stalls for two iterations, after outer/inner caps, or on out-of-scope/ambiguous failures.
-10. **Do not commit** unless the user explicitly asks.
+9. **Enforce English** — code, tests, comments, and CLI I/O in English; front-end UI stays Dutch. See Language section.
+10. **Escalate, don't loop forever** — see "When to stop and escalate"; stop when the failure count stalls for two iterations, after outer/inner caps, or on out-of-scope/ambiguous failures.
+11. **Do not commit** unless the user explicitly asks.

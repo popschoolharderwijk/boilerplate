@@ -9,11 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { consumeMagicLinkFromUrl, getFunctionErrorMessage, readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
 /**
- * Landing page voor de magic-link uit de incasso-uitnodigingsmail.
- * 1. Verwerkt de magic link (PKCE of token_hash) als die in de URL staat.
- * 2. Roept create-subscription-checkout aan voor de meegegeven agreement.
- * 3. Stuurt de gebruiker door naar Stripe Checkout (mode `checkout`)
- *    of bevestigt de afronding (mode `complete`).
+ * Landing page for the magic link from the direct-debit invitation email.
+ * 1. Consumes the magic link (PKCE or token_hash) when present in the URL.
+ * 2. Calls create-subscription-checkout for the given agreement.
+ * 3. Redirects the user to Stripe Checkout (mode `checkout`)
+ *    or confirms completion (mode `complete`).
  */
 export default function IncassoStart() {
 	const [params] = useSearchParams();

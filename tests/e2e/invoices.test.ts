@@ -1,13 +1,13 @@
 /**
- * End-to-end test voor het factuur-genereren + ophalen-flow.
+ * End-to-end test for the invoice generate + fetch flow.
  *
  * Flow:
- *  1. Admin maakt SEPA-mandaat + incasso-batch + batch-item aan (service role).
- *  2. Admin (JWT) roept `generate-invoice` aan → factuur + PDF moet bestaan.
- *  3. De juiste student haalt `get-invoice-pdf` op → krijgt signed URL (RLS toestaan).
- *  4. Een andere student vraagt diezelfde factuur op → 404 (RLS blokkeert).
- *  5. Een anonieme call → 401.
- *  6. Cleanup: invoice_lines, invoices, batch_items, batches, mandaat, storage object.
+ *  1. Admin creates a SEPA mandate + direct-debit batch + batch item (service role).
+ *  2. Admin (JWT) calls `generate-invoice` → invoice + PDF must exist.
+ *  3. The owning student calls `get-invoice-pdf` → receives a signed URL (RLS allows).
+ *  4. Another student requests the same invoice → 404 (RLS blocks).
+ *  5. An anonymous call → 401.
+ *  6. Cleanup: invoice_lines, invoices, batch_items, batches, mandate, storage object.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
@@ -45,7 +45,7 @@ async function invokeFn(fn: string, opts: { token?: string; body: unknown }): Pr
 	return { status: resp.status, json };
 }
 
-describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
+describe('E2E: generate-invoice + get-invoice-pdf with RLS', () => {
 	const admin = createClientBypassRLS();
 	let studentUserId: string;
 	let otherStudentUserId: string;
@@ -57,7 +57,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 	let createdSettings = false;
 
 	beforeAll(async () => {
-		if (!SUPABASE_URL || !ANON_KEY) throw new Error('SUPABASE_URL en publishable key vereist');
+		if (!SUPABASE_URL || !ANON_KEY) throw new Error('SUPABASE_URL and publishable key required');
 
 		// Resolve seeded student user_ids
 		const studentEmail = TestUsers.STUDENT_001;
@@ -73,7 +73,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(studentUserId).toBeTruthy();
 		expect(otherStudentUserId).toBeTruthy();
 
-		// Zorg dat accounting_settings minimaal bestaat
+		// Ensure a minimal accounting_settings row exists
 		const { data: existingSettings } = await admin
 			.from('accounting_settings')
 			.select('id')
@@ -87,7 +87,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 			createdSettings = true;
 		}
 
-		// Mandaat (actief)
+		// Mandate (active)
 		const ref = `E2E-MND-${Date.now()}`;
 		const { data: mand, error: mErr } = await admin
 			.from('sepa_mandates')
@@ -143,7 +143,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		if (pdfStoragePath) {
 			await admin.storage.from('invoices').remove([pdfStoragePath]);
 		}
-		// DB cleanup (CASCADE doet incasso_batch_items via batch)
+		// DB cleanup (CASCADE removes incasso_batch_items via batch)
 		if (invoiceId) {
 			await admin.from('invoice_lines').delete().eq('invoice_id', invoiceId);
 			await admin.from('invoices').delete().eq('id', invoiceId);
@@ -154,7 +154,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		if (createdSettings) await admin.from('accounting_settings').delete().eq('id', true);
 	});
 
-	it('admin kan generate-invoice aanroepen en factuur wordt aangemaakt', async () => {
+	it('admin can call generate-invoice and an invoice is created', async () => {
 		const adminClient = await createClientAs(TestUsers.ADMIN_ONE);
 		const { data: sess } = await adminClient.auth.getSession();
 		const token = sess.session?.access_token;
@@ -171,7 +171,7 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(results[0].invoice_id).toBeTruthy();
 		invoiceId = results[0].invoice_id as string;
 
-		// Verifieer DB-rijen
+		// Verify DB rows
 		const { data: inv } = await admin
 			.from('invoices')
 			.select('id, student_user_id, status, pdf_storage_path, amount_total_cents')
@@ -189,8 +189,8 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(lines.length).toBe(1);
 	});
 
-	it('opnieuw aanroepen genereert geen duplicaten (idempotent)', async () => {
-		if (!invoiceId) throw new Error('voorgaande test moet eerst slagen');
+	it('calling again does not create duplicates (idempotent)', async () => {
+		if (!invoiceId) throw new Error('previous test must succeed first');
 		const adminClient = await createClientAs(TestUsers.ADMIN_ONE);
 		const { data: sess } = await adminClient.auth.getSession();
 		const token = sess.session?.access_token as string;
@@ -204,8 +204,8 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(results[0].invoice_id).toBe(invoiceId);
 	});
 
-	it('eigenaar-student krijgt signed URL via get-invoice-pdf en kan PDF downloaden', async () => {
-		if (!invoiceId) throw new Error('voorgaande test moet eerst slagen');
+	it('owning student gets a signed URL via get-invoice-pdf and can download the PDF', async () => {
+		if (!invoiceId) throw new Error('previous test must succeed first');
 		const studentClient = await createClientAs(TestUsers.STUDENT_001);
 		const { data: sess } = await studentClient.auth.getSession();
 		const token = sess.session?.access_token as string;
@@ -225,8 +225,8 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(bytes[3]).toBe(0x46);
 	});
 
-	it('andere student krijgt 404 (RLS blokkeert toegang tot factuur)', async () => {
-		if (!invoiceId) throw new Error('voorgaande test moet eerst slagen');
+	it('another student gets 404 (RLS blocks access to the invoice)', async () => {
+		if (!invoiceId) throw new Error('previous test must succeed first');
 		const otherClient = await createClientAs(TestUsers.STUDENT_002);
 		const { data: sess } = await otherClient.auth.getSession();
 		const token = sess.session?.access_token as string;
@@ -234,13 +234,13 @@ describe('E2E: generate-invoice + get-invoice-pdf met RLS', () => {
 		expect(res.status).toBe(404);
 	});
 
-	it('anonieme call op get-invoice-pdf wordt afgewezen met 401', async () => {
-		if (!invoiceId) throw new Error('voorgaande test moet eerst slagen');
+	it('anonymous get-invoice-pdf call is rejected with 401', async () => {
+		if (!invoiceId) throw new Error('previous test must succeed first');
 		const res = await invokeFn('get-invoice-pdf', { body: { invoice_id: invoiceId } });
 		expect(res.status).toBe(401);
 	});
 
-	it('niet-admin (student) mag generate-invoice niet aanroepen (403)', async () => {
+	it('non-admin (student) cannot call generate-invoice (403)', async () => {
 		const studentClient = await createClientAs(TestUsers.STUDENT_001);
 		const { data: sess } = await studentClient.auth.getSession();
 		const token = sess.session?.access_token as string;

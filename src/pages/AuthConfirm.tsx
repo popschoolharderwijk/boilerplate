@@ -8,7 +8,7 @@ import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
 const EMAIL_OTP_TYPES = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email', 'email_change']);
 
 function getSafeNext(value: string | null): string {
-	if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
+	if (!value?.startsWith('/') || value.startsWith('//')) return '/';
 	return value;
 }
 

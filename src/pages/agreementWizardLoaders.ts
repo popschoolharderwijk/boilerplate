@@ -336,7 +336,7 @@ async function saveWizardAgreement(params: SaveParams): Promise<boolean> {
 	}
 
 	if (!agreement && insertResult.data?.id) {
-		// Bevestigingsmails naar leerling en docent (best-effort, blockt de flow niet).
+		// Confirmation emails to student and teacher (best-effort; does not block the flow).
 		await sendAgreementCreatedMails(insertResult.data.id);
 	}
 

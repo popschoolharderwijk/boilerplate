@@ -473,7 +473,7 @@ export function AgendaEventFormDialog({
 						)}
 					</div>
 
-					{canRevert && deviationInfo && deviationInfo.hasTimeOrDateChange && (
+					{canRevert && deviationInfo?.hasTimeOrDateChange && (
 						<DeviationInfoBanner
 							deviationInfo={deviationInfo}
 							onRevert={() => runFormAction({ kind: 'revert' })}
