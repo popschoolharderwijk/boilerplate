@@ -26,7 +26,6 @@ import {
 	resolveTeacherFormDialogCopy,
 	resolveTeacherFormSubmitDisabled,
 	resolveTeacherFormSubmitLabel,
-	shouldBlockTeacherFormClose,
 } from '@/lib/teachers/teacherFormDialogShellHelpers';
 import { executeTeacherFormDialogSubmit } from '@/lib/teachers/teacherFormDialogSubmit';
 import type { Teacher } from '@/types/teachers';
@@ -149,7 +148,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 	}, [open, teacher]);
 
 	const handleOpenChange = (newOpen: boolean) => {
-		if (shouldBlockTeacherFormClose(saving)) return;
+		if (saving) return;
 		if (!newOpen) {
 			setForm(EMPTY_TEACHER_FORM);
 			setSelectedUserId(null);

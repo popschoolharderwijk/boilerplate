@@ -5,12 +5,11 @@ import { useActiveLessonTypes } from '@/hooks/useActiveLessonTypes';
 import { useAgreementsPageController } from '@/hooks/useAgreementsPageController';
 import { useAuth } from '@/hooks/useAuth';
 import { useListPageTableState } from '@/hooks/useListPageTableState';
-import { shouldShowAgreementsPage } from '@/lib/agreements/agreementsPageShellHelpers';
 
 export default function Agreements() {
 	const navigate = useNavigate();
 	const { isPrivileged, isLoading: authLoading } = useAuth();
-	const hasAccess = shouldShowAgreementsPage(isPrivileged);
+	const hasAccess = isPrivileged;
 	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 	const tableState = useListPageTableState({
 		storageKey: 'agreements',

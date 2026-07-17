@@ -1,19 +1,18 @@
 import type { Student } from '@/types/students';
 
-export function shouldShowStudentDateOfBirth(dateOfBirth: string | null | undefined): boolean {
-	return Boolean(dateOfBirth);
-}
-export function shouldShowStudentLimitedAccessNotice(canViewFullData: boolean): boolean {
-	return !canViewFullData;
-}
-
-export function resolveStudentInfoDateOfBirth(fullData: Student | null): string | null {
-	return fullData?.date_of_birth ?? null;
+export interface StudentInfoModalView {
+	dateOfBirth: string | null;
+	showDateOfBirth: boolean;
+	showPrivilegedBlock: boolean;
+	showLimitedAccessNotice: boolean;
 }
 
-export function shouldRenderStudentInfoPrivilegedBlock(
-	canViewFullData: boolean,
-	fullData: Student | null,
-): fullData is Student {
-	return canViewFullData && fullData !== null;
+export function buildStudentInfoModalView(fullData: Student | null, canViewFullData: boolean): StudentInfoModalView {
+	const dateOfBirth = fullData?.date_of_birth ?? null;
+	return {
+		dateOfBirth,
+		showDateOfBirth: Boolean(dateOfBirth),
+		showPrivilegedBlock: canViewFullData && fullData !== null,
+		showLimitedAccessNotice: !canViewFullData,
+	};
 }

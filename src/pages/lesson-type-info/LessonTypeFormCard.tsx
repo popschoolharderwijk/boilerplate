@@ -10,7 +10,6 @@ import {
 	applyDuoLessonToggle,
 	applyGroupLessonToggle,
 	shouldDisableLessonTypeSubmit,
-	shouldShowLessonTypeSavingLabel,
 	updateLessonTypeFormActive,
 	updateLessonTypeFormColor,
 	updateLessonTypeFormCostCenter,
@@ -136,7 +135,7 @@ export function LessonTypeFormCard({
 						onClick={onSubmit}
 						disabled={shouldDisableLessonTypeSubmit(canSubmit, submitting)}
 					>
-						{shouldShowLessonTypeSavingLabel(submitting) ? (
+						{submitting ? (
 							<>
 								<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
 								{savingLabel}

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'bun:test';
 import {
 	isStudentEmailFieldDisabled,
 	isStudentPersonalNameFieldDisabled,
-	shouldShowStudentEmailImmutableHint,
 } from '../../../src/lib/students/studentFormPersonalSectionHelpers';
 
 describe('isStudentPersonalNameFieldDisabled', () => {
@@ -26,15 +25,5 @@ describe('isStudentEmailFieldDisabled', () => {
 
 	it('keeps email enabled for a new user in create mode', () => {
 		expect(isStudentEmailFieldDisabled(false, 'new-user')).toBe(false);
-	});
-});
-
-describe('shouldShowStudentEmailImmutableHint', () => {
-	it('shows hint in edit mode', () => {
-		expect(shouldShowStudentEmailImmutableHint(true)).toBe(true);
-	});
-
-	it('hides hint in create mode', () => {
-		expect(shouldShowStudentEmailImmutableHint(false)).toBe(false);
 	});
 });

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
-import { buildLessonTypeInfoPageResult } from '@/lib/lesson-types/lessonTypeInfoPageControllerHelpers';
 import {
 	resolveLessonTypeInfoAccess,
 	resolveLessonTypeInfoEditMode,
@@ -57,7 +56,7 @@ export function useLessonTypeInfoPage() {
 		[isEditMode, loader.form.name, loader.lessonType?.name],
 	);
 
-	return buildLessonTypeInfoPageResult({
+	return {
 		authLoading,
 		hasAccess,
 		isEditMode,
@@ -73,5 +72,5 @@ export function useLessonTypeInfoPage() {
 		saving,
 		submit,
 		optionModal,
-	});
+	};
 }

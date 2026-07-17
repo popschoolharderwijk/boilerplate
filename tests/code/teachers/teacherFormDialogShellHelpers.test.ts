@@ -4,7 +4,6 @@ import {
 	resolveTeacherFormDialogCopy,
 	resolveTeacherFormSubmitDisabled,
 	resolveTeacherFormSubmitLabel,
-	shouldBlockTeacherFormClose,
 } from '../../../src/lib/teachers/teacherFormDialogShellHelpers';
 
 describe('resolveTeacherFormDialogCopy', () => {
@@ -41,15 +40,5 @@ describe('resolveTeacherFormSubmitLabel', () => {
 
 	it('returns edit labels', () => {
 		expect(resolveTeacherFormSubmitLabel(true)).toEqual({ idle: 'Opslaan', loading: 'Opslaan...' });
-	});
-});
-
-describe('shouldBlockTeacherFormClose', () => {
-	it('blocks close while saving', () => {
-		expect(shouldBlockTeacherFormClose(true)).toBe(true);
-	});
-
-	it('allows close when not saving', () => {
-		expect(shouldBlockTeacherFormClose(false)).toBe(false);
 	});
 });

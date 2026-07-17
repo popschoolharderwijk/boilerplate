@@ -2,18 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	shouldShowNoLessonPeriodsEmpty,
 	shouldShowNoLessonPeriodsList,
-	shouldShowNoLessonPeriodsLoading,
 } from '../../../src/lib/settings/noLessonPeriodsViewHelpers';
-
-describe('shouldShowNoLessonPeriodsLoading', () => {
-	it('returns true while loading', () => {
-		expect(shouldShowNoLessonPeriodsLoading(true)).toBe(true);
-	});
-
-	it('returns false when loading finished', () => {
-		expect(shouldShowNoLessonPeriodsLoading(false)).toBe(false);
-	});
-});
 
 describe('shouldShowNoLessonPeriodsEmpty', () => {
 	it('shows empty state when not loading and no periods exist', () => {

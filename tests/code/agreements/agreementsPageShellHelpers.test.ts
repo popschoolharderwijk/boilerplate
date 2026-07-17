@@ -2,18 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	buildAgreementDeleteDescription,
 	buildAgreementDeleteDialogOpenChangeHandler,
-	shouldShowAgreementsPage,
 } from '../../../src/lib/agreements/agreementsPageShellHelpers';
-
-describe('shouldShowAgreementsPage', () => {
-	it('returns true when user has access', () => {
-		expect(shouldShowAgreementsPage(true)).toBe(true);
-	});
-
-	it('returns false when user lacks access', () => {
-		expect(shouldShowAgreementsPage(false)).toBe(false);
-	});
-});
 
 describe('buildAgreementDeleteDialogOpenChangeHandler', () => {
 	it('clears delete dialog when closed', () => {

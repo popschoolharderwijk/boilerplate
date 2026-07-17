@@ -16,7 +16,6 @@ import {
 	buildProjectsRowActions,
 	resolveProjectAgendaCanSchedule,
 	resolveProjectsPagePermissions,
-	resolveProjectsPageRedirect,
 } from '@/lib/projects/projectsPageViewHelpers';
 import type { ProjectRow } from '@/types/projects';
 
@@ -96,7 +95,7 @@ export default function Projects() {
 		runAction,
 	} = useProjectsPageController({ authLoading, canView: permissions.canView });
 
-	if (resolveProjectsPageRedirect(permissions.canView)) {
+	if (!permissions.canView) {
 		return <Navigate to="/" replace />;
 	}
 

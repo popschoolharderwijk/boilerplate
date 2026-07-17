@@ -7,9 +7,8 @@ import {
 	buildUserFormDialogOpenChangeHandler,
 	buildUsersDeleteDialogOpenChangeHandler,
 	buildUsersPageRowActions,
+	buildUsersPageShellState,
 	createUsersPageRoleFilterSetter,
-	resolveUsersPageSelectedRole,
-	shouldShowUsersPage,
 } from '@/lib/users/usersPageShellHelpers';
 
 export function useUsersPage() {
@@ -21,21 +20,23 @@ export function useUsersPage() {
 		initialFilters: { selectedRole: null },
 	});
 
-	const selectedRole = resolveUsersPageSelectedRole(
-		pagination.filters.selectedRole as AppRole | null | 'none' | undefined,
-	);
-	const hasAccess = shouldShowUsersPage(isAdmin, isSiteAdmin);
+	const shell = buildUsersPageShellState({
+		isAdmin,
+		isSiteAdmin,
+		userId: user?.id,
+		selectedRoleFilter: pagination.filters.selectedRole as AppRole | null | 'none' | undefined,
+	});
 	const setSelectedRole = createUsersPageRoleFilterSetter(pagination.setFilters);
 
 	const controller = useUsersPageController({
-		hasAccess,
+		hasAccess: shell.hasAccess,
 		authLoading,
-		isSiteAdmin,
-		currentUserId: user?.id,
+		isSiteAdmin: shell.isSiteAdmin,
+		currentUserId: shell.userId,
 		currentPage: pagination.currentPage,
 		rowsPerPage: pagination.rowsPerPage,
 		debouncedSearchQuery: pagination.debouncedSearchQuery,
-		selectedRole,
+		selectedRole: shell.selectedRole,
 		sortColumn: pagination.sortColumn,
 		sortDirection: pagination.sortDirection,
 		setLoading: pagination.setLoading,
@@ -46,20 +47,20 @@ export function useUsersPage() {
 	const rowActions = useMemo(
 		() =>
 			buildUsersPageRowActions({
-				isAdmin,
-				isSiteAdmin,
-				currentUserId: user?.id,
+				isAdmin: shell.isAdmin,
+				isSiteAdmin: shell.isSiteAdmin,
+				currentUserId: shell.userId,
 				onEdit: controller.handleEdit,
 				onDelete: controller.handleDelete,
 			}),
-		[isAdmin, isSiteAdmin, user?.id, controller.handleEdit, controller.handleDelete],
+		[shell.isAdmin, shell.isSiteAdmin, shell.userId, controller.handleEdit, controller.handleDelete],
 	);
 
 	return {
-		hasAccess,
-		isSiteAdmin,
-		isAdmin,
-		userId: user?.id,
+		hasAccess: shell.hasAccess,
+		isSiteAdmin: shell.isSiteAdmin,
+		isAdmin: shell.isAdmin,
+		userId: shell.userId,
 		pagination,
 		controller,
 		rowActions,

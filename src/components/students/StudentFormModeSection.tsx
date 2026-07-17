@@ -4,7 +4,6 @@ import { Label } from '@/components/ui/label';
 import { UserSelectSingle } from '@/components/ui/user-select';
 import {
 	getStudentFormModeButtonVariant,
-	shouldRenderStudentFormModeSection,
 	shouldShowExistingUserPicker,
 } from '@/lib/students/studentFormModeSectionHelpers';
 
@@ -15,7 +14,7 @@ interface StudentFormModeSectionProps {
 export function StudentFormModeSection({ vm }: StudentFormModeSectionProps) {
 	const { mode, selectedUserId, selectExistingUser, switchToNewUserMode, switchToExistingUserMode } = vm;
 
-	if (!shouldRenderStudentFormModeSection(vm.isEditMode)) return null;
+	if (vm.isEditMode) return null;
 
 	return (
 		<>

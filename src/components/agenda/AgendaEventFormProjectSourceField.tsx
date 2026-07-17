@@ -1,7 +1,4 @@
-import {
-	resolveAgendaProjectSourceSelection,
-	shouldShowAgendaProjectButton,
-} from '@/components/agenda/agendaEventFormDialogContentHelpers';
+import { resolveAgendaProjectSourceSelection } from '@/components/agenda/agendaEventFormDialogContentHelpers';
 import type { AgendaEventFormDialogContext } from '@/components/agenda/useAgendaEventFormDialog';
 import { ProjectButton } from '@/components/ui/project-button';
 
@@ -10,7 +7,7 @@ interface AgendaEventFormProjectSourceFieldProps {
 }
 
 export function AgendaEventFormProjectSourceField({ ctx }: AgendaEventFormProjectSourceFieldProps) {
-	if (!shouldShowAgendaProjectButton(ctx.isPrivileged)) {
+	if (!ctx.isPrivileged) {
 		return null;
 	}
 

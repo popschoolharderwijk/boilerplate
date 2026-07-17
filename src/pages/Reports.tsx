@@ -3,7 +3,7 @@ import { ReportsPageBody } from '@/components/reports/ReportsPageBody';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { useReportsPage } from '@/hooks/useReportsPage';
 import { BASE_PRESET_LABELS, type BasePeriodPreset } from '@/lib/reports/periodPresets';
-import { shouldRedirectReportsAccess, shouldShowReportsAuthSkeleton } from '@/lib/reports/reportsPageHelpers';
+import { shouldRedirectReportsAccess } from '@/lib/reports/reportsPageHelpers';
 
 const REPORT_PRESETS = Object.keys(BASE_PRESET_LABELS) as BasePeriodPreset[];
 
@@ -14,7 +14,7 @@ export default function Reports() {
 		return <Navigate to="/" replace />;
 	}
 
-	if (shouldShowReportsAuthSkeleton(page.authLoading)) {
+	if (page.authLoading) {
 		return <PageSkeleton variant="header-and-cards" />;
 	}
 

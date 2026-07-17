@@ -10,10 +10,6 @@ export function resolveAgendaProjectSourceSelection(projectId: string | null): {
 	};
 }
 
-export function shouldShowAgendaProjectButton(isPrivileged: boolean): boolean {
-	return isPrivileged;
-}
-
 function shouldShowAgendaDeviationBanner(canRevert: boolean, hasTimeOrDateChange: boolean | undefined): boolean {
 	return canRevert && Boolean(hasTimeOrDateChange);
 }

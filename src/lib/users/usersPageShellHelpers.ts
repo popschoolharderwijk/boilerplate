@@ -3,8 +3,23 @@ import type { useUsersPageController } from '@/hooks/useUsersPageController';
 import type { AppRole } from '@/lib/roles';
 import type { UserWithRole } from '@/lib/users/usersPageHelpers';
 
-export function shouldShowUsersPage(isAdmin: boolean, isSiteAdmin: boolean): boolean {
+function shouldShowUsersPage(isAdmin: boolean, isSiteAdmin: boolean): boolean {
 	return isAdmin || isSiteAdmin;
+}
+
+export function buildUsersPageShellState(input: {
+	isAdmin: boolean;
+	isSiteAdmin: boolean;
+	userId: string | undefined;
+	selectedRoleFilter: AppRole | null | 'none' | undefined;
+}) {
+	return {
+		hasAccess: shouldShowUsersPage(input.isAdmin, input.isSiteAdmin),
+		selectedRole: input.selectedRoleFilter ?? null,
+		userId: input.userId,
+		isAdmin: input.isAdmin,
+		isSiteAdmin: input.isSiteAdmin,
+	};
 }
 
 export function buildUsersPageRowActions(params: {
@@ -20,12 +35,6 @@ export function buildUsersPageRowActions(params: {
 		onEdit: params.onEdit,
 		onDelete: params.onDelete,
 	});
-}
-
-export function resolveUsersPageSelectedRole(
-	selectedRole: AppRole | null | 'none' | undefined,
-): AppRole | null | 'none' {
-	return selectedRole ?? null;
 }
 
 export function createUsersPageRoleFilterSetter(

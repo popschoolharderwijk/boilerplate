@@ -2,10 +2,6 @@ import type { AccountingCostCenter } from '@/lib/accounting/types';
 
 export type AccountingReportTableView = 'skeleton' | 'table';
 
-export function resolveAccountingReportInvoiceCount(invoiceCount: number | undefined): number {
-	return invoiceCount ?? 0;
-}
-
 function shouldRenderAccountingSummaryCards(summary: unknown): boolean {
 	return summary != null;
 }

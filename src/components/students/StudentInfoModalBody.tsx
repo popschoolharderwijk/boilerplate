@@ -3,12 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 import { formatDebtorPostalCity, formatPhoneNumber, hasParentContactInfo } from '@/lib/students/studentInfoHelpers';
-import {
-	resolveStudentInfoDateOfBirth,
-	shouldRenderStudentInfoPrivilegedBlock,
-	shouldShowStudentDateOfBirth,
-	shouldShowStudentLimitedAccessNotice,
-} from '@/lib/students/studentInfoModalBodyHelpers';
+import { buildStudentInfoModalView } from '@/lib/students/studentInfoModalBodyHelpers';
 import type { Student } from '@/types/students';
 import type { User } from '@/types/users';
 
@@ -115,8 +110,39 @@ function MetadataSection({ fullData }: { fullData: Student }) {
 	);
 }
 
+function DateOfBirthRow({ dateOfBirth }: { dateOfBirth: string | null }) {
+	if (!dateOfBirth) return null;
+	return (
+		<InfoRow
+			label="Geboortedatum"
+			value={formatDbDateToUi(dateOfBirth)}
+			icon={<LuCalendar className="h-4 w-4" />}
+		/>
+	);
+}
+
+function PrivilegedStudentSections({ fullData }: { fullData: Student | null }) {
+	if (!fullData) return null;
+	return (
+		<>
+			<ParentGuardianSection fullData={fullData} />
+			<DebtorSection fullData={fullData} />
+			<MetadataSection fullData={fullData} />
+		</>
+	);
+}
+
+function LimitedAccessNotice({ show }: { show: boolean }) {
+	if (!show) return null;
+	return (
+		<p className="text-xs text-muted-foreground italic text-center py-2">
+			Je hebt alleen toegang tot beperkte leerlinginformatie.
+		</p>
+	);
+}
+
 export function StudentInfoModalBody({ display, fullData, canViewFullData }: StudentInfoModalBodyProps) {
-	const dateOfBirth = resolveStudentInfoDateOfBirth(fullData);
+	const view = buildStudentInfoModalView(fullData, canViewFullData);
 
 	return (
 		<div className="space-y-5 py-2">
@@ -127,28 +153,11 @@ export function StudentInfoModalBody({ display, fullData, canViewFullData }: Stu
 					value={formatPhoneNumber(display.phone_number)}
 					icon={<LuPhone className="h-4 w-4" />}
 				/>
-				{shouldShowStudentDateOfBirth(dateOfBirth) && (
-					<InfoRow
-						label="Geboortedatum"
-						value={formatDbDateToUi(dateOfBirth)}
-						icon={<LuCalendar className="h-4 w-4" />}
-					/>
-				)}
+				<DateOfBirthRow dateOfBirth={view.showDateOfBirth ? view.dateOfBirth : null} />
 			</InfoSection>
 
-			{shouldRenderStudentInfoPrivilegedBlock(canViewFullData, fullData) && (
-				<>
-					<ParentGuardianSection fullData={fullData} />
-					<DebtorSection fullData={fullData} />
-					<MetadataSection fullData={fullData} />
-				</>
-			)}
-
-			{shouldShowStudentLimitedAccessNotice(canViewFullData) && (
-				<p className="text-xs text-muted-foreground italic text-center py-2">
-					Je hebt alleen toegang tot beperkte leerlinginformatie.
-				</p>
-			)}
+			<PrivilegedStudentSections fullData={view.showPrivilegedBlock ? fullData : null} />
+			<LimitedAccessNotice show={view.showLimitedAccessNotice} />
 		</div>
 	);
 }

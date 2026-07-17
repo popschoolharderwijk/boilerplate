@@ -43,7 +43,3 @@ export function updateLessonTypeFormActive(form: LessonTypeFormState, isActive: 
 export function shouldDisableLessonTypeSubmit(canSubmit: boolean, submitting: boolean): boolean {
 	return !canSubmit || submitting;
 }
-
-export function shouldShowLessonTypeSavingLabel(submitting: boolean): boolean {
-	return submitting;
-}

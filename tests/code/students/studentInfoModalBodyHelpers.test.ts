@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	resolveStudentInfoDateOfBirth,
-	shouldRenderStudentInfoPrivilegedBlock,
-	shouldShowStudentDateOfBirth,
-	shouldShowStudentLimitedAccessNotice,
-} from '../../../src/lib/students/studentInfoModalBodyHelpers';
+import { buildStudentInfoModalView } from '../../../src/lib/students/studentInfoModalBodyHelpers';
 
 const fullData = {
 	id: 'student-1',
@@ -29,46 +24,40 @@ const fullData = {
 	phone_number: null,
 };
 
-describe('shouldShowStudentDateOfBirth', () => {
-	it('returns true when date of birth exists', () => {
-		expect(shouldShowStudentDateOfBirth('2010-01-01')).toBe(true);
+describe('buildStudentInfoModalView', () => {
+	it('shows privileged block and date of birth for privileged viewers with full data', () => {
+		expect(buildStudentInfoModalView(fullData, true)).toEqual({
+			dateOfBirth: '2010-01-01',
+			showDateOfBirth: true,
+			showPrivilegedBlock: true,
+			showLimitedAccessNotice: false,
+		});
 	});
 
-	it('returns false when date of birth is missing', () => {
-		expect(shouldShowStudentDateOfBirth(null)).toBe(false);
-	});
-});
-
-describe('shouldShowStudentLimitedAccessNotice', () => {
-	it('returns true for non-privileged viewers', () => {
-		expect(shouldShowStudentLimitedAccessNotice(false)).toBe(true);
-	});
-
-	it('returns false for privileged viewers', () => {
-		expect(shouldShowStudentLimitedAccessNotice(true)).toBe(false);
-	});
-});
-
-describe('resolveStudentInfoDateOfBirth', () => {
-	it('returns date of birth from full data', () => {
-		expect(resolveStudentInfoDateOfBirth(fullData)).toBe('2010-01-01');
+	it('hides privileged block and shows limited-access notice for non-privileged viewers', () => {
+		expect(buildStudentInfoModalView(fullData, false)).toEqual({
+			dateOfBirth: '2010-01-01',
+			showDateOfBirth: true,
+			showPrivilegedBlock: false,
+			showLimitedAccessNotice: true,
+		});
 	});
 
-	it('returns null without full data', () => {
-		expect(resolveStudentInfoDateOfBirth(null)).toBeNull();
-	});
-});
-
-describe('shouldRenderStudentInfoPrivilegedBlock', () => {
-	it('returns true for privileged viewers with full data', () => {
-		expect(shouldRenderStudentInfoPrivilegedBlock(true, fullData)).toBe(true);
-	});
-
-	it('returns false without full data', () => {
-		expect(shouldRenderStudentInfoPrivilegedBlock(true, null)).toBe(false);
+	it('hides privileged block when privileged viewer has no full data', () => {
+		expect(buildStudentInfoModalView(null, true)).toEqual({
+			dateOfBirth: null,
+			showDateOfBirth: false,
+			showPrivilegedBlock: false,
+			showLimitedAccessNotice: false,
+		});
 	});
 
-	it('returns false for non-privileged viewers with full data', () => {
-		expect(shouldRenderStudentInfoPrivilegedBlock(false, fullData)).toBe(false);
+	it('hides date of birth when full data has no date_of_birth', () => {
+		expect(buildStudentInfoModalView({ ...fullData, date_of_birth: null }, true)).toEqual({
+			dateOfBirth: null,
+			showDateOfBirth: false,
+			showPrivilegedBlock: true,
+			showLimitedAccessNotice: false,
+		});
 	});
 });

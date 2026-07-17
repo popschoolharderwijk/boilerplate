@@ -5,7 +5,3 @@ export function resolveSidebarWidthClass(collapsed: boolean): string {
 export function resolveSidebarDevToolsContainerClass(collapsed: boolean): string {
 	return collapsed ? 'flex justify-center p-2' : 'p-2 w-full';
 }
-
-export function shouldShowSidebarAdminSection(showAdminNav: boolean): boolean {
-	return showAdminNav;
-}

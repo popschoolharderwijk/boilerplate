@@ -10,7 +10,6 @@ import type { useAccountingReportPage } from '@/hooks/useAccountingReportPage';
 import {
 	buildAccountingJournalLinesSummary,
 	canDownloadAccountingReport,
-	resolveAccountingReportInvoiceCount,
 	resolveAccountingReportTableView,
 } from '@/lib/reports/accountingReportContentHelpers';
 import { ACCOUNTING_PRESET_LABELS, type ExtendedPeriodPreset } from '@/lib/reports/periodPresets';
@@ -27,7 +26,7 @@ export function AccountingReportContent({ state }: AccountingReportContentProps)
 	const summary = state.report?.summary;
 	const tableView = resolveAccountingReportTableView(state.loading);
 	const journalLinesCount = state.journalLines.length;
-	const invoiceCount = resolveAccountingReportInvoiceCount(state.report?.invoices.length);
+	const invoiceCount = state.report?.invoices.length ?? 0;
 
 	return (
 		<div className="space-y-6">

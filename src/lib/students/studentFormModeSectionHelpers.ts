@@ -1,9 +1,5 @@
 import type { StudentFormMode } from '@/components/students/studentFormTypes';
 
-export function shouldRenderStudentFormModeSection(isEditMode: boolean): boolean {
-	return !isEditMode;
-}
-
 export function shouldShowExistingUserPicker(mode: StudentFormMode): boolean {
 	return mode === 'existing-user';
 }

@@ -1,9 +1,6 @@
 import { Button } from '@/components/ui/button';
 import type { Announcement } from '@/hooks/useAnnouncements';
-import {
-	AnnouncementAccordionHeader,
-	getAnnouncementPublishedAt,
-} from '@/lib/dashboard/announcementsSectionPartsHelpers';
+import { AnnouncementAccordionHeader } from '@/lib/dashboard/announcementsSectionPartsHelpers';
 import { renderMarkdown } from '@/lib/markdown/render';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +11,7 @@ interface AnnouncementAccordionItemProps {
 }
 
 export function AnnouncementAccordionItem({ announcement, isOpen, onToggle }: AnnouncementAccordionItemProps) {
-	const publishedAt = getAnnouncementPublishedAt(announcement);
+	const publishedAt = announcement.published_at;
 
 	return (
 		<div className="rounded-lg border border-border">

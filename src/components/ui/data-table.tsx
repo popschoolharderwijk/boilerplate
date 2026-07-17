@@ -21,6 +21,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { cn } from '@/lib/utils';
 
+const DATA_TABLE_SKELETON_KEYS = Array.from({ length: 100 }, (_, index) => `data-table-skeleton-${index}`);
+
 export type SortDirection = 'asc' | 'desc' | null;
 
 export interface DataTableColumn<T> {
@@ -533,8 +535,8 @@ export function DataTable<T>({
 						<tbody className="text-sm">
 							{loading && paginatedData.length === 0 ? (
 								// Show skeleton loaders when loading and no data
-								Array.from({ length: effectiveRowsPerPage }, (_, skeletonIndex) => (
-									<tr key={`skeleton-${skeletonIndex}`} className="border-b last:border-0">
+								DATA_TABLE_SKELETON_KEYS.slice(0, effectiveRowsPerPage).map((skeletonKey) => (
+									<tr key={skeletonKey} className="border-b last:border-0">
 										{hasExpandableRows && (
 											<td className={cn('pl-2', compactRows ? 'py-2' : 'py-4')}>
 												<Skeleton className="h-4 w-4" />

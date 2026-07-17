@@ -1,7 +1,3 @@
-export function shouldShowNoLessonPeriodsLoading(loading: boolean): boolean {
-	return loading;
-}
-
 export function shouldShowNoLessonPeriodsEmpty(loading: boolean, periodCount: number): boolean {
 	return !loading && periodCount === 0;
 }

@@ -30,10 +30,6 @@ export function resolveTeacherFormSubmitDisabled(
 	return !selectedUserId;
 }
 
-export function shouldBlockTeacherFormClose(saving: boolean): boolean {
-	return saving;
-}
-
 export function resolveTeacherFormSubmitLabel(isEditMode: boolean): { idle: string; loading: string } {
 	if (isEditMode) {
 		return { idle: 'Opslaan', loading: 'Opslaan...' };

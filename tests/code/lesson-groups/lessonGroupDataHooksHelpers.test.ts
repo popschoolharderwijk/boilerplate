@@ -1,34 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	shouldLoadEligibleStudents,
 	shouldLoadLessonGroupEditData,
 	shouldLoadLessonGroupTeacherSlots,
-	shouldLoadLessonGroupTeachers,
-	shouldLoadPendingSignupRequests,
 } from '../../../src/components/lesson-groups/wizard/lessonGroupDataHooksHelpers';
 import { LGStep } from '../../../src/components/lesson-groups/wizard/lessonGroupWizardTypes';
-
-describe('shouldLoadLessonGroupTeachers', () => {
-	it('returns false when lesson type id is missing', () => {
-		expect(shouldLoadLessonGroupTeachers(null)).toBe(false);
-	});
-
-	it('returns true when lesson type id exists', () => {
-		expect(shouldLoadLessonGroupTeachers('lt-1')).toBe(true);
-	});
-});
-
-describe('shouldLoadEligibleStudents', () => {
-	it('returns false when lesson type id is missing', () => {
-		expect(shouldLoadEligibleStudents(null)).toBe(false);
-	});
-});
-
-describe('shouldLoadPendingSignupRequests', () => {
-	it('returns false when lesson type id is missing', () => {
-		expect(shouldLoadPendingSignupRequests(null)).toBe(false);
-	});
-});
 
 describe('shouldLoadLessonGroupEditData', () => {
 	it('returns false outside edit mode', () => {

@@ -3,7 +3,6 @@ import {
 	applyDuoLessonToggle,
 	applyGroupLessonToggle,
 	shouldDisableLessonTypeSubmit,
-	shouldShowLessonTypeSavingLabel,
 	updateLessonTypeFormActive,
 	updateLessonTypeFormName,
 } from '../../../src/lib/lesson-types/lessonTypeFormCardHelpers';
@@ -59,15 +58,5 @@ describe('shouldDisableLessonTypeSubmit', () => {
 
 	it('enables submit when form is valid and not saving', () => {
 		expect(shouldDisableLessonTypeSubmit(true, false)).toBe(false);
-	});
-});
-
-describe('shouldShowLessonTypeSavingLabel', () => {
-	it('returns true while submitting', () => {
-		expect(shouldShowLessonTypeSavingLabel(true)).toBe(true);
-	});
-
-	it('returns false when idle', () => {
-		expect(shouldShowLessonTypeSavingLabel(false)).toBe(false);
 	});
 });

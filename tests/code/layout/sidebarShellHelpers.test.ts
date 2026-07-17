@@ -2,7 +2,6 @@ import { describe, expect, it } from 'bun:test';
 import {
 	resolveSidebarDevToolsContainerClass,
 	resolveSidebarWidthClass,
-	shouldShowSidebarAdminSection,
 } from '../../../src/lib/layout/sidebarShellHelpers';
 
 describe('resolveSidebarWidthClass', () => {
@@ -22,15 +21,5 @@ describe('resolveSidebarDevToolsContainerClass', () => {
 
 	it('uses full width when expanded', () => {
 		expect(resolveSidebarDevToolsContainerClass(false)).toBe('p-2 w-full');
-	});
-});
-
-describe('shouldShowSidebarAdminSection', () => {
-	it('returns true when admin nav is visible', () => {
-		expect(shouldShowSidebarAdminSection(true)).toBe(true);
-	});
-
-	it('returns false when admin nav is hidden', () => {
-		expect(shouldShowSidebarAdminSection(false)).toBe(false);
 	});
 });

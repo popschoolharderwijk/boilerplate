@@ -15,7 +15,6 @@ import { isNoLessonPeriodFormValid } from '@/lib/settings/noLessonPeriodsManager
 import {
 	shouldShowNoLessonPeriodsEmpty,
 	shouldShowNoLessonPeriodsList,
-	shouldShowNoLessonPeriodsLoading,
 } from '@/lib/settings/noLessonPeriodsViewHelpers';
 
 interface FormState {
@@ -111,7 +110,7 @@ export function NoLessonPeriodsManager() {
 				</Button>
 			</CardHeader>
 			<CardContent>
-				{shouldShowNoLessonPeriodsLoading(loading) && <p className="text-sm text-muted-foreground">Laden...</p>}
+				{loading && <p className="text-sm text-muted-foreground">Laden...</p>}
 				{shouldShowNoLessonPeriodsEmpty(loading, periods.length) && (
 					<p className="text-sm text-muted-foreground">Er zijn nog geen lesvrije periodes ingesteld.</p>
 				)}

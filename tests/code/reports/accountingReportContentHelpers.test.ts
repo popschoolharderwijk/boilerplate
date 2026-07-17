@@ -3,7 +3,6 @@ import {
 	buildAccountingJournalLinesSummary,
 	canDownloadAccountingReport,
 	resolveAccountingReportCostCenterRows,
-	resolveAccountingReportInvoiceCount,
 	resolveAccountingReportSummary,
 	resolveAccountingReportTableView,
 } from '../../../src/lib/reports/accountingReportContentHelpers';
@@ -31,16 +30,6 @@ describe('canDownloadAccountingReport', () => {
 
 	it('returns false when journal lines are empty', () => {
 		expect(canDownloadAccountingReport(0)).toBe(false);
-	});
-});
-
-describe('resolveAccountingReportInvoiceCount', () => {
-	it('returns zero when invoice count is missing', () => {
-		expect(resolveAccountingReportInvoiceCount(undefined)).toBe(0);
-	});
-
-	it('returns provided invoice count', () => {
-		expect(resolveAccountingReportInvoiceCount(4)).toBe(4);
 	});
 });
 

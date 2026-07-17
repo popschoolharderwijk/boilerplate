@@ -3,7 +3,6 @@ import {
 	buildProjectsRowActions,
 	resolveProjectAgendaCanSchedule,
 	resolveProjectsPagePermissions,
-	resolveProjectsPageRedirect,
 } from '../../../src/lib/projects/projectsPageViewHelpers';
 
 describe('resolveProjectsPagePermissions', () => {
@@ -52,15 +51,5 @@ describe('resolveProjectAgendaCanSchedule', () => {
 		expect(resolveProjectAgendaCanSchedule(true, true)).toBe(true);
 		expect(resolveProjectAgendaCanSchedule(true, false)).toBe(false);
 		expect(resolveProjectAgendaCanSchedule(false, true)).toBe(false);
-	});
-});
-
-describe('resolveProjectsPageRedirect', () => {
-	it('returns true when user cannot view projects', () => {
-		expect(resolveProjectsPageRedirect(false)).toBe(true);
-	});
-
-	it('returns false when user can view projects', () => {
-		expect(resolveProjectsPageRedirect(true)).toBe(false);
 	});
 });

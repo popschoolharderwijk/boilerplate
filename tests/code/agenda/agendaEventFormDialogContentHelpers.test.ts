@@ -3,7 +3,6 @@ import {
 	resolveAgendaCancellationBannerProps,
 	resolveAgendaDeviationBannerProps,
 	resolveAgendaProjectSourceSelection,
-	shouldShowAgendaProjectButton,
 } from '../../../src/components/agenda/agendaEventFormDialogContentHelpers';
 
 describe('resolveAgendaProjectSourceSelection', () => {
@@ -19,16 +18,6 @@ describe('resolveAgendaProjectSourceSelection', () => {
 			selectedProjectId: null,
 			selectedSourceType: 'manual',
 		});
-	});
-});
-
-describe('shouldShowAgendaProjectButton', () => {
-	it('returns true for privileged users', () => {
-		expect(shouldShowAgendaProjectButton(true)).toBe(true);
-	});
-
-	it('returns false for non-privileged users', () => {
-		expect(shouldShowAgendaProjectButton(false)).toBe(false);
 	});
 });
 

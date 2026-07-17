@@ -2,18 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	buildUsersPageRowActions,
 	createUsersPageRoleFilterSetter,
-	resolveUsersPageSelectedRole,
 } from '../../../src/lib/users/usersPageShellHelpers';
-
-describe('resolveUsersPageSelectedRole', () => {
-	it('returns null when filter is undefined', () => {
-		expect(resolveUsersPageSelectedRole(undefined)).toBeNull();
-	});
-
-	it('returns selected role value', () => {
-		expect(resolveUsersPageSelectedRole('admin')).toBe('admin');
-	});
-});
 
 describe('createUsersPageRoleFilterSetter', () => {
 	it('updates selectedRole in filters', () => {

@@ -4,11 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { UserSelectSingle } from '@/components/ui/user-select';
 import type { ProjectFormSaveInput } from '@/lib/projects/projectFormDialogHelpers';
-import {
-	buildProjectLabelSelectKey,
-	getProjectLabelSelectPlaceholder,
-	shouldShowProjectActiveCheckbox,
-} from '@/lib/projects/projectFormFieldsHelpers';
+import { buildProjectLabelSelectKey, getProjectLabelSelectPlaceholder } from '@/lib/projects/projectFormFieldsHelpers';
 import type { ProjectLabelOption } from '@/lib/projects/projectFormLabelHelpers';
 
 interface ProjectFormFieldsProps {
@@ -91,7 +87,7 @@ export function ProjectFormFields({
 				/>
 			</div>
 
-			{shouldShowProjectActiveCheckbox(isEditing) && (
+			{isEditing && (
 				<div className="flex items-center gap-2">
 					<input
 						id="project-active"

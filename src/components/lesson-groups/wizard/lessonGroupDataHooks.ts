@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-	shouldLoadEligibleStudents,
 	shouldLoadLessonGroupEditData,
 	shouldLoadLessonGroupTeacherSlots,
-	shouldLoadLessonGroupTeachers,
-	shouldLoadPendingSignupRequests,
 } from '@/components/lesson-groups/wizard/lessonGroupDataHooksHelpers';
 import {
 	fetchEligibleStudentIds,
@@ -68,7 +65,7 @@ export function useLessonGroupTeachers(lessonTypeId: string | null) {
 	const [teachers, setTeachers] = useState<TeacherOpt[]>([]);
 
 	useEffect(() => {
-		if (!shouldLoadLessonGroupTeachers(lessonTypeId)) {
+		if (!lessonTypeId) {
 			setTeachers([]);
 			return;
 		}
@@ -82,7 +79,7 @@ export function useEligibleStudents(lessonTypeId: string | null) {
 	const [eligibleStudentIds, setEligibleStudentIds] = useState<string[]>([]);
 
 	useEffect(() => {
-		if (!shouldLoadEligibleStudents(lessonTypeId)) {
+		if (!lessonTypeId) {
 			setEligibleStudentIds([]);
 			return;
 		}
@@ -96,7 +93,7 @@ export function usePendingSignupRequests(lessonTypeId: string | null) {
 	const [pendingRequests, setPendingRequests] = useState<PendingSignupRequest[]>([]);
 
 	useEffect(() => {
-		if (!shouldLoadPendingSignupRequests(lessonTypeId)) {
+		if (!lessonTypeId) {
 			setPendingRequests([]);
 			return;
 		}

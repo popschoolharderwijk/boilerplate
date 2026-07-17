@@ -16,7 +16,3 @@ export function resolveLessonGroupsPageView(isLoading: boolean, canView: boolean
 	if (!isLoading && !canView) return 'redirect';
 	return 'content';
 }
-
-export function resolveLessonGroupDeleteDialogOpen(open: boolean): boolean {
-	return open;
-}

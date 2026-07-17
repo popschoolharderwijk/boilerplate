@@ -4,11 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { type LoginState, shouldAutoSendMagicLink, shouldRedirectLoggedInUser } from '@/lib/auth/loginHelpers';
 import { resolveLoginOtpVerifyOutcome, resolveLoginStateAfterOtpVerify } from '@/lib/auth/loginOtpHelpers';
-import {
-	buildMagicLinkSignInOptions,
-	resolveLoginViewMode,
-	shouldShowLoginLoadingScreen,
-} from '@/lib/auth/loginPageHelpers';
+import { buildMagicLinkSignInOptions, resolveLoginViewMode } from '@/lib/auth/loginPageHelpers';
 
 export function useLoginPage() {
 	const { user, isLoading } = useAuth();
@@ -68,7 +64,7 @@ export function useLoginPage() {
 		error,
 		viewMode: resolveLoginViewMode(state),
 		shouldRedirect: shouldRedirectLoggedInUser(isLoading, !!user),
-		showLoadingScreen: shouldShowLoginLoadingScreen(isLoading),
+		showLoadingScreen: isLoading,
 		sendMagicLink,
 		verifyOtp,
 		resetOtpFlow,

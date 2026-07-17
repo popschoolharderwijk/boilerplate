@@ -1,5 +1,4 @@
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
-import type { Announcement } from '@/hooks/useAnnouncements';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 
 interface AnnouncementAccordionHeaderProps {
@@ -24,8 +23,4 @@ export function AnnouncementAccordionHeader({ title, publishedAt, isOpen }: Anno
 			)}
 		</>
 	);
-}
-
-export function getAnnouncementPublishedAt(announcement: Announcement): string | null {
-	return announcement.published_at;
 }

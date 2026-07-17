@@ -8,11 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useSidebarGroupState } from '@/hooks/useSidebarGroupState';
 import { useSidebarNavVisibility } from '@/hooks/useSidebarNavVisibility';
-import {
-	resolveSidebarDevToolsContainerClass,
-	resolveSidebarWidthClass,
-	shouldShowSidebarAdminSection,
-} from '@/lib/layout/sidebarShellHelpers';
+import { resolveSidebarDevToolsContainerClass, resolveSidebarWidthClass } from '@/lib/layout/sidebarShellHelpers';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -45,7 +41,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 						>
 							<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
 								<SidebarMainNav collapsed={collapsed} {...visibility} />
-								{shouldShowSidebarAdminSection(visibility.showAdminNav) && (
+								{visibility.showAdminNav && (
 									<SidebarBeheerSection
 										collapsed={collapsed}
 										beheerOpen={beheerOpen}

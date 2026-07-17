@@ -4,11 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-	getAvatarUploadInputId,
-	resolveAvatarImageSrc,
-	shouldShowAvatarDeleteButton,
-} from '@/lib/account/accountProfileAvatarHelpers';
+import { getAvatarUploadInputId, resolveAvatarImageSrc } from '@/lib/account/accountProfileAvatarHelpers';
 import type { AccountProfileState } from '@/lib/account/persistence';
 
 interface AccountProfileAvatarSectionProps {
@@ -28,7 +24,7 @@ export function AccountProfileAvatarSection({
 }: AccountProfileAvatarSectionProps) {
 	const uploadInputId = getAvatarUploadInputId();
 	const avatarSrc = resolveAvatarImageSrc(profile?.avatar_url);
-	const showDeleteButton = shouldShowAvatarDeleteButton(profile?.avatar_url);
+	const showDeleteButton = Boolean(profile?.avatar_url);
 
 	return (
 		<div className="flex items-center gap-4">

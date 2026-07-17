@@ -3,7 +3,6 @@ import { LessonGroupDeleteDialog, LessonGroupsTable } from '@/components/lesson-
 import { useAuth } from '@/hooks/useAuth';
 import { useLessonGroupsPageController } from '@/hooks/useLessonGroupsPageController';
 import {
-	resolveLessonGroupDeleteDialogOpen,
 	resolveLessonGroupsPageAccess,
 	resolveLessonGroupsPageView,
 } from '@/lib/lesson-groups/lessonGroupsPageViewHelpers';
@@ -36,7 +35,7 @@ export default function LessonGroups() {
 			<LessonGroupDeleteDialog
 				group={deleteDialog}
 				onOpenChange={(open) => {
-					if (!resolveLessonGroupDeleteDialogOpen(open)) setDeleteDialog(null);
+					if (!open) setDeleteDialog(null);
 				}}
 				onConfirm={confirmDelete}
 			/>

@@ -7,7 +7,3 @@ export function isStudentPersonalNameFieldDisabled(isEditMode: boolean, mode: St
 export function isStudentEmailFieldDisabled(isEditMode: boolean, mode: StudentFormMode): boolean {
 	return isEditMode || mode === 'existing-user';
 }
-
-export function shouldShowStudentEmailImmutableHint(isEditMode: boolean): boolean {
-	return isEditMode;
-}

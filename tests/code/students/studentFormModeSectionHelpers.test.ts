@@ -1,19 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	getStudentFormModeButtonVariant,
-	shouldRenderStudentFormModeSection,
 	shouldShowExistingUserPicker,
 } from '../../../src/lib/students/studentFormModeSectionHelpers';
-
-describe('shouldRenderStudentFormModeSection', () => {
-	it('hides the section in edit mode', () => {
-		expect(shouldRenderStudentFormModeSection(true)).toBe(false);
-	});
-
-	it('shows the section in create mode', () => {
-		expect(shouldRenderStudentFormModeSection(false)).toBe(true);
-	});
-});
 
 describe('shouldShowExistingUserPicker', () => {
 	it('shows picker for existing-user mode', () => {

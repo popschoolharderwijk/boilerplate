@@ -1,9 +1,7 @@
 import { LuBan, LuRepeat, LuTriangleAlert } from 'react-icons/lu';
 import {
 	getCancelledOverlayIconClass,
-	shouldShowCancelledOverlayIcon,
 	shouldShowChangedOverlayIcon,
-	shouldShowRecurringOverlayIcon,
 } from '@/components/agenda/agendaEventOverlayIconsHelpers';
 import { getCancellationBanTitle } from '@/lib/agenda/agendaEventDisplay';
 
@@ -24,14 +22,14 @@ export function AgendaEventOverlayIcons({
 }: AgendaEventOverlayIconsProps) {
 	return (
 		<>
-			{shouldShowRecurringOverlayIcon(isRecurring) && (
+			{isRecurring && (
 				<LuRepeat
 					className={`absolute bottom-0.5 right-0.5 h-3 w-3 ${iconColorClass} drop-shadow-md z-10 shrink-0`}
 					title="Terugkerende afspraak"
 					aria-hidden
 				/>
 			)}
-			{shouldShowCancelledOverlayIcon(isCancelled) && (
+			{isCancelled && (
 				<LuBan
 					className={`absolute h-3 w-3 ${getCancelledOverlayIconClass(isTeacherCancelled, iconColorClass)} drop-shadow-md z-10 shrink-0 top-0.5 right-0.5`}
 					title={getCancellationBanTitle(isTeacherCancelled)}

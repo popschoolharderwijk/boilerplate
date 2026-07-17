@@ -39,7 +39,3 @@ export function buildProjectsRowActions(
 export function resolveProjectAgendaCanSchedule(canSchedule: boolean, isActive: boolean): boolean {
 	return canSchedule && isActive;
 }
-
-export function resolveProjectsPageRedirect(canView: boolean): boolean {
-	return !canView;
-}

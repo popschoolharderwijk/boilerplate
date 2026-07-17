@@ -2,20 +2,53 @@ import { describe, expect, it } from 'bun:test';
 import {
 	buildUserFormDialogOpenChangeHandler,
 	buildUsersDeleteDialogOpenChangeHandler,
-	shouldShowUsersPage,
+	buildUsersPageShellState,
 } from '../../../src/lib/users/usersPageShellHelpers';
 
-describe('shouldShowUsersPage', () => {
-	it('returns true for admins', () => {
-		expect(shouldShowUsersPage(true, false)).toBe(true);
+describe('buildUsersPageShellState', () => {
+	it('grants access to admins and normalizes missing role filter to null', () => {
+		expect(
+			buildUsersPageShellState({
+				isAdmin: true,
+				isSiteAdmin: false,
+				userId: 'user-1',
+				selectedRoleFilter: undefined,
+			}),
+		).toEqual({
+			hasAccess: true,
+			selectedRole: null,
+			userId: 'user-1',
+			isAdmin: true,
+			isSiteAdmin: false,
+		});
 	});
 
-	it('returns true for site admins', () => {
-		expect(shouldShowUsersPage(false, true)).toBe(true);
+	it('denies access for regular users and keeps an explicit role filter', () => {
+		expect(
+			buildUsersPageShellState({
+				isAdmin: false,
+				isSiteAdmin: false,
+				userId: undefined,
+				selectedRoleFilter: 'staff',
+			}),
+		).toEqual({
+			hasAccess: false,
+			selectedRole: 'staff',
+			userId: undefined,
+			isAdmin: false,
+			isSiteAdmin: false,
+		});
 	});
 
-	it('returns false for regular users', () => {
-		expect(shouldShowUsersPage(false, false)).toBe(false);
+	it('grants access to site admins', () => {
+		expect(
+			buildUsersPageShellState({
+				isAdmin: false,
+				isSiteAdmin: true,
+				userId: 'site-admin-1',
+				selectedRoleFilter: 'none',
+			}).hasAccess,
+		).toBe(true);
 	});
 });
 

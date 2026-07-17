@@ -3,7 +3,6 @@ import {
 	buildMagicLinkSignInOptions,
 	resolveLoginPageContent,
 	resolveLoginViewMode,
-	shouldShowLoginLoadingScreen,
 } from '../../../src/lib/auth/loginPageHelpers';
 
 describe('buildMagicLinkSignInOptions', () => {
@@ -23,16 +22,6 @@ describe('resolveLoginViewMode', () => {
 
 	it('returns otp mode after the link is sent', () => {
 		expect(resolveLoginViewMode('sent')).toBe('otp');
-	});
-});
-
-describe('shouldShowLoginLoadingScreen', () => {
-	it('returns true while auth is loading', () => {
-		expect(shouldShowLoginLoadingScreen(true)).toBe(true);
-	});
-
-	it('returns false when auth is loaded', () => {
-		expect(shouldShowLoginLoadingScreen(false)).toBe(false);
 	});
 });
 
