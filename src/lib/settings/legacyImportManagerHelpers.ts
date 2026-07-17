@@ -1,5 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 type Tab = 'lesson_types' | 'lesson_type_options' | 'teachers' | 'students' | 'lesson_agreements';
 
 export interface RowError {
@@ -80,28 +78,6 @@ export async function fetchLegacyImportTemplate(accessToken: string): Promise<Bl
 	}
 	return response.blob();
 }
-
-export async function validateLegacyImportFile(
-	supabase: SupabaseClient,
-	file: File,
-): Promise<ValidationResponse | null> {
-	const file_base64 = await fileToBase64(file);
-	const { data, error } = await supabase.functions.invoke<ValidationResponse>('import-legacy-data', {
-		body: { action: 'validate', file_base64 },
-	});
-	if (error) throw error;
-	return data ?? null;
-}
-
-export async function importLegacyImportFile(supabase: SupabaseClient, file: File): Promise<ImportResponse | null> {
-	const file_base64 = await fileToBase64(file);
-	const { data, error } = await supabase.functions.invoke<ImportResponse>('import-legacy-data', {
-		body: { action: 'import', file_base64 },
-	});
-	if (error) throw error;
-	return data ?? null;
-}
-
 export function resolveLegacyValidationToast(data: ValidationResponse | null): {
 	kind: 'success' | 'warning';
 	message: string;

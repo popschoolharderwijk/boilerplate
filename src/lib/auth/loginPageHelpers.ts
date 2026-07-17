@@ -1,6 +1,6 @@
 import type { LoginState } from '@/lib/auth/loginHelpers';
 
-export function buildMagicLinkRedirectUrl(origin: string): string {
+function buildMagicLinkRedirectUrl(origin: string): string {
 	return `${origin}/auth/callback`;
 }
 

@@ -8,9 +8,9 @@ import { moveAgendaEvent } from '@/lib/agenda/moveAgendaEvent';
 import { needsRecurrenceChoice } from '@/lib/agenda/needsRecurrenceChoice';
 import { notifyAgendaOpResult } from '@/lib/agenda/notifyAgendaOpResult';
 
-export type EventDropPreAction = 'noop-unchanged' | 'prompt-recurrence' | 'proceed';
+type EventDropPreAction = 'noop-unchanged' | 'prompt-recurrence' | 'proceed';
 
-export function resolveEventDropPreAction(
+function resolveEventDropPreAction(
 	args: { event: CalendarEvent; start: Date; end: Date },
 	scope: RecurrenceScope,
 	skipRecurrencePrompt: boolean,
@@ -33,40 +33,35 @@ export function resolveEventDropPreAction(
 	return 'proceed';
 }
 
-export function canExecuteEventDrop(canEdit: boolean, userId: string | null | undefined): boolean {
+function canExecuteEventDrop(canEdit: boolean, userId: string | null | undefined): boolean {
 	return canEdit && Boolean(userId);
 }
 
-export function shouldPromptRecurrenceDrop(preAction: EventDropPreAction): boolean {
+function shouldPromptRecurrenceDrop(preAction: EventDropPreAction): boolean {
 	return preAction === 'prompt-recurrence';
 }
 
-export function shouldProceedWithEventDrop(preAction: EventDropPreAction): boolean {
+function shouldProceedWithEventDrop(preAction: EventDropPreAction): boolean {
 	return preAction === 'proceed';
 }
 
-export interface MoveAgendaEventResultLike {
+interface MoveAgendaEventResultLike {
 	ok: boolean;
 	message?: string;
 }
-
-export function shouldClearOptimisticMoveOnFailure(result: MoveAgendaEventResultLike): boolean {
-	return result.ok === false;
-}
-
-export function shouldNotifySuccessfulMove(result: MoveAgendaEventResultLike): boolean {
+function shouldNotifySuccessfulMove(result: MoveAgendaEventResultLike): boolean {
 	return result.ok === true && Boolean(result.message);
 }
 
-export type OptimisticMoveFollowUp = 'fail' | 'notify' | 'done';
+type OptimisticMoveFollowUp = 'fail' | 'notify' | 'done';
 
-export function resolveOptimisticMoveFollowUp(result: MoveAgendaEventResultLike): OptimisticMoveFollowUp {
+function resolveOptimisticMoveFollowUp(result: MoveAgendaEventResultLike): OptimisticMoveFollowUp {
 	if (!result.ok) return 'fail';
 	if (shouldNotifySuccessfulMove(result)) return 'notify';
 	return 'done';
 }
 
-export function buildOptimisticMoveState(args: { event: CalendarEvent; start: Date; end: Date }): {
+function buildOptimisticMoveState(args: { event: CalendarEvent; start: Date; end: Date }): {
 	originalEvent: CalendarEvent;
 	newStart: Date;
 	newEnd: Date;
@@ -77,15 +72,6 @@ export function buildOptimisticMoveState(args: { event: CalendarEvent; start: Da
 		newEnd: args.end,
 	};
 }
-
-export function shouldFinishOptimisticMoveAfterFailure(result: MoveAgendaEventResultLike): boolean {
-	return shouldClearOptimisticMoveOnFailure(result);
-}
-
-export function shouldFinishOptimisticMoveAfterSuccess(result: MoveAgendaEventResultLike): boolean {
-	return result.ok === true;
-}
-
 type AgendaData = ReturnType<typeof useAgendaData>;
 type AgendaUI = ReturnType<typeof useAgendaUI>;
 
@@ -116,7 +102,7 @@ export async function executeAgendaEventDrop(params: ExecuteEventDropParams): Pr
 	await runOptimisticAgendaEventDrop(params);
 }
 
-export async function applyOptimisticMoveFollowUp(
+async function applyOptimisticMoveFollowUp(
 	ui: AgendaUI,
 	result: MoveAgendaEventResultLike,
 	reloadAgenda: () => void,

@@ -1,20 +1,26 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	resolveDevLoginAttemptError,
 	resolveDevLoginButtonClass,
 	resolveDevLoginButtonLabel,
-	resolveDevLoginContainerBorderClass,
+	resolveDevLoginCredentials,
 } from '../../../src/lib/auth/devLoginHookHelpers';
 
-describe('resolveDevLoginAttemptError', () => {
+describe('resolveDevLoginCredentials', () => {
 	it('returns selection error when email is missing', () => {
-		expect(resolveDevLoginAttemptError(null)).toBe('Selecteer eerst een rol, docent, leerling of user');
+		expect(resolveDevLoginCredentials(null)).toEqual({
+			ok: false,
+			error: 'Selecteer eerst een rol, docent, leerling of user',
+		});
 	});
 
-	it('returns null for valid email when password env is set', () => {
+	it('returns credentials for valid email when password env is set', () => {
 		const previous = import.meta.env.VITE_DEV_LOGIN_PASSWORD;
 		import.meta.env.VITE_DEV_LOGIN_PASSWORD = 'secret';
-		expect(resolveDevLoginAttemptError('teacher-alice@test.nl')).toBeNull();
+		expect(resolveDevLoginCredentials('teacher-alice@test.nl')).toEqual({
+			ok: true,
+			email: 'teacher-alice@test.nl',
+			password: 'secret',
+		});
 		import.meta.env.VITE_DEV_LOGIN_PASSWORD = previous;
 	});
 });
@@ -26,16 +32,6 @@ describe('resolveDevLoginButtonLabel', () => {
 
 	it('returns idle label when not busy', () => {
 		expect(resolveDevLoginButtonLabel(false)).toBe('Dev Login');
-	});
-});
-
-describe('resolveDevLoginContainerBorderClass', () => {
-	it('returns green border class for local dev', () => {
-		expect(resolveDevLoginContainerBorderClass(true)).toContain('green');
-	});
-
-	it('returns orange border class for non-local dev', () => {
-		expect(resolveDevLoginContainerBorderClass(false)).toContain('orange');
 	});
 });
 

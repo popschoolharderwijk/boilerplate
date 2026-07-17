@@ -1,5 +1,4 @@
-import { describe, expect, it } from 'bun:test';
-import { buildLessonGroupEditInitial } from '../../../src/components/lesson-groups/wizard/lessonGroupDataLoadHelpers';
+import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 
 const groupRow = {
 	name: 'Groep A',
@@ -8,21 +7,73 @@ const groupRow = {
 	frequency: 'weekly',
 	price_per_lesson: 25,
 	start_date: '2026-09-01',
-	end_date: null,
+	end_date: null as string | null,
 	teacher_user_id: 'teacher-1',
 	day_of_week: 1,
 	start_time: '09:00',
 };
 
-describe('buildLessonGroupEditInitial', () => {
-	it('maps group row and members to edit initial state', () => {
-		expect(
-			buildLessonGroupEditInitial(
-				groupRow,
-				[{ student_user_id: 'student-1' }, { student_user_id: 'student-2' }],
-				'2027-06-30',
-			),
-		).toEqual({
+let groupResult: { data: typeof groupRow | null; error: { message: string } | null } = {
+	data: groupRow,
+	error: null,
+};
+let membersResult: { data: { student_user_id: string }[] | null } = {
+	data: [{ student_user_id: 'student-1' }, { student_user_id: 'student-2' }],
+};
+
+const supabaseMock = {
+	from: (table: string) => {
+		if (table === 'lesson_groups') {
+			return {
+				select: () => ({
+					eq: () => ({
+						single: () => Promise.resolve(groupResult),
+					}),
+				}),
+			};
+		}
+		if (table === 'lesson_group_members') {
+			return {
+				select: () => ({
+					eq: () => ({
+						is: () => Promise.resolve(membersResult),
+					}),
+				}),
+			};
+		}
+		throw new Error(`Unexpected table ${table}`);
+	},
+};
+
+mock.module('sonner', () => ({
+	toast: { error: () => {} },
+}));
+
+mock.module('../../../src/integrations/supabase/client', () => ({
+	supabase: supabaseMock,
+}));
+
+mock.module('@/integrations/supabase/client', () => ({
+	supabase: supabaseMock,
+}));
+
+describe('fetchLessonGroupForEdit', () => {
+	let fetchLessonGroupForEdit: typeof import('../../../src/components/lesson-groups/wizard/lessonGroupDataLoadHelpers').fetchLessonGroupForEdit;
+
+	beforeAll(async () => {
+		({ fetchLessonGroupForEdit } = await import(
+			'../../../src/components/lesson-groups/wizard/lessonGroupDataLoadHelpers'
+		));
+	});
+
+	beforeEach(() => {
+		groupResult = { data: groupRow, error: null };
+		membersResult = { data: [{ student_user_id: 'student-1' }, { student_user_id: 'student-2' }] };
+	});
+
+	it('maps group row and members to edit initial state', async () => {
+		const result = await fetchLessonGroupForEdit('group-1', '2027-06-30', () => {});
+		expect(result).toEqual({
 			name: 'Groep A',
 			lessonTypeId: 'lt-1',
 			durationMinutes: 45,
@@ -43,8 +94,10 @@ describe('buildLessonGroupEditInitial', () => {
 		});
 	});
 
-	it('uses provided end date when group has one', () => {
-		const result = buildLessonGroupEditInitial({ ...groupRow, end_date: '2026-12-31' }, [], '2027-06-30');
-		expect(result.endDate).toBe('2026-12-31');
+	it('uses group end date when present', async () => {
+		groupResult = { data: { ...groupRow, end_date: '2026-12-31' }, error: null };
+		membersResult = { data: [] };
+		const result = await fetchLessonGroupForEdit('group-1', '2027-06-30', () => {});
+		expect(result?.endDate).toBe('2026-12-31');
 	});
 });

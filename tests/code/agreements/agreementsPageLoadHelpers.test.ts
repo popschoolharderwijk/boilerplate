@@ -1,10 +1,4 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
-import {
-	type AgreementsPageLoadOutcome,
-	applyAgreementsPageLoadOutcome,
-	collectAgreementProfileUserIds,
-	resolveAgreementSortUsesClientSideProfile,
-} from '../../../src/lib/agreements/agreementsPageLoadHelpers';
 import type { RawAgreementRow } from '../../../src/lib/agreements/mapAgreementTableRow';
 
 let agreementsResult: { data: unknown; error: { message: string } | null; count: number | null } = {
@@ -66,67 +60,16 @@ const rawAgreement: RawAgreementRow = {
 	teachers: { user_id: 'teacher-1' },
 };
 
-describe('resolveAgreementSortUsesClientSideProfile', () => {
-	it('returns true for student and teacher sort columns', () => {
-		expect(resolveAgreementSortUsesClientSideProfile('student')).toBe(true);
-		expect(resolveAgreementSortUsesClientSideProfile('teacher')).toBe(true);
-	});
-
-	it('returns false for database sort columns', () => {
-		expect(resolveAgreementSortUsesClientSideProfile('created_at')).toBe(false);
-	});
-});
-
-describe('collectAgreementProfileUserIds', () => {
-	it('collects unique student and teacher user ids', () => {
-		expect(
-			collectAgreementProfileUserIds([
-				rawAgreement,
-				{ ...rawAgreement, id: 'agreement-2', student_user_id: 'student-2' },
-			]),
-		).toEqual(['student-1', 'student-2', 'teacher-1']);
-	});
-});
-
-describe('applyAgreementsPageLoadOutcome', () => {
-	it('applies success outcome and returns true', () => {
-		let agreementCount = -1;
-		let totalCount = -1;
-		const outcome: AgreementsPageLoadOutcome = {
-			kind: 'success',
-			agreements: [],
-			totalCount: 4,
-		};
-		const shouldStopLoading = applyAgreementsPageLoadOutcome(
-			outcome,
-			(value) => {
-				agreementCount = value.length;
-			},
-			(value) => {
-				totalCount = value;
-			},
-		);
-		expect(shouldStopLoading).toBe(true);
-		expect(agreementCount).toBe(0);
-		expect(totalCount).toBe(4);
-	});
-
-	it('returns false for skipped outcome', () => {
-		expect(
-			applyAgreementsPageLoadOutcome(
-				{ kind: 'skipped' },
-				() => {},
-				() => {},
-			),
-		).toBe(false);
-	});
-});
-
-describe('executeAgreementsPageLoad', () => {
+describe('agreementsPageLoadHelpers', () => {
+	let applyAgreementsPageLoadOutcome: typeof import('../../../src/lib/agreements/agreementsPageLoadHelpers').applyAgreementsPageLoadOutcome;
 	let executeAgreementsPageLoad: typeof import('../../../src/lib/agreements/agreementsPageLoadHelpers').executeAgreementsPageLoad;
+	type AgreementsPageLoadOutcome =
+		import('../../../src/lib/agreements/agreementsPageLoadHelpers').AgreementsPageLoadOutcome;
 
 	beforeAll(async () => {
-		({ executeAgreementsPageLoad } = await import('../../../src/lib/agreements/agreementsPageLoadHelpers'));
+		({ applyAgreementsPageLoadOutcome, executeAgreementsPageLoad } = await import(
+			'../../../src/lib/agreements/agreementsPageLoadHelpers'
+		));
 	});
 
 	beforeEach(() => {
@@ -152,10 +95,60 @@ describe('executeAgreementsPageLoad', () => {
 		};
 	});
 
-	it('returns skipped when auth is still loading', async () => {
-		expect(
-			await executeAgreementsPageLoad({
-				authLoading: true,
+	describe('applyAgreementsPageLoadOutcome', () => {
+		it('applies success outcome and returns true', () => {
+			let agreementCount = -1;
+			let totalCount = -1;
+			const outcome: AgreementsPageLoadOutcome = {
+				kind: 'success',
+				agreements: [],
+				totalCount: 4,
+			};
+			const shouldStopLoading = applyAgreementsPageLoadOutcome(
+				outcome,
+				(value) => {
+					agreementCount = value.length;
+				},
+				(value) => {
+					totalCount = value;
+				},
+			);
+			expect(shouldStopLoading).toBe(true);
+			expect(agreementCount).toBe(0);
+			expect(totalCount).toBe(4);
+		});
+
+		it('returns false for skipped outcome', () => {
+			expect(
+				applyAgreementsPageLoadOutcome(
+					{ kind: 'skipped' },
+					() => {},
+					() => {},
+				),
+			).toBe(false);
+		});
+	});
+
+	describe('executeAgreementsPageLoad', () => {
+		it('returns skipped when auth is still loading', async () => {
+			expect(
+				await executeAgreementsPageLoad({
+					authLoading: true,
+					hasAccess: true,
+					statusFilter: null,
+					selectedLessonTypeId: null,
+					debouncedSearchQuery: '',
+					sortColumn: null,
+					sortDirection: null,
+					currentPage: 1,
+					rowsPerPage: 10,
+				}),
+			).toEqual({ kind: 'skipped' });
+		});
+
+		it('returns success with one agreement row', async () => {
+			const outcome = await executeAgreementsPageLoad({
+				authLoading: false,
 				hasAccess: true,
 				statusFilter: null,
 				selectedLessonTypeId: null,
@@ -164,32 +157,42 @@ describe('executeAgreementsPageLoad', () => {
 				sortDirection: null,
 				currentPage: 1,
 				rowsPerPage: 10,
-			}),
-		).toEqual({ kind: 'skipped' });
-	});
-
-	it('returns success with one agreement row', async () => {
-		const outcome = await executeAgreementsPageLoad({
-			authLoading: false,
-			hasAccess: true,
-			statusFilter: null,
-			selectedLessonTypeId: null,
-			debouncedSearchQuery: '',
-			sortColumn: null,
-			sortDirection: null,
-			currentPage: 1,
-			rowsPerPage: 10,
+			});
+			expect(outcome).toEqual({
+				kind: 'success',
+				agreements: [
+					expect.objectContaining({
+						id: 'agreement-1',
+						student_user_id: 'student-1',
+						teacher_user_id: 'teacher-1',
+					}),
+				],
+				totalCount: 1,
+			});
 		});
-		expect(outcome).toEqual({
-			kind: 'success',
-			agreements: [
-				expect.objectContaining({
-					id: 'agreement-1',
-					student_user_id: 'student-1',
-					teacher_user_id: 'teacher-1',
-				}),
-			],
-			totalCount: 1,
+
+		it('loads profile data when sorting by student column', async () => {
+			const outcome = await executeAgreementsPageLoad({
+				authLoading: false,
+				hasAccess: true,
+				statusFilter: null,
+				selectedLessonTypeId: null,
+				debouncedSearchQuery: '',
+				sortColumn: 'student',
+				sortDirection: 'asc',
+				currentPage: 1,
+				rowsPerPage: 10,
+			});
+			expect(outcome).toEqual({
+				kind: 'success',
+				agreements: [
+					expect.objectContaining({
+						id: 'agreement-1',
+						student: expect.objectContaining({ first_name: 'Anna' }),
+					}),
+				],
+				totalCount: 1,
+			});
 		});
 	});
 });

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { type LessonTypeListItem, translateLessonTypeDeleteError } from '@/lib/lesson-types/lessonTypesPageHelpers';
 
-export function filterDeletedLessonType(lessonTypes: LessonTypeListItem[], deletedId: string): LessonTypeListItem[] {
+function filterDeletedLessonType(lessonTypes: LessonTypeListItem[], deletedId: string): LessonTypeListItem[] {
 	return lessonTypes.filter((lessonType) => lessonType.id !== deletedId);
 }
 

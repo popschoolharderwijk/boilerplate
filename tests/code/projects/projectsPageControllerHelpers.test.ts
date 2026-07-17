@@ -1,9 +1,5 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	applyProjectPageOpenAction,
-	resolveProjectDeleteToast,
-	resolveProjectRunAction,
-} from '../../../src/lib/projects/projectsPageControllerHelpers';
+import { describe, expect, it, mock } from 'bun:test';
+import { runProjectPageAction } from '../../../src/lib/projects/projectsPageControllerHelpers';
 import type { ProjectRow } from '../../../src/types/projects';
 
 const project: ProjectRow = {
@@ -27,97 +23,61 @@ const project: ProjectRow = {
 	slot_count: 0,
 };
 
-describe('resolveProjectRunAction', () => {
-	it('maps project actions to controller steps', () => {
-		expect(resolveProjectRunAction({ kind: 'create' })).toBe('open-create');
-		expect(resolveProjectRunAction({ kind: 'edit', project })).toBe('open-edit');
-		expect(resolveProjectRunAction({ kind: 'delete', project })).toBe('open-delete');
-		expect(resolveProjectRunAction({ kind: 'confirm-delete' })).toBe('confirm-delete');
-	});
-});
+mock.module('sonner', () => ({
+	toast: {
+		error: () => {},
+		success: () => {},
+	},
+}));
 
-describe('resolveProjectDeleteToast', () => {
-	it('returns success toast details', () => {
-		expect(resolveProjectDeleteToast({ deleted: true, error: null }, 'Project A')).toEqual({
-			kind: 'success',
-			message: 'Project verwijderd',
-			description: 'Project A is verwijderd.',
-		});
-	});
+mock.module('../../../src/lib/projects/projectsPageHelpers', () => ({
+	deleteProjectRow: async () => ({ deleted: true, error: null }),
+}));
 
-	it('returns not-deleted error toast details', () => {
-		expect(resolveProjectDeleteToast({ deleted: false, error: 'no rights' }, 'Project A')).toEqual({
-			kind: 'error-not-deleted',
-			message: 'Project niet verwijderd',
-			description: 'no rights',
-		});
-	});
-
-	it('returns deleted error toast details', () => {
-		expect(resolveProjectDeleteToast({ deleted: true, error: 'partial failure' }, 'Project A')).toEqual({
-			kind: 'error-deleted',
-			message: 'Fout bij verwijderen project',
-			description: 'partial failure',
-		});
-	});
-});
-
-describe('applyProjectPageOpenAction', () => {
-	it('opens create dialog for create action', () => {
+describe('runProjectPageAction', () => {
+	it('opens create dialog for create action', async () => {
 		const formDialog: Array<{ open: boolean; project: ProjectRow | null }> = [];
-		const handled = applyProjectPageOpenAction(
-			'open-create',
-			{ kind: 'create' },
-			{
-				setFormDialog: (value) => formDialog.push(value),
-				setDeleteDialog: () => {},
-				setProjects: () => {},
-			},
-		);
-		expect(handled).toBe(true);
+		await runProjectPageAction({ kind: 'create' }, null, {
+			setFormDialog: (value) => formDialog.push(value),
+			setDeleteDialog: () => {},
+			setProjects: () => {},
+		});
 		expect(formDialog).toEqual([{ open: true, project: null }]);
 	});
 
-	it('opens edit dialog for edit action', () => {
+	it('opens edit dialog for edit action', async () => {
 		const formDialog: Array<{ open: boolean; project: ProjectRow | null }> = [];
-		const handled = applyProjectPageOpenAction(
-			'open-edit',
-			{ kind: 'edit', project },
-			{
-				setFormDialog: (value) => formDialog.push(value),
-				setDeleteDialog: () => {},
-				setProjects: () => {},
-			},
-		);
-		expect(handled).toBe(true);
+		await runProjectPageAction({ kind: 'edit', project }, null, {
+			setFormDialog: (value) => formDialog.push(value),
+			setDeleteDialog: () => {},
+			setProjects: () => {},
+		});
 		expect(formDialog).toEqual([{ open: true, project }]);
 	});
 
-	it('opens delete dialog for delete action', () => {
+	it('opens delete dialog for delete action', async () => {
 		const deleteDialog: Array<{ open: boolean; project: ProjectRow } | null> = [];
-		const handled = applyProjectPageOpenAction(
-			'open-delete',
-			{ kind: 'delete', project },
-			{
-				setFormDialog: () => {},
-				setDeleteDialog: (value) => deleteDialog.push(value),
-				setProjects: () => {},
-			},
-		);
-		expect(handled).toBe(true);
+		await runProjectPageAction({ kind: 'delete', project }, null, {
+			setFormDialog: () => {},
+			setDeleteDialog: (value) => deleteDialog.push(value),
+			setProjects: () => {},
+		});
 		expect(deleteDialog).toEqual([{ open: true, project }]);
 	});
 
-	it('returns false for confirm-delete action', () => {
-		const handled = applyProjectPageOpenAction(
-			'confirm-delete',
-			{ kind: 'confirm-delete' },
-			{
-				setFormDialog: () => {},
-				setDeleteDialog: () => {},
-				setProjects: () => {},
+	it('deletes project and clears delete dialog on confirm delete', async () => {
+		let deleteDialog: { open: boolean; project: ProjectRow } | null = { open: true, project };
+		const projects: ProjectRow[] = [project];
+		await runProjectPageAction({ kind: 'confirm-delete' }, deleteDialog, {
+			setFormDialog: () => {},
+			setDeleteDialog: (value) => {
+				deleteDialog = value;
 			},
-		);
-		expect(handled).toBe(false);
+			setProjects: (updater) => {
+				projects.splice(0, projects.length, ...updater(projects));
+			},
+		});
+		expect(deleteDialog).toBeNull();
+		expect(projects).toEqual([]);
 	});
 });

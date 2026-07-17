@@ -4,13 +4,8 @@ import {
 	assembleProjectLabelOptions,
 	mergeCurrentProjectLabel,
 	needsCurrentProjectLabelFetch,
+	type ProjectLabelOption,
 } from '@/lib/projects/projectFormLabelHelpers';
-
-export interface ProjectLabelOption {
-	id: string;
-	name: string;
-	domain_name: string;
-}
 
 export interface ProjectFormSaveInput {
 	name: string;
@@ -21,7 +16,7 @@ export interface ProjectFormSaveInput {
 	is_active: boolean;
 }
 
-export interface ProjectFormSavePayload {
+interface ProjectFormSavePayload {
 	name: string;
 	label_id: string;
 	owner_user_id: string;
@@ -175,10 +170,3 @@ async function saveProjectForm(
 	toast.success('Project aangemaakt');
 	return { ok: true };
 }
-
-export {
-	buildProjectFormSavePayload,
-	buildProjectFormStateFromProject,
-	getProjectFormSaveErrorMessage,
-	validateProjectFormInput,
-};

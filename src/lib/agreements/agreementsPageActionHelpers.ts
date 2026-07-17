@@ -7,7 +7,7 @@ export type AgreementAction =
 	| { kind: 'delete'; agreement: AgreementTableRow }
 	| { kind: 'confirm-delete' };
 
-export type AgreementRunActionKind = 'navigate-edit' | 'open-delete' | 'confirm-delete';
+type AgreementRunActionKind = 'navigate-edit' | 'open-delete' | 'confirm-delete';
 
 export interface AgreementPageActionSetters {
 	navigate: (path: string) => void;
@@ -15,13 +15,13 @@ export interface AgreementPageActionSetters {
 	reloadAgreements: () => void;
 }
 
-export function resolveAgreementRunActionKind(action: AgreementAction): AgreementRunActionKind {
+function resolveAgreementRunActionKind(action: AgreementAction): AgreementRunActionKind {
 	if (action.kind === 'edit') return 'navigate-edit';
 	if (action.kind === 'delete') return 'open-delete';
 	return 'confirm-delete';
 }
 
-export async function executeAgreementDelete(
+async function executeAgreementDelete(
 	agreementId: string,
 	setters: Pick<AgreementPageActionSetters, 'setDeleteDialog' | 'reloadAgreements'>,
 ): Promise<void> {

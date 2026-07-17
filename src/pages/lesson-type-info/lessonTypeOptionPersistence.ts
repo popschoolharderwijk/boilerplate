@@ -5,7 +5,7 @@ import type { OptionModalFormState, OptionRowWithKey } from '@/pages/lesson-type
 import { buildOptionDbPayloadFromForm } from '@/pages/lesson-type-info/utils';
 import type { LessonTypeOptionRow, LessonTypeRow } from '@/types/lesson-agreements';
 
-export function isOptionDuplicateCandidate(
+function isOptionDuplicateCandidate(
 	option: OptionRowWithKey,
 	modalForm: OptionModalFormState,
 	editingOption: OptionRowWithKey,

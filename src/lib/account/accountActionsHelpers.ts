@@ -8,11 +8,11 @@ import {
 	validateProfilePhone,
 } from '@/lib/account/persistence';
 
-export function hasProfileValidationErrors(errors: AccountFormErrors): boolean {
+function hasProfileValidationErrors(errors: AccountFormErrors): boolean {
 	return Object.keys(errors).length > 0;
 }
 
-export function mergeProfileFromForm(profile: AccountProfileState, formData: AccountFormData): AccountProfileState {
+function mergeProfileFromForm(profile: AccountProfileState, formData: AccountFormData): AccountProfileState {
 	return {
 		...profile,
 		first_name: formData.first_name || null,
@@ -21,19 +21,19 @@ export function mergeProfileFromForm(profile: AccountProfileState, formData: Acc
 	};
 }
 
-export function mergeAvatarIntoProfile(profile: AccountProfileState, avatarUrl: string): AccountProfileState {
+function mergeAvatarIntoProfile(profile: AccountProfileState, avatarUrl: string): AccountProfileState {
 	return { ...profile, avatar_url: avatarUrl };
 }
 
-export function shouldAbortAvatarUpload(
+function shouldAbortAvatarUpload(
 	files: FileList | null | undefined,
 ): files is null | undefined | (FileList & { length: 0 }) {
 	return !files || files.length === 0;
 }
 
-export type AvatarUploadOutcome = 'skipped' | 'error' | 'success';
+type AvatarUploadOutcome = 'skipped' | 'error' | 'success';
 
-export function resolveAvatarUploadOutcome(
+function resolveAvatarUploadOutcome(
 	error: string | null | undefined,
 	profile: AccountProfileState | null,
 	avatarUrl: string | null | undefined,
@@ -47,7 +47,7 @@ export function resolveAvatarUploadOutcome(
 	return 'skipped';
 }
 
-export function applyAvatarUploadOutcome(params: {
+function applyAvatarUploadOutcome(params: {
 	outcome: AvatarUploadOutcome;
 	error: string | null | undefined;
 	profile: AccountProfileState | null;

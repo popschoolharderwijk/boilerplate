@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import type { ReportCategoryDisplay } from '@/lib/reports/reportCategoryDisplayHelpers';
 
-export function ReportProjectCategoryBadge({ projectName }: { projectName: string }) {
+function ReportProjectCategoryBadge({ projectName }: { projectName: string }) {
 	return (
 		<Badge variant="outline" className="gap-1">
 			<LuFolderOpen className="h-3 w-3" />
@@ -12,11 +12,7 @@ export function ReportProjectCategoryBadge({ projectName }: { projectName: strin
 	);
 }
 
-export function ReportLessonCategoryBadge({
-	display,
-}: {
-	display: Extract<ReportCategoryDisplay, { kind: 'lesson' }>;
-}) {
+function ReportLessonCategoryBadge({ display }: { display: Extract<ReportCategoryDisplay, { kind: 'lesson' }> }) {
 	return (
 		<div className="flex items-center gap-2">
 			<LessonTypeBadge

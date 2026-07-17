@@ -6,13 +6,13 @@ import {
 } from '@/lib/settings/announcementsManagerControllerHelpers';
 import { buildAnnouncementImagePath, isAnnouncementImageFile } from '@/lib/settings/announcementsManagerHelpers';
 
-export function resolveAnnouncementImageUploadToast(gate: AnnouncementImageUploadGate): string | null {
+function resolveAnnouncementImageUploadToast(gate: AnnouncementImageUploadGate): string | null {
 	if (gate === 'schema-missing') return 'Nieuwsberichten zijn nog niet beschikbaar';
 	if (gate === 'invalid-file') return 'Alleen afbeeldingen zijn toegestaan';
 	return null;
 }
 
-export async function uploadAnnouncementImageFile(
+async function uploadAnnouncementImageFile(
 	supabase: SupabaseClient,
 	file: File,
 ): Promise<{ publicUrl: string } | { error: string }> {
@@ -28,7 +28,7 @@ export async function uploadAnnouncementImageFile(
 	return { publicUrl };
 }
 
-export function isAnnouncementImageUploadReady(
+function isAnnouncementImageUploadReady(
 	file: File | undefined,
 	isSchemaMissing: boolean,
 ): { ready: false; gate: AnnouncementImageUploadGate } | { ready: true; file: File } {
@@ -40,19 +40,19 @@ export function isAnnouncementImageUploadReady(
 	return { ready: true, file };
 }
 
-export function buildAnnouncementImageMarkdown(fileName: string, publicUrl: string): string {
+function buildAnnouncementImageMarkdown(fileName: string, publicUrl: string): string {
 	return `![${fileName}](${publicUrl})`;
 }
 
-export function showAnnouncementImageUploadError(message: string, description?: string): void {
+function showAnnouncementImageUploadError(message: string, description?: string): void {
 	toast.error(message, description ? { description } : undefined);
 }
 
-export type PreparedAnnouncementImageUpload =
+type PreparedAnnouncementImageUpload =
 	| { status: 'blocked'; gate: AnnouncementImageUploadGate }
 	| { status: 'ready'; file: File };
 
-export function prepareAnnouncementImageUpload(
+function prepareAnnouncementImageUpload(
 	file: File | undefined,
 	isSchemaMissing: boolean,
 ): PreparedAnnouncementImageUpload {
@@ -63,7 +63,7 @@ export function prepareAnnouncementImageUpload(
 	return { status: 'ready', file: uploadReady.file };
 }
 
-export async function uploadAndBuildAnnouncementImageMarkdown(
+async function uploadAndBuildAnnouncementImageMarkdown(
 	supabase: SupabaseClient,
 	file: File,
 ): Promise<{ markdown: string } | { error: string }> {

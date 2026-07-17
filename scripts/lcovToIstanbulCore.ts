@@ -34,7 +34,7 @@ export function parseLcov(content: string): LcovFile[] {
 	return files;
 }
 
-export function readFunctionRange(
+function readFunctionRange(
 	sourceFile: ts.SourceFile,
 	startNode: ts.Node,
 	endNode: ts.Node,
@@ -44,7 +44,7 @@ export function readFunctionRange(
 	return { startLine, endLine };
 }
 
-export function readNamedFunctionFromVariableDeclaration(
+function readNamedFunctionFromVariableDeclaration(
 	sourceFile: ts.SourceFile,
 	parent: ts.VariableDeclaration,
 	node: ts.FunctionExpression | ts.ArrowFunction,
@@ -54,7 +54,7 @@ export function readNamedFunctionFromVariableDeclaration(
 	return { name: parent.name.text, ...range };
 }
 
-export function readNamedFunctionFromPropertyAssignment(
+function readNamedFunctionFromPropertyAssignment(
 	sourceFile: ts.SourceFile,
 	parent: ts.PropertyAssignment,
 	node: ts.FunctionExpression | ts.ArrowFunction,
@@ -64,7 +64,7 @@ export function readNamedFunctionFromPropertyAssignment(
 	return { name: parent.name.text, ...range };
 }
 
-export function readNamedFunctionFromMethodParent(
+function readNamedFunctionFromMethodParent(
 	sourceFile: ts.SourceFile,
 	parent: ts.MethodDeclaration,
 	node: ts.FunctionExpression | ts.ArrowFunction,
@@ -74,7 +74,7 @@ export function readNamedFunctionFromMethodParent(
 	return { name: parent.name.text, ...range };
 }
 
-export function readNamedFunctionFromParent(
+function readNamedFunctionFromParent(
 	sourceFile: ts.SourceFile,
 	node: ts.FunctionExpression | ts.ArrowFunction,
 ): { name: string; startLine: number; endLine: number } | null {
@@ -91,19 +91,19 @@ export function readNamedFunctionFromParent(
 	return null;
 }
 
-export function collectFunctionDeclaration(sourceFile: ts.SourceFile, node: ts.FunctionDeclaration): FnRange | null {
+function collectFunctionDeclaration(sourceFile: ts.SourceFile, node: ts.FunctionDeclaration): FnRange | null {
 	if (!node.name || !node.body) return null;
 	const range = readFunctionRange(sourceFile, node, node);
 	return { name: node.name.text, ...range };
 }
 
-export function collectMethodDeclaration(sourceFile: ts.SourceFile, node: ts.MethodDeclaration): FnRange | null {
+function collectMethodDeclaration(sourceFile: ts.SourceFile, node: ts.MethodDeclaration): FnRange | null {
 	if (!node.name || !ts.isIdentifier(node.name) || !node.body) return null;
 	const range = readFunctionRange(sourceFile, node, node);
 	return { name: node.name.text, ...range };
 }
 
-export function collectNamedFunction(sourceFile: ts.SourceFile, node: ts.Node): FnRange | null {
+function collectNamedFunction(sourceFile: ts.SourceFile, node: ts.Node): FnRange | null {
 	if (ts.isFunctionDeclaration(node)) return collectFunctionDeclaration(sourceFile, node);
 	if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
 		return readNamedFunctionFromParent(sourceFile, node);

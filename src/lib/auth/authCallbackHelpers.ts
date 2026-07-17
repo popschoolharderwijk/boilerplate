@@ -8,11 +8,11 @@ export interface AuthCallbackDeps {
 	exchangeCodeForSession: (href: string) => Promise<{ error: { message: string } | null }>;
 }
 
-export function isValidAuthCallbackTokenHash(tokenHash: string | null, type: string): boolean {
+function isValidAuthCallbackTokenHash(tokenHash: string | null, type: string): boolean {
 	return Boolean(tokenHash) && type === 'email';
 }
 
-export function parseAuthCallbackHashParams(hash: string): { tokenHash: string | null; type: string } {
+function parseAuthCallbackHashParams(hash: string): { tokenHash: string | null; type: string } {
 	const hashParams = new URLSearchParams(hash.slice(1));
 	return {
 		tokenHash: hashParams.get('token_hash'),

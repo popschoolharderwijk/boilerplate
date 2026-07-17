@@ -4,10 +4,10 @@ import { filterAgreementRows, sortAgreementRows } from '@/lib/agreements/agreeme
 import { mapRawAgreementToTableRow, type RawAgreementRow } from '@/lib/agreements/mapAgreementTableRow';
 import type { AgreementTableRow } from '@/types/lesson-agreements';
 
-export const AGREEMENTS_LIST_SELECT =
+const AGREEMENTS_LIST_SELECT =
 	'id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, duo_pair_id, lesson_types(id, name, icon, color), teachers(user_id)';
 
-export const EMPTY_AGREEMENT_PROFILE = {
+const EMPTY_AGREEMENT_PROFILE = {
 	first_name: null,
 	last_name: null,
 	avatar_url: null,
@@ -20,7 +20,7 @@ function agreementsListQuery() {
 
 type AgreementsListQuery = ReturnType<typeof agreementsListQuery>;
 
-export function applyAgreementFilters(
+function applyAgreementFilters(
 	query: AgreementsListQuery,
 	statusFilter: string | null,
 	selectedLessonTypeId: string | null,
@@ -32,11 +32,11 @@ export function applyAgreementFilters(
 	return nextQuery;
 }
 
-export function resolveAgreementSortUsesClientSideProfile(sortColumn: string | null): boolean {
+function resolveAgreementSortUsesClientSideProfile(sortColumn: string | null): boolean {
 	return sortColumn === 'student' || sortColumn === 'teacher';
 }
 
-export function applyAgreementSort(
+function applyAgreementSort(
 	query: AgreementsListQuery,
 	sortColumn: string | null,
 	sortDirection: 'asc' | 'desc' | null,
@@ -59,7 +59,7 @@ export function applyAgreementSort(
 	return query.order('start_date', { ascending: false });
 }
 
-export function collectAgreementProfileUserIds(raw: RawAgreementRow[]): string[] {
+function collectAgreementProfileUserIds(raw: RawAgreementRow[]): string[] {
 	const studentUserIds = [...new Set(raw.map((agreement) => agreement.student_user_id))];
 	const teacherUserIds = [
 		...new Set(

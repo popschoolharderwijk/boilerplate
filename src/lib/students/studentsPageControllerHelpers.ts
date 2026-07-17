@@ -10,7 +10,7 @@ import {
 	type StudentWithAgreements,
 } from '@/types/students';
 
-export type StudentRunActionKind = 'open-edit' | 'open-delete' | 'confirm-delete';
+type StudentRunActionKind = 'open-edit' | 'open-delete' | 'confirm-delete';
 
 export interface ExecuteStudentsPageLoadParams {
 	authLoading: boolean;
@@ -24,7 +24,7 @@ export interface ExecuteStudentsPageLoadParams {
 	sortDirection: 'asc' | 'desc' | null;
 }
 
-export function buildStudentsPageLoadRpcParams(params: ExecuteStudentsPageLoadParams) {
+function buildStudentsPageLoadRpcParams(params: ExecuteStudentsPageLoadParams) {
 	return {
 		p_limit: params.limit,
 		p_offset: params.offset,
@@ -97,19 +97,19 @@ export type StudentAction =
 	| { kind: 'delete'; student: StudentWithAgreements }
 	| { kind: 'confirm-delete' };
 
-export function resolveStudentRunAction(action: { kind: 'edit' | 'delete' | 'confirm-delete' }): StudentRunActionKind {
+function resolveStudentRunAction(action: { kind: 'edit' | 'delete' | 'confirm-delete' }): StudentRunActionKind {
 	if (action.kind === 'edit') return 'open-edit';
 	if (action.kind === 'delete') return 'open-delete';
 	return 'confirm-delete';
 }
 
-export type StudentDeleteToastKind = 'user-deleted' | 'agreements-deleted';
+type StudentDeleteToastKind = 'user-deleted' | 'agreements-deleted';
 
-export function resolveStudentDeleteToastKind(deleteUser: boolean): StudentDeleteToastKind {
+function resolveStudentDeleteToastKind(deleteUser: boolean): StudentDeleteToastKind {
 	return deleteUser ? 'user-deleted' : 'agreements-deleted';
 }
 
-export function getStudentDeleteSuccessMessage(deleteUser: boolean): string {
+function getStudentDeleteSuccessMessage(deleteUser: boolean): string {
 	return resolveStudentDeleteToastKind(deleteUser) === 'user-deleted'
 		? 'Leerling en gebruiker verwijderd'
 		: 'Leerling verwijderd';
@@ -140,13 +140,13 @@ export interface StudentPageControllerSetters {
 	loadStudents: () => void;
 }
 
-export type StudentPageActionOutcome =
+type StudentPageActionOutcome =
 	| { kind: 'open-edit'; student: StudentWithAgreements }
 	| { kind: 'open-delete'; student: StudentWithAgreements }
 	| { kind: 'execute-delete'; student: StudentWithAgreements; deleteUser: boolean }
 	| { kind: 'noop' };
 
-export function resolveStudentPageActionOutcome(
+function resolveStudentPageActionOutcome(
 	action: StudentAction,
 	deleteDialog: { open: boolean; student: StudentWithAgreements; deleteUser: boolean } | null,
 ): StudentPageActionOutcome {

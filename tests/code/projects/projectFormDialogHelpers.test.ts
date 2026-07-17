@@ -1,87 +1,61 @@
-import { describe, expect, it } from 'bun:test';
+import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import {
 	buildEmptyProjectFormState,
-	buildProjectFormSavePayload,
-	buildProjectFormStateFromProject,
-	getProjectFormSaveErrorMessage,
 	mergeProjectFormLabelAfterLoad,
 	resolveProjectFormDialogInitialState,
-	validateProjectFormInput,
+	runProjectFormDialogSubmit,
 } from '../../../src/lib/projects/projectFormDialogHelpers';
 
-describe('validateProjectFormInput', () => {
-	it('returns true for a complete form', () => {
-		expect(
-			validateProjectFormInput({
-				name: 'Project A',
-				label_id: 'label-1',
-				owner_user_id: 'owner-1',
-				cost_center: '',
-				description: '',
-				is_active: true,
-			}),
-		).toBe(true);
-	});
+const toastCalls: { kind: 'error' | 'success'; message: string; description?: string }[] = [];
+let insertError: { message: string } | null = null;
+let updateError: { message: string } | null = null;
+let lastInsertPayload: Record<string, unknown> | null = null;
+let lastUpdatePayload: Record<string, unknown> | null = null;
 
-	it('returns false when required fields are missing', () => {
-		expect(
-			validateProjectFormInput({
-				name: ' ',
-				label_id: '',
-				owner_user_id: '',
-				cost_center: '',
-				description: '',
-				is_active: true,
-			}),
-		).toBe(false);
-	});
-});
+mock.module('sonner', () => ({
+	toast: {
+		error: (message: string, options?: { description?: string }) => {
+			toastCalls.push({ kind: 'error', message, description: options?.description });
+		},
+		success: (message: string) => {
+			toastCalls.push({ kind: 'success', message });
+		},
+	},
+}));
 
-describe('buildProjectFormSavePayload', () => {
-	it('trims text fields and maps empty optional fields to null', () => {
-		expect(
-			buildProjectFormSavePayload({
-				name: '  Project A  ',
-				label_id: 'label-1',
-				owner_user_id: 'owner-1',
-				cost_center: '  ',
-				description: '  ',
-				is_active: false,
+mock.module('../../../src/integrations/supabase/client', () => ({
+	supabase: {
+		from: () => ({
+			insert: async (payload: Record<string, unknown>) => {
+				lastInsertPayload = payload;
+				return { error: insertError };
+			},
+			update: (payload: Record<string, unknown>) => ({
+				eq: async () => {
+					lastUpdatePayload = payload;
+					return { error: updateError };
+				},
 			}),
-		).toEqual({
-			name: 'Project A',
-			label_id: 'label-1',
-			owner_user_id: 'owner-1',
-			cost_center: null,
-			description: null,
-			is_active: false,
-		});
-	});
-});
+		}),
+	},
+}));
 
-describe('buildProjectFormStateFromProject', () => {
-	it('maps nullable project fields to form defaults', () => {
-		expect(
-			buildProjectFormStateFromProject({
-				id: 'proj-1',
-				name: 'Project A',
-				label_id: 'label-1',
-				owner_user_id: 'owner-1',
-				cost_center: null,
-				description: null,
-				is_active: true,
+mock.module('@/integrations/supabase/client', () => ({
+	supabase: {
+		from: () => ({
+			insert: async (payload: Record<string, unknown>) => {
+				lastInsertPayload = payload;
+				return { error: insertError };
+			},
+			update: (payload: Record<string, unknown>) => ({
+				eq: async () => {
+					lastUpdatePayload = payload;
+					return { error: updateError };
+				},
 			}),
-		).toEqual({
-			id: 'proj-1',
-			name: 'Project A',
-			label_id: 'label-1',
-			owner_user_id: 'owner-1',
-			cost_center: '',
-			description: '',
-			is_active: true,
-		});
-	});
-});
+		}),
+	},
+}));
 
 describe('buildEmptyProjectFormState', () => {
 	it('returns the default create form state', () => {
@@ -170,12 +144,150 @@ describe('mergeProjectFormLabelAfterLoad', () => {
 	});
 });
 
-describe('getProjectFormSaveErrorMessage', () => {
-	it('returns the edit error title', () => {
-		expect(getProjectFormSaveErrorMessage(true)).toBe('Fout bij bijwerken project');
+describe('runProjectFormDialogSubmit', () => {
+	beforeAll(async () => {
+		await import('../../../src/lib/projects/projectFormDialogHelpers');
 	});
 
-	it('returns the create error title', () => {
-		expect(getProjectFormSaveErrorMessage(false)).toBe('Fout bij aanmaken project');
+	beforeEach(() => {
+		toastCalls.length = 0;
+		insertError = null;
+		updateError = null;
+		lastInsertPayload = null;
+		lastUpdatePayload = null;
+	});
+
+	it('shows validation toast when required fields are missing', async () => {
+		let dialogOpen = true;
+		let saved = false;
+		await runProjectFormDialogSubmit({
+			form: buildEmptyProjectFormState(),
+			isEditing: false,
+			onOpenChange: (open) => {
+				dialogOpen = open;
+			},
+			onSaved: () => {
+				saved = true;
+			},
+		});
+		expect(dialogOpen).toBe(true);
+		expect(saved).toBe(false);
+		expect(toastCalls).toEqual([{ kind: 'error', message: 'Vul alle verplichte velden in' }]);
+	});
+
+	it('creates project with trimmed payload and closes dialog on success', async () => {
+		let dialogOpen = true;
+		let saved = false;
+		await runProjectFormDialogSubmit({
+			form: {
+				name: '  Project A  ',
+				label_id: 'label-1',
+				owner_user_id: 'owner-1',
+				cost_center: '  ',
+				description: '  ',
+				is_active: false,
+			},
+			isEditing: false,
+			onOpenChange: (open) => {
+				dialogOpen = open;
+			},
+			onSaved: () => {
+				saved = true;
+			},
+		});
+		expect(dialogOpen).toBe(false);
+		expect(saved).toBe(true);
+		expect(lastInsertPayload).toEqual({
+			name: 'Project A',
+			label_id: 'label-1',
+			owner_user_id: 'owner-1',
+			cost_center: null,
+			description: null,
+			is_active: false,
+		});
+		expect(toastCalls).toEqual([{ kind: 'success', message: 'Project aangemaakt' }]);
+	});
+
+	it('updates project and closes dialog on success', async () => {
+		let dialogOpen = true;
+		let saved = false;
+		await runProjectFormDialogSubmit({
+			form: {
+				id: 'proj-1',
+				name: 'Project A',
+				label_id: 'label-1',
+				owner_user_id: 'owner-1',
+				cost_center: '',
+				description: '',
+				is_active: true,
+			},
+			isEditing: true,
+			onOpenChange: (open) => {
+				dialogOpen = open;
+			},
+			onSaved: () => {
+				saved = true;
+			},
+		});
+		expect(dialogOpen).toBe(false);
+		expect(saved).toBe(true);
+		expect(lastUpdatePayload).toEqual({
+			name: 'Project A',
+			label_id: 'label-1',
+			owner_user_id: 'owner-1',
+			cost_center: null,
+			description: null,
+			is_active: true,
+		});
+		expect(toastCalls).toEqual([{ kind: 'success', message: 'Project bijgewerkt' }]);
+	});
+
+	it('shows create error toast when insert fails', async () => {
+		insertError = { message: 'insert failed' };
+		let dialogOpen = true;
+		await runProjectFormDialogSubmit({
+			form: {
+				name: 'Project A',
+				label_id: 'label-1',
+				owner_user_id: 'owner-1',
+				cost_center: '',
+				description: '',
+				is_active: true,
+			},
+			isEditing: false,
+			onOpenChange: (open) => {
+				dialogOpen = open;
+			},
+			onSaved: () => {},
+		});
+		expect(dialogOpen).toBe(true);
+		expect(toastCalls).toEqual([
+			{ kind: 'error', message: 'Fout bij aanmaken project', description: 'insert failed' },
+		]);
+	});
+
+	it('shows edit error toast when update fails', async () => {
+		updateError = { message: 'update failed' };
+		let dialogOpen = true;
+		await runProjectFormDialogSubmit({
+			form: {
+				id: 'proj-1',
+				name: 'Project A',
+				label_id: 'label-1',
+				owner_user_id: 'owner-1',
+				cost_center: '',
+				description: '',
+				is_active: true,
+			},
+			isEditing: true,
+			onOpenChange: (open) => {
+				dialogOpen = open;
+			},
+			onSaved: () => {},
+		});
+		expect(dialogOpen).toBe(true);
+		expect(toastCalls).toEqual([
+			{ kind: 'error', message: 'Fout bij bijwerken project', description: 'update failed' },
+		]);
 	});
 });

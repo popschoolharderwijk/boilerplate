@@ -15,7 +15,7 @@ interface ProjectDomainsListProps {
 	onDelete: (domain: ProjectDomain) => void;
 }
 
-export function ProjectDomainsList({ domains, onEdit, onDelete }: ProjectDomainsListProps) {
+function ProjectDomainsList({ domains, onEdit, onDelete }: ProjectDomainsListProps) {
 	return (
 		<ul className="divide-y divide-border">
 			{domains.map((domain) => (
@@ -60,7 +60,7 @@ interface ProjectDomainEditorDialogProps {
 	onSave: () => void;
 }
 
-export function ProjectDomainEditorDialog({
+function ProjectDomainEditorDialog({
 	open,
 	onOpenChange,
 	editing,
@@ -99,7 +99,7 @@ export function ProjectDomainEditorDialog({
 	);
 }
 
-export function ProjectDomainsAddButton({ onClick }: { onClick: () => void }) {
+function ProjectDomainsAddButton({ onClick }: { onClick: () => void }) {
 	return (
 		<Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onClick}>
 			<LuPlus className="h-3.5 w-3.5" />
@@ -107,19 +107,6 @@ export function ProjectDomainsAddButton({ onClick }: { onClick: () => void }) {
 		</Button>
 	);
 }
-
-export function shouldShowProjectDomainsLoading(loading: boolean): boolean {
-	return resolveListCardView(loading, 0) === 'loading';
-}
-
-export function shouldShowProjectDomainsEmpty(loading: boolean, domainCount: number): boolean {
-	return resolveListCardView(loading, domainCount) === 'empty';
-}
-
-export function shouldShowProjectDomainsList(loading: boolean, domainCount: number): boolean {
-	return resolveListCardView(loading, domainCount) === 'list';
-}
-
 function ProjectDomainsManagerCardContent({
 	view,
 	domains,

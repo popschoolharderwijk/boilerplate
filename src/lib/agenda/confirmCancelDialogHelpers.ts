@@ -27,7 +27,7 @@ export function canConfirmCancel(isGroup: boolean, cancelAll: boolean, selectedI
 	return !isGroup || cancelAll || selectedIds.length > 0;
 }
 
-export function buildCancelConfirmPayload(
+function buildCancelConfirmPayload(
 	isGroup: boolean,
 	cancelAll: boolean,
 	selectedIds: string[],

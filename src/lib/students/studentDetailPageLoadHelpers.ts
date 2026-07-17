@@ -12,7 +12,7 @@ export interface StudentDetailPageLoadResult {
 	signupRequests: SignupRequestDetail[];
 }
 
-export async function loadStudentProfileForDetailPage(
+async function loadStudentProfileForDetailPage(
 	supabase: SupabaseClient,
 	userId: string,
 ): Promise<StudentProfileData | null> {

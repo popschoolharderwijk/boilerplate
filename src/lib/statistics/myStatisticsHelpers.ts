@@ -10,7 +10,7 @@ export interface TeacherStatistics {
 	upcomingLessons: number;
 }
 
-export function isAgreementGroupLesson(lessonTypes: TeacherStatisticsAgreement['lesson_types']): boolean {
+function isAgreementGroupLesson(lessonTypes: TeacherStatisticsAgreement['lesson_types']): boolean {
 	if (Array.isArray(lessonTypes)) {
 		return lessonTypes[0]?.is_group_lesson ?? false;
 	}

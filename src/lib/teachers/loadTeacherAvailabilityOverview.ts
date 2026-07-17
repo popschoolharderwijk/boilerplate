@@ -48,7 +48,7 @@ const EMPTY_PROFILE = {
 	email: '',
 };
 
-export function buildTeacherAvailabilityOverviewTeachers(
+function buildTeacherAvailabilityOverviewTeachers(
 	teacherRows: { user_id: string }[],
 	profiles: { user_id: string; first_name: string | null; last_name: string | null; email: string }[],
 ): TeacherAvailabilityOverviewTeacher[] {

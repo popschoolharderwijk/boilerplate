@@ -12,7 +12,7 @@ export function maskSepaIban(iban: string): string {
 	return iban.length > 8 ? `${iban.slice(0, 4)} •••• ${iban.slice(-4)}` : iban;
 }
 
-export function resolveAutoSelectedSepaMandateId(
+function resolveAutoSelectedSepaMandateId(
 	mandates: SepaMandateOption[],
 	currentSepaMandateId: string | null,
 ): string | null {

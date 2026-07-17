@@ -28,7 +28,7 @@ export async function runLegacyImportTemplateDownload(
 	}
 }
 
-export async function runLegacyImportValidationBase64(
+async function runLegacyImportValidationBase64(
 	supabase: SupabaseClient,
 	fileBase64: string,
 ): Promise<LegacyImportActionResult<ValidationResponse | null>> {
@@ -52,7 +52,7 @@ export async function runLegacyImportValidation(
 	return runLegacyImportValidationBase64(supabase, fileBase64);
 }
 
-export async function runLegacyImportExecutionBase64(
+async function runLegacyImportExecutionBase64(
 	supabase: SupabaseClient,
 	fileBase64: string,
 ): Promise<LegacyImportActionResult<ImportResponse | null>> {

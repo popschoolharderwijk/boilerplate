@@ -22,9 +22,9 @@ export function formatStudentPhoneSubtitle(email: string, phoneNumber: string | 
 	return phoneNumber ? `${email} · ${phoneNumber}` : email;
 }
 
-export type StudentDetailViewState = 'redirect' | 'loading' | 'not-found' | 'content';
+type StudentDetailViewState = 'redirect' | 'loading' | 'not-found' | 'content';
 
-export function resolveStudentDetailViewState(
+function resolveStudentDetailViewState(
 	authLoading: boolean,
 	canView: boolean,
 	loading: boolean,
@@ -36,15 +36,15 @@ export function resolveStudentDetailViewState(
 	return 'content';
 }
 
-export function resolveStudentDetailRedirectPath(viewState: StudentDetailViewState): string | null {
+function resolveStudentDetailRedirectPath(viewState: StudentDetailViewState): string | null {
 	if (viewState === 'redirect') return '/';
 	if (viewState === 'not-found') return '/students';
 	return null;
 }
 
-export type StudentDetailRenderTarget = '/' | '/students' | 'loading' | 'content';
+type StudentDetailRenderTarget = '/' | '/students' | 'loading' | 'content';
 
-export function resolveStudentDetailRenderTarget(
+function resolveStudentDetailRenderTarget(
 	viewState: StudentDetailViewState,
 	hasProfile: boolean,
 ): StudentDetailRenderTarget {

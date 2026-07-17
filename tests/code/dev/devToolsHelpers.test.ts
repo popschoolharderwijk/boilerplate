@@ -2,8 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import {
 	resolveDevToolsEnvironmentBadgeClass,
 	resolveDevToolsHeaderClass,
+	resolveDevToolsRenderMode,
 	resolveDevToolsTriggerClass,
-	shouldRenderDevToolsProductionBadge,
 } from '../../../src/lib/dev/devToolsHelpers';
 
 describe('resolveDevToolsHeaderClass', () => {
@@ -28,12 +28,12 @@ describe('resolveDevToolsTriggerClass', () => {
 	});
 });
 
-describe('shouldRenderDevToolsProductionBadge', () => {
-	it('returns true when sidebar is collapsed', () => {
-		expect(shouldRenderDevToolsProductionBadge(true)).toBe(true);
+describe('resolveDevToolsRenderMode', () => {
+	it('returns production-badge when sidebar is collapsed in production', () => {
+		expect(resolveDevToolsRenderMode(true, true)).toBe('production-badge');
 	});
 
-	it('returns false when sidebar is expanded', () => {
-		expect(shouldRenderDevToolsProductionBadge(false)).toBe(false);
+	it('returns hidden when sidebar is expanded in production', () => {
+		expect(resolveDevToolsRenderMode(true, false)).toBe('hidden');
 	});
 });

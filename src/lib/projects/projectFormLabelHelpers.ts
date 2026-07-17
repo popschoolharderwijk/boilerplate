@@ -19,15 +19,7 @@ export function mergeCurrentProjectLabel(
 	if (hasCurrentLabel) return activeLabels;
 	return [currentLabel, ...activeLabels];
 }
-
-export function collectProjectDomainIds(labels: ProjectLabelRow[]): string[] {
-	return [...new Set(labels.map((label) => label.domain_id))];
-}
-
-export function mapProjectLabelOptions(
-	labels: ProjectLabelRow[],
-	domainMap: Map<string, string>,
-): ProjectLabelOption[] {
+function mapProjectLabelOptions(labels: ProjectLabelRow[], domainMap: Map<string, string>): ProjectLabelOption[] {
 	return labels.map((label) => ({
 		id: label.id,
 		name: label.name,
@@ -42,7 +34,7 @@ export function needsCurrentProjectLabelFetch(
 	return Boolean(currentLabelId && !activeLabels.some((label) => label.id === currentLabelId));
 }
 
-export function buildProjectDomainNameMap(
+function buildProjectDomainNameMap(
 	domains: Array<{ id: string; name: string }> | null | undefined,
 ): Map<string, string> {
 	return new Map((domains ?? []).map((domain) => [domain.id, domain.name]));

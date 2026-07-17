@@ -3,7 +3,7 @@ import type { LessonFrequency, LessonTypeOptionFormRow } from '@/types/lesson-ag
 export const centsToInput = (cents: number | null | undefined): string =>
 	cents == null ? '' : (cents / 100).toFixed(2);
 
-export const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
+const inputToCents = (input: string): number => Math.round((parseFloat(input) || 0) * 100);
 
 export function optionSort(a: LessonTypeOptionFormRow, b: LessonTypeOptionFormRow): number {
 	const durA = parseInt(a.duration_minutes, 10) || 0;

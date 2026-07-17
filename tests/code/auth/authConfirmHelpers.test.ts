@@ -1,33 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	getSafeNext,
-	isValidEmailOtpType,
-	resolveAuthConfirmParams,
-	resolveVerifyOtpErrorMessage,
-} from '../../../src/lib/auth/authConfirmHelpers';
-
-describe('getSafeNext', () => {
-	it('returns slash for missing or unsafe values', () => {
-		expect(getSafeNext(null)).toBe('/');
-		expect(getSafeNext('//evil.example')).toBe('/');
-		expect(getSafeNext('https://evil.example')).toBe('/');
-	});
-
-	it('returns safe relative paths', () => {
-		expect(getSafeNext('/dashboard')).toBe('/dashboard');
-	});
-});
-
-describe('isValidEmailOtpType', () => {
-	it('accepts supported otp types', () => {
-		expect(isValidEmailOtpType('email')).toBe(true);
-		expect(isValidEmailOtpType('recovery')).toBe(true);
-	});
-
-	it('rejects unsupported otp types', () => {
-		expect(isValidEmailOtpType('sms')).toBe(false);
-	});
-});
+import { resolveAuthConfirmParams, resolveVerifyOtpErrorMessage } from '../../../src/lib/auth/authConfirmHelpers';
 
 describe('resolveVerifyOtpErrorMessage', () => {
 	it('maps expired errors to dutch message', () => {
@@ -57,6 +29,24 @@ describe('resolveAuthConfirmParams', () => {
 			typeParam: 'email',
 			next: '/students',
 			isValid: true,
+		});
+	});
+
+	it('rejects unsafe next paths', () => {
+		expect(resolveAuthConfirmParams(new URLSearchParams('token_hash=abc&type=email&next=//evil.example'))).toEqual({
+			tokenHash: 'abc',
+			typeParam: 'email',
+			next: '/',
+			isValid: true,
+		});
+	});
+
+	it('rejects unsupported otp types', () => {
+		expect(resolveAuthConfirmParams(new URLSearchParams('token_hash=abc&type=sms'))).toEqual({
+			tokenHash: 'abc',
+			typeParam: 'sms',
+			next: '/',
+			isValid: false,
 		});
 	});
 });

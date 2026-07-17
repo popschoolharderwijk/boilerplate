@@ -1,11 +1,26 @@
-import { describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import {
 	resolveAnnouncementImageUploadGate,
-	resolveAnnouncementSaveErrorMessage,
-	resolveAnnouncementSaveOperation,
-	resolveAnnouncementSaveSuccessMessage,
-	shouldBlockAnnouncementSave,
+	runAnnouncementSave,
 } from '../../../src/lib/settings/announcementsManagerControllerHelpers';
+
+let saveResult: { error: { message: string } | null } = { error: null };
+
+const supabaseMock = {
+	from: () => ({
+		insert: () => Promise.resolve(saveResult),
+		update: () => ({
+			eq: () => Promise.resolve(saveResult),
+		}),
+	}),
+};
+
+mock.module('sonner', () => ({
+	toast: {
+		error: () => {},
+		success: () => {},
+	},
+}));
 
 describe('resolveAnnouncementImageUploadGate', () => {
 	it('returns no-file when file is missing', () => {
@@ -25,37 +40,112 @@ describe('resolveAnnouncementImageUploadGate', () => {
 	});
 });
 
-describe('resolveAnnouncementSaveOperation', () => {
-	it('returns update when editing id is present', () => {
-		expect(resolveAnnouncementSaveOperation('ann-1')).toBe('update');
+describe('runAnnouncementSave', () => {
+	beforeEach(() => {
+		saveResult = { error: null };
 	});
 
-	it('returns insert when editing id is absent', () => {
-		expect(resolveAnnouncementSaveOperation(undefined)).toBe('insert');
+	it('returns early when form is invalid', async () => {
+		let dialogOpen = true;
+		let refetched = false;
+		await runAnnouncementSave({
+			isFormValid: false,
+			isSchemaMissing: false,
+			form: { title: '', body: '', publish: false },
+			audience: ['students'],
+			editingId: undefined,
+			editingPublishedAt: undefined,
+			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			refetch: async () => {
+				refetched = true;
+			},
+		});
+		expect(dialogOpen).toBe(true);
+		expect(refetched).toBe(false);
 	});
-});
 
-describe('shouldBlockAnnouncementSave', () => {
-	it('blocks invalid or unavailable saves', () => {
-		expect(shouldBlockAnnouncementSave(false, false)).toBe(true);
-		expect(shouldBlockAnnouncementSave(true, true)).toBe(true);
+	it('returns early when schema is missing', async () => {
+		let dialogOpen = true;
+		await runAnnouncementSave({
+			isFormValid: true,
+			isSchemaMissing: true,
+			form: { title: 'Nieuws', body: 'Tekst', publish: false },
+			audience: ['students'],
+			editingId: undefined,
+			editingPublishedAt: undefined,
+			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			refetch: async () => {},
+		});
+		expect(dialogOpen).toBe(true);
 	});
 
-	it('allows valid saves when schema is available', () => {
-		expect(shouldBlockAnnouncementSave(true, false)).toBe(false);
+	it('creates announcement and closes dialog on success', async () => {
+		let dialogOpen = true;
+		let refetched = false;
+		await runAnnouncementSave({
+			isFormValid: true,
+			isSchemaMissing: false,
+			form: { title: 'Nieuws', body: 'Tekst', publish: true },
+			audience: ['students'],
+			editingId: undefined,
+			editingPublishedAt: undefined,
+			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			refetch: async () => {
+				refetched = true;
+			},
+		});
+		expect(dialogOpen).toBe(false);
+		expect(refetched).toBe(true);
 	});
-});
 
-describe('resolveAnnouncementSaveErrorMessage', () => {
-	it('returns update and create error titles', () => {
-		expect(resolveAnnouncementSaveErrorMessage('update')).toBe('Opslaan mislukt');
-		expect(resolveAnnouncementSaveErrorMessage('insert')).toBe('Aanmaken mislukt');
+	it('updates announcement when editing id is present', async () => {
+		let dialogOpen = true;
+		await runAnnouncementSave({
+			isFormValid: true,
+			isSchemaMissing: false,
+			form: { title: 'Nieuws', body: 'Tekst', publish: true },
+			audience: ['students'],
+			editingId: 'ann-1',
+			editingPublishedAt: '2026-01-01T00:00:00Z',
+			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			refetch: async () => {},
+		});
+		expect(dialogOpen).toBe(false);
 	});
-});
 
-describe('resolveAnnouncementSaveSuccessMessage', () => {
-	it('returns update and create success titles', () => {
-		expect(resolveAnnouncementSaveSuccessMessage('update')).toBe('Bericht bijgewerkt');
-		expect(resolveAnnouncementSaveSuccessMessage('insert')).toBe('Bericht aangemaakt');
+	it('keeps dialog open when save fails', async () => {
+		saveResult = { error: { message: 'denied' } };
+		let dialogOpen = true;
+		await runAnnouncementSave({
+			isFormValid: true,
+			isSchemaMissing: false,
+			form: { title: 'Nieuws', body: 'Tekst', publish: true },
+			audience: ['students'],
+			editingId: undefined,
+			editingPublishedAt: undefined,
+			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			refetch: async () => {},
+		});
+		expect(dialogOpen).toBe(true);
 	});
 });

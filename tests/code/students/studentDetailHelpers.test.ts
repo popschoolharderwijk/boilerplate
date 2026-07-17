@@ -4,9 +4,6 @@ import {
 	buildStudentInitials,
 	formatStudentPhoneSubtitle,
 	resolveStudentDetailPageContent,
-	resolveStudentDetailRedirectPath,
-	resolveStudentDetailRenderTarget,
-	resolveStudentDetailViewState,
 } from '../../../src/lib/students/studentDetailHelpers';
 
 describe('buildStudentInitials', () => {
@@ -48,54 +45,6 @@ describe('formatStudentPhoneSubtitle', () => {
 	});
 });
 
-describe('resolveStudentDetailViewState', () => {
-	it('returns redirect when user cannot view student detail', () => {
-		expect(resolveStudentDetailViewState(false, false, false, false)).toBe('redirect');
-	});
-
-	it('returns loading while auth or page data is loading', () => {
-		expect(resolveStudentDetailViewState(true, true, false, false)).toBe('loading');
-		expect(resolveStudentDetailViewState(false, true, true, false)).toBe('loading');
-	});
-
-	it('returns not-found when profile is missing', () => {
-		expect(resolveStudentDetailViewState(false, true, false, false)).toBe('not-found');
-	});
-
-	it('returns content when profile is available', () => {
-		expect(resolveStudentDetailViewState(false, true, false, true)).toBe('content');
-	});
-});
-
-describe('resolveStudentDetailRedirectPath', () => {
-	it('returns home redirect for unauthorized users', () => {
-		expect(resolveStudentDetailRedirectPath('redirect')).toBe('/');
-	});
-
-	it('returns students redirect for missing profiles', () => {
-		expect(resolveStudentDetailRedirectPath('not-found')).toBe('/students');
-	});
-
-	it('returns null for loading and content states', () => {
-		expect(resolveStudentDetailRedirectPath('loading')).toBeNull();
-		expect(resolveStudentDetailRedirectPath('content')).toBeNull();
-	});
-});
-
-describe('resolveStudentDetailRenderTarget', () => {
-	it('returns loading target while page is loading', () => {
-		expect(resolveStudentDetailRenderTarget('loading', false)).toBe('loading');
-	});
-
-	it('returns content target when profile is available', () => {
-		expect(resolveStudentDetailRenderTarget('content', true)).toBe('content');
-	});
-
-	it('returns students redirect when profile is missing in content state', () => {
-		expect(resolveStudentDetailRenderTarget('content', false)).toBe('/students');
-	});
-});
-
 describe('resolveStudentDetailPageContent', () => {
 	const profile = {
 		user_id: 'u-1',
@@ -112,6 +61,20 @@ describe('resolveStudentDetailPageContent', () => {
 				authLoading: true,
 				canView: true,
 				loading: false,
+				profile: null,
+				userId: 'u-1',
+				agreements: [],
+				signupRequests: [],
+			}),
+		).toEqual({ kind: 'loading' });
+	});
+
+	it('returns loading content while page data is loading', () => {
+		expect(
+			resolveStudentDetailPageContent({
+				authLoading: false,
+				canView: true,
+				loading: true,
 				profile: null,
 				userId: 'u-1',
 				agreements: [],
@@ -152,5 +115,19 @@ describe('resolveStudentDetailPageContent', () => {
 				signupRequests: [],
 			}),
 		).toEqual({ kind: 'redirect', to: '/' });
+	});
+
+	it('returns students redirect when profile is missing', () => {
+		expect(
+			resolveStudentDetailPageContent({
+				authLoading: false,
+				canView: true,
+				loading: false,
+				profile: null,
+				userId: 'u-1',
+				agreements: [],
+				signupRequests: [],
+			}),
+		).toEqual({ kind: 'redirect', to: '/students' });
 	});
 });

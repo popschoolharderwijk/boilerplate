@@ -1,36 +1,17 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	shouldShowProjectDomainsEmpty,
-	shouldShowProjectDomainsList,
-	shouldShowProjectDomainsLoading,
-} from '../../../src/components/projects/ProjectDomainsManagerParts';
+import { resolveListCardView } from '../../../src/lib/ui/listCardViewHelpers';
 
-describe('shouldShowProjectDomainsLoading', () => {
-	it('returns true while loading', () => {
-		expect(shouldShowProjectDomainsLoading(true)).toBe(true);
+describe('ProjectDomainsManagerCard view resolution', () => {
+	it('shows loading while domains are loading', () => {
+		expect(resolveListCardView(true, 0)).toBe('loading');
+		expect(resolveListCardView(true, 2)).toBe('loading');
 	});
 
-	it('returns false when not loading', () => {
-		expect(shouldShowProjectDomainsLoading(false)).toBe(false);
-	});
-});
-
-describe('shouldShowProjectDomainsEmpty', () => {
-	it('returns true when loaded with no domains', () => {
-		expect(shouldShowProjectDomainsEmpty(false, 0)).toBe(true);
+	it('shows empty when loaded with no domains', () => {
+		expect(resolveListCardView(false, 0)).toBe('empty');
 	});
 
-	it('returns false while loading', () => {
-		expect(shouldShowProjectDomainsEmpty(true, 0)).toBe(false);
-	});
-});
-
-describe('shouldShowProjectDomainsList', () => {
-	it('returns true when domains exist', () => {
-		expect(shouldShowProjectDomainsList(false, 2)).toBe(true);
-	});
-
-	it('returns false while loading', () => {
-		expect(shouldShowProjectDomainsList(true, 2)).toBe(false);
+	it('shows list when domains exist', () => {
+		expect(resolveListCardView(false, 2)).toBe('list');
 	});
 });

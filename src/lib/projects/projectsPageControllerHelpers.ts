@@ -2,18 +2,18 @@ import { toast } from 'sonner';
 import { deleteProjectRow, type ProjectAction } from '@/lib/projects/projectsPageHelpers';
 import type { ProjectRow } from '@/types/projects';
 
-export type ProjectRunActionKind = 'open-create' | 'open-edit' | 'open-delete' | 'confirm-delete';
+type ProjectRunActionKind = 'open-create' | 'open-edit' | 'open-delete' | 'confirm-delete';
 
-export function resolveProjectRunAction(action: ProjectAction): ProjectRunActionKind {
+function resolveProjectRunAction(action: ProjectAction): ProjectRunActionKind {
 	if (action.kind === 'create') return 'open-create';
 	if (action.kind === 'edit') return 'open-edit';
 	if (action.kind === 'delete') return 'open-delete';
 	return 'confirm-delete';
 }
 
-export type ProjectDeleteToastKind = 'error-not-deleted' | 'error-deleted' | 'success';
+type ProjectDeleteToastKind = 'error-not-deleted' | 'error-deleted' | 'success';
 
-export function resolveProjectDeleteToast(
+function resolveProjectDeleteToast(
 	result: { deleted: boolean; error: string | null },
 	projectName: string,
 ): { kind: ProjectDeleteToastKind; message: string; description?: string } {
@@ -37,7 +37,7 @@ export interface ProjectPageControllerSetters {
 	setProjects: (updater: (prev: ProjectRow[]) => ProjectRow[]) => void;
 }
 
-export function applyProjectPageOpenAction(
+function applyProjectPageOpenAction(
 	resolved: ProjectRunActionKind,
 	action: ProjectAction,
 	setters: ProjectPageControllerSetters,

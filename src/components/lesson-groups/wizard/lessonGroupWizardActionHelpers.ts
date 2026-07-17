@@ -4,7 +4,7 @@ import { saveLessonGroup } from '@/components/lesson-groups/wizard/lessonGroupSa
 import type { LessonGroupFormState } from '@/components/lesson-groups/wizard/lessonGroupWizardTypes';
 import type { SlotWithStatus } from '@/lib/agreementSlots';
 
-export function isLessonGroupWizardFormComplete(form: LessonGroupFormState): boolean {
+function isLessonGroupWizardFormComplete(form: LessonGroupFormState): boolean {
 	return Boolean(form.name.trim() && form.lessonTypeId && form.teacherUserId && form.slot);
 }
 

@@ -3,10 +3,6 @@ import {
 	resolveAgendaCancellationBannerProps,
 	resolveAgendaDeviationBannerProps,
 	resolveAgendaProjectSourceSelection,
-	shouldRenderAgendaCancellationBanner,
-	shouldRenderAgendaDeviationBanner,
-	shouldShowAgendaCancellationBanner,
-	shouldShowAgendaDeviationBanner,
 	shouldShowAgendaProjectButton,
 } from '../../../src/components/agenda/agendaEventFormDialogContentHelpers';
 
@@ -36,46 +32,6 @@ describe('shouldShowAgendaProjectButton', () => {
 	});
 });
 
-describe('shouldShowAgendaDeviationBanner', () => {
-	it('returns true when revert is allowed and deviation exists', () => {
-		expect(shouldShowAgendaDeviationBanner(true, true)).toBe(true);
-	});
-
-	it('returns false when revert is not allowed', () => {
-		expect(shouldShowAgendaDeviationBanner(false, true)).toBe(false);
-	});
-});
-
-describe('shouldShowAgendaCancellationBanner', () => {
-	it('returns true for cancelled events with cancellation type', () => {
-		expect(shouldShowAgendaCancellationBanner(true, 'lesson_cancelled')).toBe(true);
-	});
-
-	it('returns false when cancellation type is missing', () => {
-		expect(shouldShowAgendaCancellationBanner(true, null)).toBe(false);
-	});
-});
-
-describe('shouldRenderAgendaDeviationBanner', () => {
-	it('returns true when deviation info is present', () => {
-		expect(shouldRenderAgendaDeviationBanner(true, true, { hasTimeOrDateChange: true })).toBe(true);
-	});
-
-	it('returns false when deviation info is missing', () => {
-		expect(shouldRenderAgendaDeviationBanner(true, true, null)).toBe(false);
-	});
-});
-
-describe('shouldRenderAgendaCancellationBanner', () => {
-	it('returns true when cancellation type is present', () => {
-		expect(shouldRenderAgendaCancellationBanner(true, 'lesson_cancelled')).toBe(true);
-	});
-
-	it('returns false when cancellation type is missing', () => {
-		expect(shouldRenderAgendaCancellationBanner(true, null)).toBe(false);
-	});
-});
-
 describe('resolveAgendaDeviationBannerProps', () => {
 	it('returns deviation props when banner should render', () => {
 		const deviationInfo = {
@@ -89,6 +45,17 @@ describe('resolveAgendaDeviationBannerProps', () => {
 		});
 	});
 
+	it('returns null when revert is not allowed', () => {
+		expect(
+			resolveAgendaDeviationBannerProps(false, true, {
+				deviationId: 'dev-1',
+				originalDate: '2026-09-01',
+				originalStartTime: '15:00',
+				hasTimeOrDateChange: true,
+			}),
+		).toBeNull();
+	});
+
 	it('returns null when deviation info is missing', () => {
 		expect(resolveAgendaDeviationBannerProps(true, true, null)).toBeNull();
 	});
@@ -99,6 +66,10 @@ describe('resolveAgendaCancellationBannerProps', () => {
 		expect(resolveAgendaCancellationBannerProps(true, 'lesson_cancelled')).toEqual({
 			cancellationType: 'lesson_cancelled',
 		});
+	});
+
+	it('returns null when event is not cancelled', () => {
+		expect(resolveAgendaCancellationBannerProps(false, 'lesson_cancelled')).toBeNull();
 	});
 
 	it('returns null when cancellation type is missing', () => {

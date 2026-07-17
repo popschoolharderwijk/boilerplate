@@ -47,7 +47,7 @@ export function handleUserFormDialogCancel(
 	onOpenChange(false);
 }
 
-export function resolveUserFormEditContext(
+function resolveUserFormEditContext(
 	isEditMode: boolean,
 	editUser: { user_id: string; role: UserFormState['role'] } | undefined,
 ): { user_id: string; role: UserFormState['role'] } | null {
@@ -55,7 +55,7 @@ export function resolveUserFormEditContext(
 	return { user_id: editUser.user_id, role: editUser.role };
 }
 
-export function applyUserFormDialogSubmitSuccess(params: {
+function applyUserFormDialogSubmitSuccess(params: {
 	result: Extract<SubmitUserFormResult, { ok: true }>;
 	setForm: (form: UserFormState) => void;
 	emptyForm: UserFormState;

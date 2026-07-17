@@ -1,6 +1,5 @@
 import type { NavigateFunction } from 'react-router-dom';
 import { createThemeToggleHandler } from '@/components/layout/TopNavUserMenu';
-import { getNextTheme } from '@/lib/layout/topNavHelpers';
 
 export interface TopNavNavigationCallbacks {
 	onNavigateProfile: () => void;
@@ -28,8 +27,4 @@ export function buildTopNavNavigationCallbacks(
 		onToggleTheme: createThemeToggleHandler(resolvedTheme, setTheme),
 		onNavigate: navigate,
 	};
-}
-
-export function resolveTopNavNextTheme(resolvedTheme: string): 'light' | 'dark' {
-	return getNextTheme(resolvedTheme);
 }

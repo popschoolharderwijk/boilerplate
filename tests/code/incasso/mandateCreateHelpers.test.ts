@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-	executeNewMandateCreate,
-	fetchNextMandateReference,
-	insertSepaMandate,
-} from '../../../src/lib/incasso/mandateCreateHelpers';
+import { executeNewMandateCreate } from '../../../src/lib/incasso/mandateCreateHelpers';
 
 const validInput = {
 	studentId: 'student-1',
@@ -26,57 +22,6 @@ function createMockSupabase(options: {
 		}),
 	} as unknown as SupabaseClient;
 }
-
-describe('fetchNextMandateReference', () => {
-	it('returns reference when rpc succeeds', async () => {
-		const result = await fetchNextMandateReference(
-			createMockSupabase({ rpcResult: { data: 'MND-001', error: null } }),
-		);
-		expect(result).toEqual({ ok: true, reference: 'MND-001' });
-	});
-
-	it('returns error when rpc fails', async () => {
-		const result = await fetchNextMandateReference(
-			createMockSupabase({ rpcResult: { data: null, error: { message: 'rpc failed' } } }),
-		);
-		expect(result).toEqual({ ok: false, message: 'rpc failed' });
-	});
-});
-
-describe('insertSepaMandate', () => {
-	it('returns ok when insert succeeds', async () => {
-		const result = await insertSepaMandate(createMockSupabase({}), {
-			student_user_id: 'student-1',
-			mandate_reference: 'MND-001',
-			iban: 'NL91ABNA0417164300',
-			bic: null,
-			account_holder: 'Jan Jansen',
-			signed_at: '2026-01-01',
-			signature_method: 'paper',
-			status: 'active',
-			sequence_type: 'FRST',
-		});
-		expect(result).toEqual({ ok: true });
-	});
-
-	it('returns error when insert fails', async () => {
-		const result = await insertSepaMandate(
-			createMockSupabase({ insertResult: { error: { message: 'duplicate key' } } }),
-			{
-				student_user_id: 'student-1',
-				mandate_reference: 'MND-001',
-				iban: 'NL91ABNA0417164300',
-				bic: null,
-				account_holder: 'Jan Jansen',
-				signed_at: '2026-01-01',
-				signature_method: 'paper',
-				status: 'active',
-				sequence_type: 'FRST',
-			},
-		);
-		expect(result).toEqual({ ok: false, message: 'duplicate key' });
-	});
-});
 
 describe('executeNewMandateCreate', () => {
 	it('returns validation error for invalid input', async () => {

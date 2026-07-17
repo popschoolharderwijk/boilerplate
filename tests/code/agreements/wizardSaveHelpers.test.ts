@@ -1,11 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { NavigateFunction } from 'react-router-dom';
 import type { SlotWithStatus } from '../../../src/lib/agreementSlots';
-import type {
-	ValidatedDuoSaveForm,
-	ValidatedWizardSaveForm,
-	WizardSaveForm,
-} from '../../../src/lib/agreements/wizardSaveHelpers';
+import type { WizardSaveForm } from '../../../src/lib/agreements/wizardSaveHelpers';
 import type { AgreementTableRow } from '../../../src/types/lesson-agreements';
 
 const toastMessages: { type: 'error' | 'success' | 'warning'; message: string }[] = [];
@@ -76,6 +72,10 @@ mock.module('../../../src/integrations/supabase/client', () => ({
 	supabase: supabaseMock,
 }));
 
+mock.module('@/integrations/supabase/client', () => ({
+	supabase: supabaseMock,
+}));
+
 mock.module('../../../src/lib/email/sendAgreementCreatedMails', () => ({
 	sendAgreementCreatedMails: async () => {},
 }));
@@ -106,6 +106,14 @@ function baseForm(overrides: Partial<WizardSaveForm> = {}): WizardSaveForm {
 		sepaMandateId: null,
 		...overrides,
 	};
+}
+
+function duoForm(overrides: Partial<WizardSaveForm> = {}): WizardSaveForm {
+	return baseForm({
+		partnerStudentUserId: 'stu-2',
+		selectedOptionSnapshot: { duration_minutes: 45, frequency: 'weekly', price_per_lesson: 25 },
+		...overrides,
+	});
 }
 
 function mockAgreementRow(overrides: Partial<AgreementTableRow> = {}): AgreementTableRow {
@@ -143,285 +151,11 @@ function mockAgreementRow(overrides: Partial<AgreementTableRow> = {}): Agreement
 	};
 }
 
-describe('wizardSaveHelpers validation', () => {
-	let helpers: typeof import('../../../src/lib/agreements/wizardSaveHelpers');
-
-	beforeAll(async () => {
-		helpers = await import('../../../src/lib/agreements/wizardSaveHelpers');
-	});
-
-	beforeEach(() => {
-		toastMessages.length = 0;
-		recordedCalls.length = 0;
-		tableResults = {};
-	});
-
-	it('normalizes slot start time without a colon', () => {
-		expect(helpers.normalizeSlotStartTime('0900')).toBe('0900:00');
-	});
-
-	it('keeps slot start time that already includes seconds', () => {
-		expect(helpers.normalizeSlotStartTime('09:00:00')).toBe('09:00:00');
-	});
-
-	it('rejects save when required fields are missing', () => {
-		const result = helpers.validateRequiredSaveFields(baseForm({ studentUserId: null }));
-		expect(result).toBe(false);
-		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer alle verplichte velden' }]);
-	});
-
-	it('rejects save when the selected slot is occupied', () => {
-		const result = helpers.validateRequiredSaveFields(baseForm({ slot: freeSlot({ status: 'occupied' }) }));
-		expect(result).toBe(false);
-		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer alle verplichte velden' }]);
-	});
-
-	it('accepts save when all required fields are present', () => {
-		const form = baseForm();
-		const result = helpers.validateRequiredSaveFields(form);
-		expect(result).toBe(true);
-		expect(toastMessages).toHaveLength(0);
-	});
-
-	it('rejects duo save when partner equals the student', () => {
-		const form = baseForm({ partnerStudentUserId: 'stu-1' });
-		const validated = helpers.validateRequiredSaveFields(form);
-		expect(validated).toBe(true);
-		const duoResult = helpers.validateDuoSaveForm(form as ValidatedWizardSaveForm);
-		expect(duoResult).toBe(false);
-		expect(toastMessages).toEqual([{ type: 'error', message: 'Kies een duo-partner (verschillende leerling)' }]);
-	});
-
-	it('rejects duo save when no lesson option is selected', () => {
-		const form = baseForm({ partnerStudentUserId: 'stu-2', selectedOptionSnapshot: null });
-		const validated = helpers.validateRequiredSaveFields(form);
-		expect(validated).toBe(true);
-		const duoResult = helpers.validateDuoSaveForm(form as ValidatedWizardSaveForm);
-		expect(duoResult).toBe(false);
-		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer een lesoptie' }]);
-	});
-
-	it('accepts duo save when partner and option are valid', () => {
-		const form = baseForm({
-			partnerStudentUserId: 'stu-2',
-			selectedOptionSnapshot: { duration_minutes: 45, frequency: 'weekly', price_per_lesson: 25 },
-		});
-		const validated = helpers.validateRequiredSaveFields(form);
-		expect(validated).toBe(true);
-		const duoResult = helpers.validateDuoSaveForm(form as ValidatedWizardSaveForm);
-		expect(duoResult).toBe(true);
-		expect(toastMessages).toHaveLength(0);
-	});
-
-	it('rejects sepa save without a mandate id', () => {
-		const result = helpers.validateSepaMandate(baseForm({ paymentMethod: 'sepa', sepaMandateId: null }));
-		expect(result).toBe(false);
-		expect(toastMessages).toEqual([
-			{ type: 'error', message: 'Kies een SEPA-mandaat of een andere betaalmethode' },
-		]);
-	});
-
-	it('accepts stripe payment without a sepa mandate', () => {
-		const result = helpers.validateSepaMandate(baseForm({ paymentMethod: 'stripe' }));
-		expect(result).toBe(true);
-		expect(toastMessages).toHaveLength(0);
-	});
-
-	it('builds the agreement upsert payload with sepa mandate', () => {
-		const form = baseForm({ paymentMethod: 'sepa', sepaMandateId: 'mandate-1' });
-		const validated = helpers.validateRequiredSaveFields(form);
-		expect(validated).toBe(true);
-		const payload = helpers.buildAgreementUpsertPayload(form as ValidatedWizardSaveForm, '09:00:00');
-		expect(payload).toEqual({
-			teacher_user_id: 'tea-1',
-			day_of_week: 1,
-			start_time: '09:00:00',
-			start_date: '2026-09-01',
-			end_date: '2027-07-31',
-			payment_method: 'sepa',
-			sepa_mandate_id: 'mandate-1',
-		});
-	});
-
-	it('returns signup requests path when saving from a request', () => {
-		expect(helpers.getAgreementSavedNavigatePath('req-1', null)).toBe('/aanmeldingen');
-	});
-
-	it('returns trial lessons path when saving from a trial lesson', () => {
-		expect(helpers.getAgreementSavedNavigatePath(null, 'trial-1')).toBe('/trial-lessons');
-	});
-
-	it('returns agreements path for a regular save', () => {
-		expect(helpers.getAgreementSavedNavigatePath(null, null)).toBe('/agreements');
-	});
-
-	it('shows the sepa toast for a new agreement', () => {
-		helpers.showAgreementSavedToast({ isEdit: false, isNew: true, paymentMethod: 'sepa' });
-		expect(toastMessages).toEqual([
-			{ type: 'success', message: 'Overeenkomst toegevoegd — SEPA-incasso gekoppeld' },
-		]);
-	});
-
-	it('shows the edit toast for an updated agreement', () => {
-		helpers.showAgreementSavedToast({ isEdit: true, isNew: false, paymentMethod: 'stripe' });
-		expect(toastMessages).toEqual([{ type: 'success', message: 'Overeenkomst bijgewerkt' }]);
-	});
-});
-
-describe('upsertWizardAgreement', () => {
-	let upsertWizardAgreement: typeof import('../../../src/lib/agreements/wizardSaveHelpers').upsertWizardAgreement;
-	let buildAgreementUpsertPayload: typeof import('../../../src/lib/agreements/wizardSaveHelpers').buildAgreementUpsertPayload;
-	let validateRequiredSaveFields: typeof import('../../../src/lib/agreements/wizardSaveHelpers').validateRequiredSaveFields;
-
-	beforeAll(async () => {
-		({ upsertWizardAgreement, buildAgreementUpsertPayload, validateRequiredSaveFields } = await import(
-			'../../../src/lib/agreements/wizardSaveHelpers'
-		));
-	});
-
-	beforeEach(() => {
-		recordedCalls.length = 0;
-		tableResults = {};
-	});
-
-	it('inserts a new agreement when no existing row is provided', async () => {
-		const form = baseForm();
-		expect(validateRequiredSaveFields(form)).toBe(true);
-		const payload = buildAgreementUpsertPayload(form as ValidatedWizardSaveForm, '09:00:00');
-		const result = await upsertWizardAgreement(null, form as ValidatedWizardSaveForm, payload, null);
-		expect(result.error).toBeNull();
-		expect(result.data).toEqual({ id: 'agr-new' });
-		expect(recordedCalls).toHaveLength(1);
-		expect(recordedCalls[0]?.op).toBe('insert');
-	});
-
-	it('updates an existing agreement when a row is provided', async () => {
-		const form = baseForm();
-		expect(validateRequiredSaveFields(form)).toBe(true);
-		const payload = buildAgreementUpsertPayload(form as ValidatedWizardSaveForm, '09:00:00');
-		const result = await upsertWizardAgreement(mockAgreementRow(), form as ValidatedWizardSaveForm, payload, null);
-		expect(result.error).toBeNull();
-		expect(result.data).toEqual({ id: 'agr-1' });
-		expect(recordedCalls).toHaveLength(1);
-		expect(recordedCalls[0]).toEqual({
-			table: 'lesson_agreements',
-			op: 'update',
-			payload,
-			filters: { id: 'agr-1' },
-		});
-	});
-});
-
-function validatedDuoForm(overrides: Partial<WizardSaveForm> = {}): ValidatedDuoSaveForm {
-	return baseForm({
-		partnerStudentUserId: 'stu-2',
-		selectedOptionSnapshot: { duration_minutes: 45, frequency: 'weekly', price_per_lesson: 25 },
-		...overrides,
-	}) as ValidatedDuoSaveForm;
-}
-
-describe('createAndNotifyDuoAgreements', () => {
-	let createAndNotifyDuoAgreements: typeof import('../../../src/lib/agreements/wizardSaveHelpers').createAndNotifyDuoAgreements;
-	const navigateCalls: string[] = [];
-	const recordNavigate: NavigateFunction = (path) => {
-		navigateCalls.push(String(path));
-	};
-
-	beforeAll(async () => {
-		({ createAndNotifyDuoAgreements } = await import('../../../src/lib/agreements/wizardSaveHelpers'));
-	});
-
-	beforeEach(() => {
-		toastMessages.length = 0;
-		recordedCalls.length = 0;
-		tableResults = {};
-		navigateCalls.length = 0;
-		tableResults['create-duo-agreements'] = {
-			data: { agreement_ids: ['agr-1', 'agr-2'], duo_pair_id: 'pair-1' },
-			error: null,
-		};
-		tableResults['send-incasso-invite'] = { data: null, error: null };
-	});
-
-	it('returns false when duo agreements cannot be created', async () => {
-		tableResults['create-duo-agreements'] = { data: null, error: { message: 'duo failed' } };
-		const result = await createAndNotifyDuoAgreements({
-			form: validatedDuoForm(),
-			fromRequestId: null,
-			navigate: recordNavigate,
-		});
-		expect(result).toBe(false);
-		expect(toastMessages).toEqual([{ type: 'error', message: 'duo failed' }]);
-		expect(navigateCalls).toHaveLength(0);
-	});
-
-	it('navigates to agreements after successful duo save', async () => {
-		const result = await createAndNotifyDuoAgreements({
-			form: validatedDuoForm(),
-			fromRequestId: 'req-1',
-			navigate: recordNavigate,
-		});
-		expect(result).toBe(true);
-		expect(navigateCalls).toEqual(['/agreements']);
-		expect(toastMessages).toEqual([
-			{ type: 'success', message: 'Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd' },
-		]);
-		expect(recordedCalls[0]?.payload).toEqual({
-			student_user_id_a: 'stu-1',
-			student_user_id_b: 'stu-2',
-			teacher_user_id: 'tea-1',
-			lesson_type_id: 'lt-1',
-			day_of_week: 1,
-			start_time: '09:00',
-			duration_minutes: 45,
-			frequency: 'weekly',
-			price_per_lesson: 25,
-			start_date: '2026-09-01',
-			end_date: '2027-07-31',
-			signup_source: 'public_form',
-		});
-	});
-
-	it('shows warning toast when an invite fails', async () => {
-		tableResults['send-incasso-invite'] = { data: null, error: { message: 'invite failed' } };
-		const result = await createAndNotifyDuoAgreements({
-			form: validatedDuoForm(),
-			fromRequestId: null,
-			navigate: recordNavigate,
-		});
-		expect(result).toBe(true);
-		expect(toastMessages).toEqual([
-			{
-				type: 'warning',
-				message: 'Duo-overeenkomsten opgeslagen, maar 2 betaaluitnodiging(en) konden niet worden verstuurd',
-			},
-		]);
-	});
-});
-
-describe('resolveWizardAgreementUpsertErrorMessage', () => {
-	let resolveWizardAgreementUpsertErrorMessage: typeof import('../../../src/lib/agreements/wizardSaveHelpers').resolveWizardAgreementUpsertErrorMessage;
-
-	beforeAll(async () => {
-		({ resolveWizardAgreementUpsertErrorMessage } = await import('../../../src/lib/agreements/wizardSaveHelpers'));
-	});
-
-	it('returns the unique constraint message', () => {
-		expect(resolveWizardAgreementUpsertErrorMessage('duplicate key unique violation')).toBe(
-			'Deze combinatie bestaat al',
-		);
-	});
-
-	it('returns the generic save error message', () => {
-		expect(resolveWizardAgreementUpsertErrorMessage('db failed')).toBe('Fout bij opslagen');
-	});
-});
-
 describe('saveWizardAgreement', () => {
 	let saveWizardAgreement: typeof import('../../../src/lib/agreements/wizardSaveHelpers').saveWizardAgreement;
 	const navigateCalls: string[] = [];
-	const recordNavigate: NavigateFunction = (path) => {
-		navigateCalls.push(String(path));
+	const recordNavigate: NavigateFunction = (to) => {
+		navigateCalls.push(typeof to === 'string' ? to : String(to));
 	};
 
 	beforeAll(async () => {
@@ -446,6 +180,61 @@ describe('saveWizardAgreement', () => {
 		});
 		expect(result).toBe(false);
 		expect(navigateCalls).toHaveLength(0);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer alle verplichte velden' }]);
+	});
+
+	it('returns false when the selected slot is occupied', async () => {
+		const result = await saveWizardAgreement({
+			form: baseForm({ slot: freeSlot({ status: 'occupied' }) }),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer alle verplichte velden' }]);
+	});
+
+	it('returns false for duo save when partner equals the student', async () => {
+		const result = await saveWizardAgreement({
+			form: duoForm({ partnerStudentUserId: 'stu-1' }),
+			agreement: null,
+			isDuoLesson: true,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'Kies een duo-partner (verschillende leerling)' }]);
+	});
+
+	it('returns false for duo save when no lesson option is selected', async () => {
+		const result = await saveWizardAgreement({
+			form: duoForm({ selectedOptionSnapshot: null }),
+			agreement: null,
+			isDuoLesson: true,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'Selecteer een lesoptie' }]);
+	});
+
+	it('returns false for sepa save without a mandate id', async () => {
+		const result = await saveWizardAgreement({
+			form: baseForm({ paymentMethod: 'sepa', sepaMandateId: null }),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([
+			{ type: 'error', message: 'Kies een SEPA-mandaat of een andere betaalmethode' },
+		]);
 	});
 
 	it('saves a new agreement and navigates to agreements', async () => {
@@ -476,6 +265,76 @@ describe('saveWizardAgreement', () => {
 		expect(toastMessages).toEqual([{ type: 'success', message: 'Overeenkomst bijgewerkt' }]);
 	});
 
+	it('navigates to signup requests after saving from a request', async () => {
+		const result = await saveWizardAgreement({
+			form: baseForm(),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: 'req-1',
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(true);
+		expect(navigateCalls).toEqual(['/aanmeldingen']);
+	});
+
+	it('navigates to trial lessons after saving from a trial lesson', async () => {
+		const result = await saveWizardAgreement({
+			form: baseForm(),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: null,
+			fromTrialId: 'trial-1',
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(true);
+		expect(navigateCalls).toEqual(['/trial-lessons']);
+	});
+
+	it('shows the sepa toast for a new agreement', async () => {
+		const result = await saveWizardAgreement({
+			form: baseForm({ paymentMethod: 'sepa', sepaMandateId: 'mandate-1' }),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(true);
+		expect(toastMessages).toEqual([
+			{ type: 'success', message: 'Overeenkomst toegevoegd — SEPA-incasso gekoppeld' },
+		]);
+	});
+
+	it('returns false when upsert fails with a unique constraint error', async () => {
+		tableResults['lesson_agreements:insert'] = { data: null, error: { message: 'duplicate key unique violation' } };
+		const result = await saveWizardAgreement({
+			form: baseForm(),
+			agreement: null,
+			isDuoLesson: false,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'Deze combinatie bestaat al' }]);
+	});
+
+	it('returns false when duo agreements cannot be created', async () => {
+		tableResults['create-duo-agreements'] = { data: null, error: { message: 'duo failed' } };
+		const result = await saveWizardAgreement({
+			form: duoForm(),
+			agreement: null,
+			isDuoLesson: true,
+			fromRequestId: null,
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(false);
+		expect(toastMessages).toEqual([{ type: 'error', message: 'duo failed' }]);
+		expect(navigateCalls).toHaveLength(0);
+	});
+
 	it('routes duo saves through createAndNotifyDuoAgreements', async () => {
 		tableResults['create-duo-agreements'] = {
 			data: { agreement_ids: ['agr-1', 'agr-2'], duo_pair_id: 'pair-1' },
@@ -483,7 +342,42 @@ describe('saveWizardAgreement', () => {
 		};
 		tableResults['send-incasso-invite'] = { data: null, error: null };
 		const result = await saveWizardAgreement({
-			form: validatedDuoForm(),
+			form: duoForm(),
+			agreement: null,
+			isDuoLesson: true,
+			fromRequestId: 'req-1',
+			fromTrialId: null,
+			navigate: recordNavigate,
+		});
+		expect(result).toBe(true);
+		expect(navigateCalls).toEqual(['/agreements']);
+		expect(toastMessages).toEqual([
+			{ type: 'success', message: 'Duo-overeenkomsten toegevoegd — betaaluitnodigingen verstuurd' },
+		]);
+		expect(recordedCalls[0]?.payload).toEqual({
+			student_user_id_a: 'stu-1',
+			student_user_id_b: 'stu-2',
+			teacher_user_id: 'tea-1',
+			lesson_type_id: 'lt-1',
+			day_of_week: 1,
+			start_time: '09:00',
+			duration_minutes: 45,
+			frequency: 'weekly',
+			price_per_lesson: 25,
+			start_date: '2026-09-01',
+			end_date: '2027-07-31',
+			signup_source: 'public_form',
+		});
+	});
+
+	it('shows warning toast when duo invites fail', async () => {
+		tableResults['create-duo-agreements'] = {
+			data: { agreement_ids: ['agr-1', 'agr-2'], duo_pair_id: 'pair-1' },
+			error: null,
+		};
+		tableResults['send-incasso-invite'] = { data: null, error: { message: 'invite failed' } };
+		const result = await saveWizardAgreement({
+			form: duoForm(),
 			agreement: null,
 			isDuoLesson: true,
 			fromRequestId: null,
@@ -491,6 +385,11 @@ describe('saveWizardAgreement', () => {
 			navigate: recordNavigate,
 		});
 		expect(result).toBe(true);
-		expect(navigateCalls).toEqual(['/agreements']);
+		expect(toastMessages).toEqual([
+			{
+				type: 'warning',
+				message: 'Duo-overeenkomsten opgeslagen, maar 2 betaaluitnodiging(en) konden niet worden verstuurd',
+			},
+		]);
 	});
 });

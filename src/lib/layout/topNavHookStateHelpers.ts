@@ -1,11 +1,5 @@
-import type { QuickNavItem } from '@/lib/layout/topNavHelpers';
+import type { QuickNavItem, TopNavUserInitialsInput } from '@/lib/layout/topNavHelpers';
 import type { TopNavNavigationCallbacks } from '@/lib/layout/topNavHookHelpers';
-
-export interface TopNavUserInitialsInput {
-	first_name: string | null;
-	last_name: string | null;
-	email: string | null | undefined;
-}
 
 export interface TopNavHookState {
 	open: boolean;

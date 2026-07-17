@@ -21,7 +21,7 @@ interface TeacherLessonTypesAddPopoverProps {
 	onAddLessonType: (lessonTypeId: string) => void;
 }
 
-export function TeacherLessonTypesAddPopover({
+function TeacherLessonTypesAddPopover({
 	open,
 	saving,
 	availableLessonTypes,

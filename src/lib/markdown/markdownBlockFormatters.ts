@@ -3,7 +3,7 @@ export type MarkdownBlock =
 	| { kind: 'list'; items: string[] }
 	| { kind: 'paragraph'; text: string };
 
-export type MarkdownLineKind =
+type MarkdownLineKind =
 	| { kind: 'blank' }
 	| { kind: 'heading'; level: number; text: string }
 	| { kind: 'list'; text: string }

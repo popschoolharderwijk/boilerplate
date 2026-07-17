@@ -8,7 +8,7 @@ export function normalizeLessonGroupStartTime(startTime: string): string {
 	return startTime.includes(':') ? startTime : `${startTime}:00`;
 }
 
-export function computeLessonGroupEndTime(startTime: string, durationMinutes: number): string {
+function computeLessonGroupEndTime(startTime: string, durationMinutes: number): string {
 	const [h, m] = startTime.split(':').map(Number);
 	const total = h * 60 + (m ?? 0) + durationMinutes;
 	const eh = Math.floor(total / 60) % 24;
@@ -16,26 +16,11 @@ export function computeLessonGroupEndTime(startTime: string, durationMinutes: nu
 	return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`;
 }
 
-export function computeLessonGroupFirstOccurrenceDate(startDate: string, dayOfWeek: number): string {
+function computeLessonGroupFirstOccurrenceDate(startDate: string, dayOfWeek: number): string {
 	const start = new Date(`${startDate}T12:00:00`);
 	const offset = (dayOfWeek - start.getDay() + 7) % 7;
 	return addDaysToDateStr(startDate, offset);
 }
-
-export function computeGroupMemberSyncPlan(
-	existingMembers: { id: string; student_user_id: string }[],
-	desiredMemberIds: string[],
-): { toAdd: string[]; toRemoveIds: string[] } {
-	const existingMap = new Map(existingMembers.map((member) => [member.student_user_id, member.id]));
-	const wanted = new Set(desiredMemberIds);
-	const toAdd = desiredMemberIds.filter((memberId) => !existingMap.has(memberId));
-	const toRemoveIds = existingMembers
-		.filter((member) => !wanted.has(member.student_user_id))
-		.map((member) => member.id);
-	return { toAdd, toRemoveIds };
-}
-
-export { applyGroupMemberSync } from '@/components/lesson-groups/wizard/lessonGroupMemberSyncHelpers';
 
 export function buildLessonGroupDbPayload(form: LessonGroupFormState, slot: SlotWithStatus, startTime: string) {
 	return {

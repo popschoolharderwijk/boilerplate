@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LuCalendarOff, LuPlus } from 'react-icons/lu';
-import {
-	NoLessonPeriodEditorDialog,
-	type NoLessonPeriodListItem,
-	NoLessonPeriodsList,
-} from '@/components/settings/NoLessonPeriodsManagerParts';
+import { NoLessonPeriodEditorDialog, NoLessonPeriodsList } from '@/components/settings/NoLessonPeriodsManagerParts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFormCrudDialogActions, useFormCrudDialogState } from '@/hooks/useFormCrudDialogState';
 import { supabase } from '@/integrations/supabase/client';
+import type { NoLessonPeriodListItem } from '@/lib/settings/noLessonPeriodsManagerControllerHelpers';
 import {
 	executeNoLessonPeriodDelete,
 	executeNoLessonPeriodFetch,

@@ -1,20 +1,39 @@
 import { describe, expect, it, mock } from 'bun:test';
 import {
-	parseInvoiceGenerationResults,
+	generateInvoicesForIncassoBatch,
 	resolveSepaXmlStoragePath,
 } from '../../../src/lib/incasso/incassoBatchDetailActionHelpers';
 
-describe('parseInvoiceGenerationResults', () => {
-	it('counts invoice generation results from invoke response', () => {
-		expect(
-			parseInvoiceGenerationResults({
-				results: [{ invoice_number: 'INV-1' }, { error: 'failed' }],
-			}),
-		).toEqual({ ok: 1, failed: 1 });
+describe('generateInvoicesForIncassoBatch', () => {
+	it('counts invoice generation results from invoke response', async () => {
+		const supabase = {
+			functions: {
+				invoke: async () => ({
+					data: { results: [{ invoice_number: 'INV-1' }, { error: 'failed' }] },
+					error: null,
+				}),
+			},
+		} as never;
+
+		const result = await generateInvoicesForIncassoBatch(supabase, 'batch-1');
+		expect(result).toEqual({
+			ok: true,
+			message: 'Batch goedgekeurd — 1 factuur/facturen aangemaakt, 1 fout.',
+		});
 	});
 
-	it('returns zero counts when response is empty', () => {
-		expect(parseInvoiceGenerationResults(null)).toEqual({ ok: 0, failed: 0 });
+	it('returns zero counts when response is empty', async () => {
+		const supabase = {
+			functions: {
+				invoke: async () => ({ data: null, error: null }),
+			},
+		} as never;
+
+		const result = await generateInvoicesForIncassoBatch(supabase, 'batch-1');
+		expect(result).toEqual({
+			ok: true,
+			message: 'Batch goedgekeurd — 0 factuur/facturen aangemaakt.',
+		});
 	});
 });
 

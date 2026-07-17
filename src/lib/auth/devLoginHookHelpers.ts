@@ -28,22 +28,6 @@ export function resolveDevLoginCredentials(
 
 	return { ok: true, email, password };
 }
-
-export function resolveDevLoginAttemptError(email: string | null): string | null {
-	const credentials = resolveDevLoginCredentials(email);
-	if (credentials.ok === false) {
-		return credentials.error;
-	}
-	return null;
-}
-
-export function resolveDevLoginContainerBorderClass(isLocalDev: boolean): string {
-	if (isLocalDev) {
-		return 'border-green-500/30 dark:border-green-400/30';
-	}
-	return 'border-orange-500/30 dark:border-orange-400/30';
-}
-
 export function resolveDevLoginButtonClass(isLocalDev: boolean): string {
 	if (isLocalDev) {
 		return 'bg-green-500/20 text-green-600 hover:bg-green-500/30 dark:text-green-400';

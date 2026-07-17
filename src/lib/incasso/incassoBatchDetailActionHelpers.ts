@@ -5,11 +5,11 @@ import {
 } from '@/lib/incasso/incassoBatchDetailHelpers';
 import { resolveSignedStorageUrlResult } from '@/lib/incasso/signedUrlHelpers';
 
-export interface InvoiceGenerationInvokeResult {
+interface InvoiceGenerationInvokeResult {
 	results?: Array<{ invoice_number?: string; error?: string }>;
 }
 
-export function parseInvoiceGenerationResults(
+function parseInvoiceGenerationResults(
 	invResp: InvoiceGenerationInvokeResult | null,
 ): ReturnType<typeof countInvoiceGenerationResults> {
 	return countInvoiceGenerationResults(invResp?.results ?? []);
@@ -41,17 +41,6 @@ export async function generateInvoicesForIncassoBatch(
 	const counts = parseInvoiceGenerationResults(invResp as InvoiceGenerationInvokeResult | null);
 	return { ok: true, message: formatBatchApproveSuccessMessage(counts.ok, counts.failed) };
 }
-
-export async function approveIncassoBatchWithInvoices(
-	supabase: SupabaseClient,
-	batchId: string,
-): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
-	const approveResult = await approveIncassoBatch(supabase, batchId);
-	if (approveResult.ok === false) return { ok: false, error: approveResult.error };
-
-	return generateInvoicesForIncassoBatch(supabase, batchId);
-}
-
 export async function createSignedSepaXmlDownloadUrl(
 	supabase: SupabaseClient,
 	path: string,

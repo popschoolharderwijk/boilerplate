@@ -107,51 +107,24 @@ describe('projectLabelsManagerControllerHelpers', () => {
 		expect((await controller.executeProjectLabelFetch(supabaseMock as never)).kind).toBe('success');
 	});
 
-	it('executeProjectLabelSave returns blocked for invalid input', async () => {
-		const outcome = await controller.executeProjectLabelSave({
+	it('runProjectLabelSaveFlow leaves dialog open for invalid input', async () => {
+		let dialogOpen = true;
+		let refetched = false;
+		await controller.runProjectLabelSaveFlow({
 			name: '',
 			domainId: '',
 			editing: null,
 			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			fetchData: async () => {
+				refetched = true;
+			},
 		});
-		expect(outcome).toBe('blocked');
-	});
-
-	it('executeProjectLabelSave returns success on create', async () => {
-		const outcome = await controller.executeProjectLabelSave({
-			name: 'Piano',
-			domainId: 'domain-1',
-			editing: null,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('success');
-	});
-
-	it('executeProjectLabelDelete returns blocked-linked when projects exist', async () => {
-		linkedProjectsResult = { data: [{ id: 'project-1' }], error: null };
-		const outcome = await controller.executeProjectLabelDelete({
-			deleteTarget: {
-				id: 'label-1',
-				name: 'Gitaar',
-				domain_id: 'domain-1',
-				project_domains: { name: 'Muziek' },
-			} as never,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('blocked-linked');
-	});
-
-	it('executeProjectLabelDelete returns success when label deleted', async () => {
-		const outcome = await controller.executeProjectLabelDelete({
-			deleteTarget: {
-				id: 'label-1',
-				name: 'Gitaar',
-				domain_id: 'domain-1',
-				project_domains: { name: 'Muziek' },
-			} as never,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('success');
+		expect(dialogOpen).toBe(true);
+		expect(refetched).toBe(false);
 	});
 
 	it('runProjectLabelSaveFlow closes dialog and refetches on success', async () => {
@@ -174,7 +147,25 @@ describe('projectLabelsManagerControllerHelpers', () => {
 		expect(refetched).toBe(true);
 	});
 
-	it('runProjectLabelDeleteFlow clears delete target and refetches', async () => {
+	it('runProjectLabelDeleteFlow clears delete target and refetches after blocked-linked delete', async () => {
+		linkedProjectsResult = { data: [{ id: 'project-1' }], error: null };
+		let deleteTarget: { id: string; name: string } | null = { id: 'label-1', name: 'Gitaar' };
+		let refetched = false;
+		await controller.runProjectLabelDeleteFlow({
+			deleteTarget: deleteTarget as never,
+			supabase: supabaseMock as never,
+			setDeleteTarget: (target) => {
+				deleteTarget = target;
+			},
+			fetchData: async () => {
+				refetched = true;
+			},
+		});
+		expect(deleteTarget).toBeNull();
+		expect(refetched).toBe(true);
+	});
+
+	it('runProjectLabelDeleteFlow clears delete target and refetches on success', async () => {
 		let deleteTarget: { id: string; name: string } | null = { id: 'label-1', name: 'Gitaar' };
 		let refetched = false;
 		await controller.runProjectLabelDeleteFlow({

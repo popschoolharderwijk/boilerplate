@@ -1,27 +1,13 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	applyLegacyImportActionToast,
-	reportLegacyImportActionError,
-	runLegacyImportAction,
-} from '../../../src/lib/settings/legacyImportManagerActionHelpers';
+import { describe, expect, it, mock } from 'bun:test';
+import { runLegacyImportAction } from '../../../src/lib/settings/legacyImportManagerActionHelpers';
 
-describe('applyLegacyImportActionToast', () => {
-	it('returns without throwing when toast is undefined', () => {
-		expect(applyLegacyImportActionToast(undefined)).toBeUndefined();
-	});
-});
-
-describe('reportLegacyImportActionError', () => {
-	it('returns without throwing for error results', () => {
-		expect(
-			reportLegacyImportActionError({
-				ok: false,
-				title: 'Import mislukt',
-				message: 'network',
-			}),
-		).toBeUndefined();
-	});
-});
+mock.module('sonner', () => ({
+	toast: {
+		error: () => {},
+		success: () => {},
+		warning: () => {},
+	},
+}));
 
 describe('runLegacyImportAction', () => {
 	it('calls onSuccess for successful actions', async () => {
@@ -40,5 +26,14 @@ describe('runLegacyImportAction', () => {
 			(data) => successes.push(String(data)),
 		);
 		expect(successes).toEqual([]);
+	});
+
+	it('shows warning toast for successful actions with warning toast', async () => {
+		const successes: string[] = [];
+		await runLegacyImportAction(
+			async () => ({ ok: true, data: null, toast: { kind: 'warning', message: 'partial' } }),
+			(data) => successes.push(String(data)),
+		);
+		expect(successes).toEqual(['null']);
 	});
 });

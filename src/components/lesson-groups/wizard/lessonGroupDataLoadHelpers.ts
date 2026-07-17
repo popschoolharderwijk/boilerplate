@@ -46,7 +46,7 @@ interface LessonGroupRow {
 	start_time: string;
 }
 
-export function buildLessonGroupEditInitial(
+function buildLessonGroupEditInitial(
 	data: LessonGroupRow,
 	members: { student_user_id: string }[],
 	defaultEndDate: string,

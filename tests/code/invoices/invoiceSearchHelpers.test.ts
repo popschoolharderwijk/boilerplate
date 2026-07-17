@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildInvoiceStudentSearchName, matchesInvoiceSearch } from '../../../src/lib/invoices/invoiceSearchHelpers';
-
-describe('buildInvoiceStudentSearchName', () => {
-	it('builds a lowercase student name', () => {
-		expect(
-			buildInvoiceStudentSearchName({ first_name: 'Jan', last_name: 'Jansen', email: 'jan@example.com' }),
-		).toBe('jan jansen');
-	});
-});
+import { matchesInvoiceSearch } from '../../../src/lib/invoices/invoiceSearchHelpers';
 
 describe('matchesInvoiceSearch', () => {
 	const row = {

@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import ts from 'typescript';
-import {
-	collectFunctions,
-	collectNamedFunction,
-	type FnRange,
-	functionHitCount,
-	parseLcov,
-	readNamedFunctionFromParent,
-} from '../../../scripts/lcovToIstanbulCore';
+import { collectFunctions, type FnRange, functionHitCount, parseLcov } from '../../../scripts/lcovToIstanbulCore';
 
 describe('parseLcov', () => {
 	it('parses source file paths and line hits', () => {
@@ -46,38 +39,14 @@ describe('collectFunctions', () => {
 		);
 		expect(collectFunctions(sourceFile)).toEqual([{ name: 'greet', startLine: 1, endLine: 1 }]);
 	});
-});
 
-describe('collectNamedFunction', () => {
 	it('collects arrow functions assigned to variables', () => {
 		const sourceFile = ts.createSourceFile('example.ts', 'const add = () => 1;', ts.ScriptTarget.Latest, true);
-		const variableStatement = sourceFile.statements[0];
-		if (!variableStatement || !ts.isVariableStatement(variableStatement)) {
-			throw new Error('Expected variable statement');
-		}
-		const declaration = variableStatement.declarationList.declarations[0];
-		if (!declaration?.initializer) throw new Error('Expected initializer');
-		expect(collectNamedFunction(sourceFile, declaration.initializer)).toEqual({
-			name: 'add',
-			startLine: 1,
-			endLine: 1,
-		});
+		expect(collectFunctions(sourceFile)).toEqual([{ name: 'add', startLine: 1, endLine: 1 }]);
 	});
-});
 
-describe('readNamedFunctionFromParent', () => {
-	it('returns null for anonymous arrow functions', () => {
+	it('ignores anonymous arrow functions', () => {
 		const sourceFile = ts.createSourceFile('example.ts', '(() => 1)();', ts.ScriptTarget.Latest, true);
-		const expressionStatement = sourceFile.statements[0];
-		if (!expressionStatement || !ts.isExpressionStatement(expressionStatement)) {
-			throw new Error('Expected expression statement');
-		}
-		const callExpression = expressionStatement.expression;
-		if (!ts.isCallExpression(callExpression)) throw new Error('Expected call expression');
-		const arrowFunction = callExpression.expression;
-		if (!ts.isParenthesizedExpression(arrowFunction)) throw new Error('Expected parenthesized expression');
-		const fn = arrowFunction.expression;
-		if (!ts.isArrowFunction(fn)) throw new Error('Expected arrow function');
-		expect(readNamedFunctionFromParent(sourceFile, fn)).toBeNull();
+		expect(collectFunctions(sourceFile)).toEqual([]);
 	});
 });

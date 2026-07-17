@@ -19,7 +19,7 @@ export function resolveDevToolsTriggerClass(isLocalDev: boolean): string {
 	return 'text-orange-600 dark:text-orange-400 hover:bg-orange-500/10';
 }
 
-export function shouldRenderDevToolsProductionBadge(collapsed: boolean | undefined): boolean {
+function shouldRenderDevToolsProductionBadge(collapsed: boolean | undefined): boolean {
 	return collapsed === true;
 }
 

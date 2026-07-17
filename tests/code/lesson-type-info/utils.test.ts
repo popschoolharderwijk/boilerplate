@@ -3,7 +3,6 @@ import {
 	buildOptionDbPayloadFromForm,
 	centsToInput,
 	formatOptionPrice,
-	inputToCents,
 	optionSort,
 } from '../../../src/pages/lesson-type-info/utils';
 import type { LessonTypeOptionFormRow } from '../../../src/types/lesson-agreements';
@@ -27,17 +26,6 @@ describe('centsToInput', () => {
 
 	it('formats cents as euros with two decimals', () => {
 		expect(centsToInput(2550)).toBe('25.50');
-	});
-});
-
-describe('inputToCents', () => {
-	it('converts euro input to cents', () => {
-		expect(inputToCents('25.50')).toBe(2550);
-	});
-
-	it('returns zero cents for invalid input', () => {
-		expect(inputToCents('')).toBe(0);
-		expect(inputToCents('abc')).toBe(0);
 	});
 });
 
@@ -65,6 +53,16 @@ describe('buildOptionDbPayloadFromForm', () => {
 			price_per_lesson: 2500,
 			price_per_lesson_under_21_cents: 2000,
 			price_per_lesson_adult_cents: 2550,
+		});
+	});
+
+	it('converts invalid price input to zero cents', () => {
+		expect(buildOptionDbPayloadFromForm('45', 'weekly', '', 'abc', 0)).toEqual({
+			duration_minutes: 45,
+			frequency: 'weekly',
+			price_per_lesson: 0,
+			price_per_lesson_under_21_cents: 0,
+			price_per_lesson_adult_cents: 0,
 		});
 	});
 });

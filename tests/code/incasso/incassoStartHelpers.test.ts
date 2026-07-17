@@ -1,86 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	buildIncassoCheckoutInvokeBody,
-	extractCheckoutRedirectUrl,
-	hasInvokeResponseError,
-	parseIncassoStartParams,
-	resolveIncassoCheckoutFallbackError,
-	resolveIncassoCheckoutMode,
-	resolveIncassoCompleteFallbackError,
-	resolveMissingAgreementError,
-	resolveMissingCheckoutUrlError,
-	resolveMissingSessionError,
-	runIncassoStartFlow,
-} from '../../../src/lib/incasso/incassoStartHelpers';
-
-describe('parseIncassoStartParams', () => {
-	it('reads agreement and session id from search params', () => {
-		const params = new URLSearchParams('agreement=agr-1&session_id=sess-1');
-		expect(parseIncassoStartParams(params)).toEqual({
-			agreementId: 'agr-1',
-			checkoutSessionId: 'sess-1',
-		});
-	});
-});
-
-describe('resolveIncassoCheckoutMode', () => {
-	it('returns complete when session id is present', () => {
-		expect(resolveIncassoCheckoutMode('sess-1')).toBe('complete');
-	});
-
-	it('returns checkout when session id is missing', () => {
-		expect(resolveIncassoCheckoutMode(null)).toBe('checkout');
-	});
-});
-
-describe('buildIncassoCheckoutInvokeBody', () => {
-	it('builds complete mode body', () => {
-		expect(buildIncassoCheckoutInvokeBody('agr-1', 'complete', 'sess-1')).toEqual({
-			lesson_agreement_id: 'agr-1',
-			mode: 'complete',
-			checkout_session_id: 'sess-1',
-		});
-	});
-
-	it('builds checkout mode body', () => {
-		expect(buildIncassoCheckoutInvokeBody('agr-1', 'checkout', null)).toEqual({
-			lesson_agreement_id: 'agr-1',
-			mode: 'checkout',
-		});
-	});
-});
-
-describe('extractCheckoutRedirectUrl', () => {
-	it('returns checkout url from invoke response', () => {
-		expect(extractCheckoutRedirectUrl({ url: 'https://checkout.stripe.com/pay/cs_test' })).toBe(
-			'https://checkout.stripe.com/pay/cs_test',
-		);
-	});
-
-	it('returns null when url is missing', () => {
-		expect(extractCheckoutRedirectUrl({})).toBeNull();
-	});
-});
-
-describe('hasInvokeResponseError', () => {
-	it('returns true when invoke error is present', () => {
-		expect(hasInvokeResponseError(null, new Error('failed'))).toBe(true);
-	});
-
-	it('returns true when response payload contains error', () => {
-		expect(hasInvokeResponseError({ error: 'Invalid agreement' }, null)).toBe(true);
-	});
-
-	it('returns false when no error is present', () => {
-		expect(hasInvokeResponseError({ url: 'https://checkout.stripe.com/pay/cs_test' }, null)).toBe(false);
-	});
-});
-
-describe('resolveMissingAgreementError', () => {
-	it('returns Dutch missing agreement message', () => {
-		expect(resolveMissingAgreementError()).toBe('Ongeldige uitnodigingslink (overeenkomst ontbreekt).');
-	});
-});
+import { runIncassoStartFlow } from '../../../src/lib/incasso/incassoStartHelpers';
 
 describe('runIncassoStartFlow', () => {
 	const baseDeps = {
@@ -96,7 +15,10 @@ describe('runIncassoStartFlow', () => {
 
 	it('returns error when agreement id is missing', async () => {
 		const result = await runIncassoStartFlow(new URLSearchParams(''), baseDeps);
-		expect(result).toEqual({ status: 'error', message: resolveMissingAgreementError() });
+		expect(result).toEqual({
+			status: 'error',
+			message: 'Ongeldige uitnodigingslink (overeenkomst ontbreekt).',
+		});
 	});
 
 	it('returns error when magic link hash contains an error', async () => {
@@ -120,7 +42,10 @@ describe('runIncassoStartFlow', () => {
 			...baseDeps,
 			getSession: async () => ({ session: null }),
 		});
-		expect(result).toEqual({ status: 'error', message: resolveMissingSessionError() });
+		expect(result).toEqual({
+			status: 'error',
+			message: 'Geen actieve sessie. Open de link uit de mail opnieuw.',
+		});
 	});
 
 	it('returns redirect url for checkout mode', async () => {
@@ -151,7 +76,7 @@ describe('runIncassoStartFlow', () => {
 			invokeCreateSubscriptionCheckout: async () => ({ data: null, error: new Error('failed') }),
 			getFunctionErrorMessage: async (_data, _error, fallback) => fallback,
 		});
-		expect(result).toEqual({ status: 'error', message: resolveIncassoCompleteFallbackError() });
+		expect(result).toEqual({ status: 'error', message: 'Kon incasso niet afronden.' });
 	});
 
 	it('returns missing checkout url error when redirect url is absent', async () => {
@@ -159,7 +84,7 @@ describe('runIncassoStartFlow', () => {
 			...baseDeps,
 			invokeCreateSubscriptionCheckout: async () => ({ data: {}, error: null }),
 		});
-		expect(result).toEqual({ status: 'error', message: resolveMissingCheckoutUrlError() });
+		expect(result).toEqual({ status: 'error', message: 'Geen checkout-URL ontvangen.' });
 	});
 
 	it('returns checkout fallback when invoke fails without custom message', async () => {
@@ -168,6 +93,6 @@ describe('runIncassoStartFlow', () => {
 			invokeCreateSubscriptionCheckout: async () => ({ data: null, error: new Error('failed') }),
 			getFunctionErrorMessage: async (_data, _error, fallback) => fallback,
 		});
-		expect(result).toEqual({ status: 'error', message: resolveIncassoCheckoutFallbackError() });
+		expect(result).toEqual({ status: 'error', message: 'Kon incasso niet starten.' });
 	});
 });

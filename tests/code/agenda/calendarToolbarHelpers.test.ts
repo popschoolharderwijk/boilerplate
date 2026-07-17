@@ -1,21 +1,15 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	resolveCalendarViewLabel,
-	resolveCalendarViewOptions,
-	viewsToArray,
-} from '../../../src/lib/agenda/calendarToolbarHelpers';
+import { resolveCalendarViewLabel, resolveCalendarViewOptions } from '../../../src/lib/agenda/calendarToolbarHelpers';
 
-describe('viewsToArray', () => {
-	it('returns array views unchanged', () => {
-		expect(viewsToArray(['month', 'week'])).toEqual(['month', 'week']);
+describe('resolveCalendarViewOptions', () => {
+	it('returns array views unchanged when they have Dutch labels', () => {
+		expect(resolveCalendarViewOptions(['month', 'week'])).toEqual(['month', 'week']);
 	});
 
 	it('filters enabled views from object map', () => {
-		expect(viewsToArray({ month: true, week: false, day: true })).toEqual(['month', 'day']);
+		expect(resolveCalendarViewOptions({ month: true, week: false, day: true })).toEqual(['month', 'day']);
 	});
-});
 
-describe('resolveCalendarViewOptions', () => {
 	it('keeps only views with Dutch labels', () => {
 		expect(resolveCalendarViewOptions(['month', 'work_week'])).toEqual(['month']);
 	});

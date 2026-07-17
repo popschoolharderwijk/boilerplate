@@ -5,9 +5,7 @@ import {
 	handleRecurrenceDialogOpenChange,
 	resolveConfirmCancelInitialIds,
 	resolveConfirmCancelParticipants,
-	resolveRecurrenceScopeChoice,
 	resolveRecurrenceScopeChoiceSideEffect,
-	shouldClearPendingDropOnRecurrenceClose,
 	shouldHideFutureCancelOption,
 } from '../../../src/lib/agenda/agendaRecurrenceDialogHelpers';
 import type { CancellationType } from '../../../src/types/agenda-events';
@@ -30,10 +28,10 @@ describe('shouldHideFutureCancelOption', () => {
 	});
 });
 
-describe('resolveRecurrenceScopeChoice', () => {
+describe('resolveRecurrenceScopeChoiceSideEffect', () => {
 	it('returns apply-drop for change action with pending drop', () => {
 		expect(
-			resolveRecurrenceScopeChoice({
+			resolveRecurrenceScopeChoiceSideEffect({
 				action: 'change',
 				scope: 'single',
 				hasPendingDrop: true,
@@ -43,7 +41,7 @@ describe('resolveRecurrenceScopeChoice', () => {
 
 	it('returns open-cancel-confirm for cancel action', () => {
 		expect(
-			resolveRecurrenceScopeChoice({
+			resolveRecurrenceScopeChoiceSideEffect({
 				action: 'cancel',
 				scope: 'thisAndFuture',
 				hasPendingDrop: false,
@@ -53,22 +51,12 @@ describe('resolveRecurrenceScopeChoice', () => {
 
 	it('returns noop when change action has no pending drop', () => {
 		expect(
-			resolveRecurrenceScopeChoice({
+			resolveRecurrenceScopeChoiceSideEffect({
 				action: 'change',
 				scope: 'single',
 				hasPendingDrop: false,
 			}),
 		).toEqual({ kind: 'noop' });
-	});
-});
-
-describe('shouldClearPendingDropOnRecurrenceClose', () => {
-	it('returns true when dialog closes', () => {
-		expect(shouldClearPendingDropOnRecurrenceClose(false)).toBe(true);
-	});
-
-	it('returns false when dialog stays open', () => {
-		expect(shouldClearPendingDropOnRecurrenceClose(true)).toBe(false);
 	});
 });
 
@@ -88,17 +76,17 @@ describe('handleRecurrenceDialogOpenChange', () => {
 		expect(open).toBe(false);
 		expect(pendingCleared).toBe(true);
 	});
-});
 
-describe('resolveRecurrenceScopeChoiceSideEffect', () => {
-	it('mirrors resolveRecurrenceScopeChoice', () => {
-		expect(
-			resolveRecurrenceScopeChoiceSideEffect({
-				action: 'cancel',
-				scope: 'single',
-				hasPendingDrop: false,
-			}),
-		).toEqual({ kind: 'open-cancel-confirm', scope: 'single' });
+	it('keeps pending drop when the dialog stays open', () => {
+		let pendingCleared = false;
+		handleRecurrenceDialogOpenChange(
+			true,
+			() => {},
+			() => {
+				pendingCleared = true;
+			},
+		);
+		expect(pendingCleared).toBe(false);
 	});
 });
 

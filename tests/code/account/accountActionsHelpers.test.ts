@@ -1,4 +1,7 @@
-import { beforeAll, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import type { ChangeEvent } from 'react';
+import type { AccountProfileState } from '../../../src/lib/account/persistence';
+import * as persistence from '../../../src/lib/account/persistence';
 
 const toastCalls: { kind: 'error' | 'success'; message: string; description?: string }[] = [];
 
@@ -13,64 +16,38 @@ mock.module('sonner', () => ({
 	},
 }));
 
+function createFileList(file: File): FileList {
+	return {
+		length: 1,
+		item: (index: number) => (index === 0 ? file : null),
+		0: file,
+	} as FileList;
+}
+
 describe('accountActionsHelpers', () => {
 	let helpers: typeof import('../../../src/lib/account/accountActionsHelpers');
+	let persistProfileSpy: ReturnType<typeof spyOn>;
+	let persistAvatarUploadSpy: ReturnType<typeof spyOn>;
+	let dispatchProfileUpdatedSpy: ReturnType<typeof spyOn>;
 
 	beforeAll(async () => {
 		helpers = await import('../../../src/lib/account/accountActionsHelpers');
 	});
 
-	describe('hasProfileValidationErrors', () => {
-		it('returns true when errors exist', () => {
-			expect(helpers.hasProfileValidationErrors({ phone_number: 'invalid' })).toBe(true);
+	beforeEach(() => {
+		toastCalls.length = 0;
+		persistProfileSpy = spyOn(persistence, 'persistProfile').mockResolvedValue({ error: null });
+		persistAvatarUploadSpy = spyOn(persistence, 'persistAvatarUpload').mockResolvedValue({
+			error: null,
+			avatarUrl: null,
 		});
-
-		it('returns false for empty errors', () => {
-			expect(helpers.hasProfileValidationErrors({})).toBe(false);
-		});
+		dispatchProfileUpdatedSpy = spyOn(persistence, 'dispatchProfileUpdated').mockImplementation(() => {});
 	});
 
-	describe('mergeProfileFromForm', () => {
-		it('maps empty strings to null profile fields', () => {
-			expect(
-				helpers.mergeProfileFromForm(
-					{ first_name: 'Old', last_name: 'Name', phone_number: '0612345678', avatar_url: null },
-					{ first_name: '', last_name: 'Bakker', phone_number: '' },
-				),
-			).toEqual({
-				first_name: null,
-				last_name: 'Bakker',
-				phone_number: null,
-				avatar_url: null,
-			});
-		});
-	});
-
-	describe('mergeAvatarIntoProfile', () => {
-		it('updates avatar url on profile', () => {
-			expect(
-				helpers.mergeAvatarIntoProfile(
-					{ first_name: 'Anna', last_name: null, phone_number: null, avatar_url: null },
-					'https://example.com/avatar.png',
-				),
-			).toEqual({
-				first_name: 'Anna',
-				last_name: null,
-				phone_number: null,
-				avatar_url: 'https://example.com/avatar.png',
-			});
-		});
-	});
-
-	describe('shouldAbortAvatarUpload', () => {
-		it('returns true when no files are selected', () => {
-			expect(helpers.shouldAbortAvatarUpload(null)).toBe(true);
-			expect(helpers.shouldAbortAvatarUpload({ length: 0 } as FileList)).toBe(true);
-		});
-
-		it('returns false when files are selected', () => {
-			expect(helpers.shouldAbortAvatarUpload({ length: 1 } as FileList)).toBe(false);
-		});
+	afterEach(() => {
+		persistProfileSpy.mockRestore();
+		persistAvatarUploadSpy.mockRestore();
+		dispatchProfileUpdatedSpy.mockRestore();
 	});
 
 	describe('resolveDeleteAccountToastKind', () => {
@@ -81,84 +58,156 @@ describe('accountActionsHelpers', () => {
 		});
 	});
 
-	describe('resolveAvatarUploadOutcome', () => {
-		it('returns error when upload fails', () => {
-			expect(helpers.resolveAvatarUploadOutcome('upload failed', null, null)).toBe('error');
+	describe('runSaveProfile', () => {
+		it('sets validation errors and skips persist when phone is invalid', async () => {
+			let errors: Record<string, string> = {};
+			let saving = false;
+			let profileChanged = false;
+
+			await helpers.runSaveProfile({
+				userId: 'user-1',
+				formData: { first_name: 'Anna', last_name: 'Bakker', phone_number: '123' },
+				profile: { first_name: 'Anna', last_name: null, phone_number: null, avatar_url: null },
+				setErrors: (value) => {
+					errors = typeof value === 'function' ? value(errors) : value;
+				},
+				setSaving: (value) => {
+					saving = typeof value === 'function' ? value(saving) : value;
+				},
+				setProfile: () => {
+					profileChanged = true;
+				},
+			});
+
+			expect(errors).toEqual({ phone_number: 'Telefoonnummer moet precies 10 cijfers zijn' });
+			expect(saving).toBe(false);
+			expect(profileChanged).toBe(false);
+			expect(persistProfileSpy).toHaveBeenCalledTimes(0);
+			expect(toastCalls).toHaveLength(0);
 		});
 
-		it('returns success when profile and avatar url exist', () => {
-			expect(
-				helpers.resolveAvatarUploadOutcome(
-					null,
-					{ first_name: 'Ada', last_name: null, phone_number: null, avatar_url: null },
-					'url',
-				),
-			).toBe('success');
+		it('persists profile, updates state, and shows success toast', async () => {
+			let profile: AccountProfileState = {
+				first_name: 'Old',
+				last_name: 'Name',
+				phone_number: null,
+				avatar_url: null,
+			};
+			let saving = false;
+
+			await helpers.runSaveProfile({
+				userId: 'user-1',
+				formData: { first_name: '', last_name: 'Bakker', phone_number: '' },
+				profile,
+				setErrors: () => {},
+				setSaving: (value) => {
+					saving = typeof value === 'function' ? value(saving) : value;
+				},
+				setProfile: (value) => {
+					const nextProfile = typeof value === 'function' ? value(profile) : value;
+					if (nextProfile !== null) {
+						profile = nextProfile;
+					}
+				},
+			});
+
+			expect(profile).toEqual({
+				first_name: null,
+				last_name: 'Bakker',
+				phone_number: null,
+				avatar_url: null,
+			});
+			expect(saving).toBe(false);
+			expect(dispatchProfileUpdatedSpy).toHaveBeenCalledTimes(1);
+			expect(toastCalls).toEqual([{ kind: 'success', message: 'Profiel opgeslagen!' }]);
 		});
 
-		it('returns skipped when profile or avatar url is missing', () => {
-			expect(helpers.resolveAvatarUploadOutcome(null, null, 'url')).toBe('skipped');
+		it('shows error toast when persist fails', async () => {
+			persistProfileSpy.mockResolvedValue({ error: 'save failed' });
+
+			await helpers.runSaveProfile({
+				userId: 'user-1',
+				formData: { first_name: 'Anna', last_name: 'Bakker', phone_number: '0612345678' },
+				profile: { first_name: 'Anna', last_name: null, phone_number: null, avatar_url: null },
+				setErrors: () => {},
+				setSaving: () => {},
+				setProfile: () => {},
+			});
+
+			expect(toastCalls).toEqual([{ kind: 'error', message: 'Fout bij opslaan', description: 'save failed' }]);
 		});
 	});
 
-	describe('applyAvatarUploadOutcome', () => {
-		it('shows error toast for failed uploads', () => {
-			toastCalls.length = 0;
-			helpers.applyAvatarUploadOutcome({
-				outcome: 'error',
-				error: 'upload failed',
-				profile: null,
-				avatarUrl: null,
+	describe('runUploadAvatar', () => {
+		function createFileChangeEvent(files: FileList | null): ChangeEvent<HTMLInputElement> {
+			return { target: { files } } as ChangeEvent<HTMLInputElement>;
+		}
+
+		it('returns early when no files are selected', async () => {
+			let saving = false;
+			let profileChanged = false;
+
+			await helpers.runUploadAvatar({
+				userId: 'user-1',
+				event: createFileChangeEvent(null),
+				profile: { first_name: 'Ada', last_name: null, phone_number: null, avatar_url: null },
+				setSaving: (value) => {
+					saving = typeof value === 'function' ? value(saving) : value;
+				},
+				setProfile: () => {
+					profileChanged = true;
+				},
+			});
+
+			expect(saving).toBe(false);
+			expect(profileChanged).toBe(false);
+			expect(persistAvatarUploadSpy).toHaveBeenCalledTimes(0);
+			expect(toastCalls).toHaveLength(0);
+		});
+
+		it('shows error toast for failed uploads', async () => {
+			persistAvatarUploadSpy.mockResolvedValue({ error: 'upload failed', avatarUrl: null });
+
+			await helpers.runUploadAvatar({
+				userId: 'user-1',
+				event: createFileChangeEvent(createFileList(new File(['x'], 'avatar.png'))),
+				profile: { first_name: 'Ada', last_name: null, phone_number: null, avatar_url: null },
+				setSaving: () => {},
 				setProfile: () => {},
 			});
+
 			expect(toastCalls).toEqual([
 				{ kind: 'error', message: 'Fout bij uploaden avatar', description: 'upload failed' },
 			]);
 		});
 
-		it('updates profile and shows success toast on success', () => {
-			toastCalls.length = 0;
-			const state = { avatarUrl: null as string | null, profileUpdated: false };
-			const profile = { first_name: 'Ada', last_name: null, phone_number: null, avatar_url: null };
-			const originalWindow = globalThis.window;
-			globalThis.window = {
-				dispatchEvent: () => {
-					state.profileUpdated = true;
-					return true;
-				},
-			} as unknown as Window & typeof globalThis;
-
-			helpers.applyAvatarUploadOutcome({
-				outcome: 'success',
+		it('updates profile and shows success toast on success', async () => {
+			persistAvatarUploadSpy.mockResolvedValue({
 				error: null,
-				profile,
 				avatarUrl: 'https://example.com/avatar.png',
+			});
+			const avatarState = { url: null as string | null };
+			const profile: AccountProfileState = {
+				first_name: 'Ada',
+				last_name: null,
+				phone_number: null,
+				avatar_url: null,
+			};
+
+			await helpers.runUploadAvatar({
+				userId: 'user-1',
+				event: createFileChangeEvent(createFileList(new File(['x'], 'avatar.png'))),
+				profile,
+				setSaving: () => {},
 				setProfile: (value) => {
 					const nextProfile = typeof value === 'function' ? value(profile) : value;
-					state.avatarUrl = nextProfile?.avatar_url ?? null;
+					avatarState.url = nextProfile?.avatar_url ?? null;
 				},
 			});
 
-			globalThis.window = originalWindow;
-			expect(state.avatarUrl).toBe('https://example.com/avatar.png');
-			expect(state.profileUpdated).toBe(true);
+			expect(avatarState.url).toBe('https://example.com/avatar.png');
+			expect(dispatchProfileUpdatedSpy).toHaveBeenCalledTimes(1);
 			expect(toastCalls).toEqual([{ kind: 'success', message: 'Avatar opgeslagen!' }]);
-		});
-
-		it('does nothing for skipped uploads', () => {
-			toastCalls.length = 0;
-			let profileChanged = false;
-			helpers.applyAvatarUploadOutcome({
-				outcome: 'skipped',
-				error: null,
-				profile: null,
-				avatarUrl: null,
-				setProfile: () => {
-					profileChanged = true;
-				},
-			});
-			expect(profileChanged).toBe(false);
-			expect(toastCalls).toHaveLength(0);
 		});
 	});
 });

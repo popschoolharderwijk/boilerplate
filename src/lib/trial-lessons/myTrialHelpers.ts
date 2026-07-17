@@ -4,7 +4,7 @@ type TrialLessonStatus = Enums<'trial_lesson_status'>;
 
 export type TrialDecision = 'confirm' | 'decline';
 
-export function resolveTrialDecisionStatus(decision: TrialDecision): TrialLessonStatus {
+function resolveTrialDecisionStatus(decision: TrialDecision): TrialLessonStatus {
 	return decision === 'confirm' ? 'student_confirmed' : 'student_declined';
 }
 
@@ -38,16 +38,3 @@ export function formatTrialScheduledTime(scheduledStartTime: string): string {
 }
 
 export type MyTrialViewState = 'auth-loading' | 'unauthenticated' | 'loading' | 'empty' | 'content';
-
-export function resolveMyTrialViewState(
-	isAuthLoading: boolean,
-	hasUser: boolean,
-	loading: boolean,
-	hasLatestTrial: boolean,
-): MyTrialViewState {
-	if (isAuthLoading) return 'auth-loading';
-	if (!hasUser) return 'unauthenticated';
-	if (loading) return 'loading';
-	if (!hasLatestTrial) return 'empty';
-	return 'content';
-}

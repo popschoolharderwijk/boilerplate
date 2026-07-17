@@ -15,13 +15,13 @@ export function resolveAnnouncementImageUploadGate(
 	return 'proceed';
 }
 
-export type AnnouncementSaveOperation = 'insert' | 'update';
+type AnnouncementSaveOperation = 'insert' | 'update';
 
-export function resolveAnnouncementSaveOperation(editingId: string | undefined): AnnouncementSaveOperation {
+function resolveAnnouncementSaveOperation(editingId: string | undefined): AnnouncementSaveOperation {
 	return editingId ? 'update' : 'insert';
 }
 
-export function shouldBlockAnnouncementSave(isFormValid: boolean, isSchemaMissing: boolean): boolean {
+function shouldBlockAnnouncementSave(isFormValid: boolean, isSchemaMissing: boolean): boolean {
 	return !isFormValid || isSchemaMissing;
 }
 
@@ -38,15 +38,15 @@ export interface AnnouncementSaveParams {
 	refetch: () => Promise<void>;
 }
 
-export function resolveAnnouncementSaveErrorMessage(operation: AnnouncementSaveOperation): string {
+function resolveAnnouncementSaveErrorMessage(operation: AnnouncementSaveOperation): string {
 	return operation === 'update' ? 'Opslaan mislukt' : 'Aanmaken mislukt';
 }
 
-export function resolveAnnouncementSaveSuccessMessage(operation: AnnouncementSaveOperation): string {
+function resolveAnnouncementSaveSuccessMessage(operation: AnnouncementSaveOperation): string {
 	return operation === 'update' ? 'Bericht bijgewerkt' : 'Bericht aangemaakt';
 }
 
-export async function persistAnnouncementSave(
+async function persistAnnouncementSave(
 	supabase: SupabaseClient,
 	operation: AnnouncementSaveOperation,
 	editingId: string | undefined,

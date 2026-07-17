@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	executeLoadMyStatistics,
-	resolveMyStatisticsLoadOutcome,
 	shouldLoadMyStatistics,
 	shouldRedirectMyStatistics,
-	shouldRunStatisticsQuery,
 	shouldShowMyStatisticsSkeleton,
 } from '../../../src/lib/statistics/myStatisticsPageHelpers';
 
@@ -15,38 +13,6 @@ describe('shouldLoadMyStatistics', () => {
 
 	it('returns false while auth is loading', () => {
 		expect(shouldLoadMyStatistics(true, true)).toBe(false);
-	});
-});
-
-describe('shouldRunStatisticsQuery', () => {
-	it('returns true for teachers with user id', () => {
-		expect(shouldRunStatisticsQuery(true, 'teacher-1')).toBe(true);
-	});
-
-	it('returns false without teacher user id', () => {
-		expect(shouldRunStatisticsQuery(true, null)).toBe(false);
-	});
-});
-
-describe('resolveMyStatisticsLoadOutcome', () => {
-	it('returns error when agreements query fails', () => {
-		expect(resolveMyStatisticsLoadOutcome({ message: 'denied' }, [])).toEqual({ kind: 'error' });
-	});
-
-	it('returns computed stats on success', () => {
-		expect(
-			resolveMyStatisticsLoadOutcome(null, [
-				{ student_user_id: 'student-1', lesson_types: { is_group_lesson: false } },
-			]),
-		).toEqual({
-			kind: 'success',
-			stats: {
-				studentCount: 1,
-				lessonsPerWeek: 1,
-				groupLessons: 0,
-				upcomingLessons: 1,
-			},
-		});
 	});
 });
 
@@ -76,6 +42,15 @@ describe('executeLoadMyStatistics', () => {
 		const outcome = await executeLoadMyStatistics({
 			isTeacher: true,
 			teacherUserId: null,
+			queryAgreements: async () => ({ data: [], error: null }),
+		});
+		expect(outcome).toEqual({ kind: 'skipped' });
+	});
+
+	it('skips loading when user is not a teacher', async () => {
+		const outcome = await executeLoadMyStatistics({
+			isTeacher: false,
+			teacherUserId: 'teacher-1',
 			queryAgreements: async () => ({ data: [], error: null }),
 		});
 		expect(outcome).toEqual({ kind: 'skipped' });

@@ -9,7 +9,7 @@ export interface InvoiceSearchRow {
 	profiles?: InvoiceSearchProfile | null;
 }
 
-export function buildInvoiceStudentSearchName(profile: InvoiceSearchProfile | null | undefined): string {
+function buildInvoiceStudentSearchName(profile: InvoiceSearchProfile | null | undefined): string {
 	return `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.toLowerCase();
 }
 

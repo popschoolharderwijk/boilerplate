@@ -18,7 +18,7 @@ interface ProjectLabelsListProps {
 	onDelete: (label: LabelWithDomain) => void;
 }
 
-export function ProjectLabelsList({ labels, onEdit, onDelete }: ProjectLabelsListProps) {
+function ProjectLabelsList({ labels, onEdit, onDelete }: ProjectLabelsListProps) {
 	return (
 		<ul className="divide-y divide-border">
 			{labels.map((label) => (
@@ -96,7 +96,7 @@ function ProjectLabelDialogShell({
 	);
 }
 
-export function ProjectLabelEditorDialog({
+function ProjectLabelEditorDialog({
 	open,
 	onOpenChange,
 	editing,
@@ -147,19 +147,6 @@ export function ProjectLabelEditorDialog({
 		</ProjectLabelDialogShell>
 	);
 }
-
-export function shouldShowProjectLabelsLoading(loading: boolean): boolean {
-	return resolveListCardView(loading, 0) === 'loading';
-}
-
-export function shouldShowProjectLabelsEmpty(loading: boolean, labelCount: number): boolean {
-	return resolveListCardView(loading, labelCount) === 'empty';
-}
-
-export function shouldShowProjectLabelsList(loading: boolean, labelCount: number): boolean {
-	return resolveListCardView(loading, labelCount) === 'list';
-}
-
 function ProjectLabelsManagerCardContent({
 	view,
 	labels,

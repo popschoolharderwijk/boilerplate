@@ -1,17 +1,46 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	buildOptimisticMoveState,
-	canExecuteEventDrop,
-	resolveEventDropPreAction,
-	resolveOptimisticMoveFollowUp,
-	shouldClearOptimisticMoveOnFailure,
-	shouldFinishOptimisticMoveAfterFailure,
-	shouldFinishOptimisticMoveAfterSuccess,
-	shouldNotifySuccessfulMove,
-	shouldProceedWithEventDrop,
-	shouldPromptRecurrenceDrop,
-} from '../../../src/components/agenda/agendaViewDropHelpers';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { CalendarEvent } from '../../../src/components/agenda/types';
+import type { MoveAgendaEventResult } from '../../../src/lib/agenda/moveAgendaEvent';
+import * as moveAgendaEventModule from '../../../src/lib/agenda/moveAgendaEvent';
+import * as notifyAgendaOpResultModule from '../../../src/lib/agenda/notifyAgendaOpResult';
+
+const toastCalls: { kind: 'error' | 'success'; message: string }[] = [];
+
+mock.module('sonner', () => ({
+	toast: {
+		error: (message: string) => {
+			toastCalls.push({ kind: 'error', message });
+		},
+		success: (message: string) => {
+			toastCalls.push({ kind: 'success', message });
+		},
+	},
+}));
+
+const uiState = {
+	pendingDrop: null as { event: CalendarEvent; start: Date; end: Date } | null,
+	recurrenceChoiceAction: null as string | null,
+	recurrenceChoiceOpen: false,
+	optimisticMove: null as unknown,
+};
+
+const ui = {
+	setPendingDrop: (value: { event: CalendarEvent; start: Date; end: Date } | null) => {
+		uiState.pendingDrop = value;
+	},
+	setRecurrenceChoiceAction: (value: string | null) => {
+		uiState.recurrenceChoiceAction = value;
+	},
+	setRecurrenceChoiceOpen: (value: boolean) => {
+		uiState.recurrenceChoiceOpen = value;
+	},
+	setOptimisticMove: (value: unknown) => {
+		uiState.optimisticMove = value;
+	},
+};
+
+let moveResult: MoveAgendaEventResult = { ok: true, message: '' };
+let notifyCalled = false;
 
 function mockEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 	return {
@@ -35,15 +64,80 @@ function mockEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 	};
 }
 
-describe('resolveEventDropPreAction', () => {
-	it('returns noop-unchanged when drop times match original times', () => {
-		const event = mockEvent();
-		expect(
-			resolveEventDropPreAction({ event, start: event.start as Date, end: event.end as Date }, 'single', false),
-		).toBe('noop-unchanged');
+describe('executeAgendaEventDrop', () => {
+	let executeAgendaEventDrop: typeof import('../../../src/components/agenda/agendaViewDropHelpers').executeAgendaEventDrop;
+	let moveAgendaEventSpy: ReturnType<typeof spyOn>;
+	let notifyAgendaOpResultSpy: ReturnType<typeof spyOn>;
+
+	beforeAll(async () => {
+		({ executeAgendaEventDrop } = await import('../../../src/components/agenda/agendaViewDropHelpers'));
 	});
 
-	it('returns proceed for non-recurring manual events moved to a new time', () => {
+	beforeEach(() => {
+		toastCalls.length = 0;
+		moveResult = { ok: true, message: '' };
+		notifyCalled = false;
+		uiState.pendingDrop = null;
+		uiState.recurrenceChoiceAction = null;
+		uiState.recurrenceChoiceOpen = false;
+		uiState.optimisticMove = null;
+		moveAgendaEventSpy = spyOn(moveAgendaEventModule, 'moveAgendaEvent').mockImplementation(async () => moveResult);
+		notifyAgendaOpResultSpy = spyOn(notifyAgendaOpResultModule, 'notifyAgendaOpResult').mockImplementation(
+			async (_result: notifyAgendaOpResultModule.AgendaOpResult, onSuccess?: () => void | Promise<void>) => {
+				notifyCalled = true;
+				await onSuccess?.();
+				return true;
+			},
+		);
+	});
+
+	afterEach(() => {
+		moveAgendaEventSpy.mockRestore();
+		notifyAgendaOpResultSpy.mockRestore();
+	});
+
+	it('does nothing when drop times match original times', async () => {
+		const event = mockEvent({ resource: { ...mockEvent().resource, isRecurring: true } });
+		await executeAgendaEventDrop({
+			args: { event, start: event.start as Date, end: event.end as Date },
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: true,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {},
+			ui: ui as never,
+		});
+		expect(uiState.recurrenceChoiceOpen).toBe(false);
+		expect(uiState.optimisticMove).toBeNull();
+		expect(moveAgendaEventSpy).toHaveBeenCalledTimes(0);
+	});
+
+	it('opens recurrence dialog for recurring events moved to a new time', async () => {
+		const event = mockEvent({ resource: { ...mockEvent().resource, isRecurring: true } });
+		const start = new Date('2026-09-07T16:00:00');
+		const end = new Date('2026-09-07T17:00:00');
+		await executeAgendaEventDrop({
+			args: { event, start, end },
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: true,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {},
+			ui: ui as never,
+		});
+		expect(uiState.pendingDrop).toEqual({ event, start, end });
+		expect(uiState.recurrenceChoiceAction).toBe('change');
+		expect(uiState.recurrenceChoiceOpen).toBe(true);
+		expect(moveAgendaEventSpy).toHaveBeenCalledTimes(0);
+	});
+
+	it('moves non-recurring manual events and clears optimistic state on success', async () => {
 		const event = mockEvent({
 			resource: {
 				...mockEvent().resource,
@@ -51,114 +145,113 @@ describe('resolveEventDropPreAction', () => {
 				isRecurring: false,
 			},
 		});
-		expect(
-			resolveEventDropPreAction(
-				{
-					event,
-					start: new Date('2026-09-07T16:00:00'),
-					end: new Date('2026-09-07T17:00:00'),
-				},
-				'single',
-				false,
-			),
-		).toBe('proceed');
+		const start = new Date('2026-09-07T16:00:00');
+		const end = new Date('2026-09-07T17:00:00');
+		await executeAgendaEventDrop({
+			args: { event, start, end },
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: true,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {},
+			ui: ui as never,
+		});
+		expect(uiState.optimisticMove).toBeNull();
+		expect(moveAgendaEventSpy).toHaveBeenCalledTimes(1);
+		expect(toastCalls).toHaveLength(0);
 	});
 
-	it('returns prompt-recurrence for recurring events', () => {
+	it('shows error toast and clears optimistic move when move fails', async () => {
+		moveResult = { ok: false, message: 'failed' };
 		const event = mockEvent({
 			resource: {
 				...mockEvent().resource,
-				isRecurring: true,
+				sourceType: 'manual',
+				isRecurring: false,
 			},
 		});
-		expect(
-			resolveEventDropPreAction(
-				{
-					event,
-					start: new Date('2026-09-07T16:00:00'),
-					end: new Date('2026-09-07T17:00:00'),
-				},
-				'single',
-				false,
-			),
-		).toBe('prompt-recurrence');
-	});
-});
-
-describe('canExecuteEventDrop', () => {
-	it('requires edit permission and a user id', () => {
-		expect(canExecuteEventDrop(false, 'user-1')).toBe(false);
-		expect(canExecuteEventDrop(true, undefined)).toBe(false);
-		expect(canExecuteEventDrop(true, 'user-1')).toBe(true);
-	});
-});
-
-describe('shouldPromptRecurrenceDrop', () => {
-	it('returns true only for prompt-recurrence pre-actions', () => {
-		expect(shouldPromptRecurrenceDrop('prompt-recurrence')).toBe(true);
-		expect(shouldPromptRecurrenceDrop('proceed')).toBe(false);
-	});
-});
-
-describe('shouldProceedWithEventDrop', () => {
-	it('returns true only for proceed pre-actions', () => {
-		expect(shouldProceedWithEventDrop('proceed')).toBe(true);
-		expect(shouldPromptRecurrenceDrop('noop-unchanged')).toBe(false);
-	});
-});
-
-describe('shouldClearOptimisticMoveOnFailure', () => {
-	it('returns true only for failed move results', () => {
-		expect(shouldClearOptimisticMoveOnFailure({ ok: false, message: 'failed' })).toBe(true);
-		expect(shouldClearOptimisticMoveOnFailure({ ok: true })).toBe(false);
-	});
-});
-
-describe('shouldNotifySuccessfulMove', () => {
-	it('returns true only when the move succeeded with a message', () => {
-		expect(shouldNotifySuccessfulMove({ ok: true, message: 'saved' })).toBe(true);
-		expect(shouldNotifySuccessfulMove({ ok: true })).toBe(false);
-		expect(shouldNotifySuccessfulMove({ ok: false, message: 'failed' })).toBe(false);
-	});
-});
-
-describe('buildOptimisticMoveState', () => {
-	it('captures the original event and new times', () => {
-		const event = mockEvent();
-		const start = new Date('2026-09-07T16:00:00');
-		const end = new Date('2026-09-07T17:00:00');
-		expect(buildOptimisticMoveState({ event, start, end })).toEqual({
-			originalEvent: event,
-			newStart: start,
-			newEnd: end,
+		await executeAgendaEventDrop({
+			args: {
+				event,
+				start: new Date('2026-09-07T16:00:00'),
+				end: new Date('2026-09-07T17:00:00'),
+			},
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: true,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {},
+			ui: ui as never,
 		});
-	});
-});
-
-describe('shouldFinishOptimisticMoveAfterFailure', () => {
-	it('returns true only for failed move results', () => {
-		expect(shouldFinishOptimisticMoveAfterFailure({ ok: false, message: 'failed' })).toBe(true);
-		expect(shouldFinishOptimisticMoveAfterFailure({ ok: true })).toBe(false);
-	});
-});
-
-describe('shouldFinishOptimisticMoveAfterSuccess', () => {
-	it('returns true only for successful move results', () => {
-		expect(shouldFinishOptimisticMoveAfterSuccess({ ok: true })).toBe(true);
-		expect(shouldFinishOptimisticMoveAfterSuccess({ ok: false, message: 'failed' })).toBe(false);
-	});
-});
-
-describe('resolveOptimisticMoveFollowUp', () => {
-	it('returns fail for failed move results', () => {
-		expect(resolveOptimisticMoveFollowUp({ ok: false, message: 'failed' })).toBe('fail');
+		expect(uiState.optimisticMove).toBeNull();
+		expect(toastCalls).toEqual([{ kind: 'error', message: 'failed' }]);
+		expect(notifyAgendaOpResultSpy).toHaveBeenCalledTimes(0);
 	});
 
-	it('returns notify for successful moves with a message', () => {
-		expect(resolveOptimisticMoveFollowUp({ ok: true, message: 'saved' })).toBe('notify');
+	it('does not move events when edit permission is missing', async () => {
+		const event = mockEvent({
+			resource: {
+				...mockEvent().resource,
+				sourceType: 'manual',
+				isRecurring: false,
+			},
+		});
+		await executeAgendaEventDrop({
+			args: {
+				event,
+				start: new Date('2026-09-07T16:00:00'),
+				end: new Date('2026-09-07T17:00:00'),
+			},
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: false,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {},
+			ui: ui as never,
+		});
+		expect(uiState.optimisticMove).toBeNull();
+		expect(moveAgendaEventSpy).toHaveBeenCalledTimes(0);
 	});
 
-	it('returns done for successful moves without a message', () => {
-		expect(resolveOptimisticMoveFollowUp({ ok: true })).toBe('done');
+	it('notifies and reloads when move succeeds with a message', async () => {
+		moveResult = { ok: true, message: 'saved' };
+		let reloaded = false;
+		const event = mockEvent({
+			resource: {
+				...mockEvent().resource,
+				sourceType: 'manual',
+				isRecurring: false,
+			},
+		});
+		await executeAgendaEventDrop({
+			args: {
+				event,
+				start: new Date('2026-09-07T16:00:00'),
+				end: new Date('2026-09-07T17:00:00'),
+			},
+			scope: 'single',
+			skipRecurrencePrompt: false,
+			canEdit: true,
+			user: { id: 'user-1' } as never,
+			agendaEvents: [],
+			deviations: [],
+			agreementsMap: new Map(),
+			reloadAgenda: () => {
+				reloaded = true;
+			},
+			ui: ui as never,
+		});
+		expect(notifyCalled).toBe(true);
+		expect(reloaded).toBe(true);
+		expect(uiState.optimisticMove).toBeNull();
 	});
 });

@@ -1,73 +1,22 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	applyFetchUsersPageOutcome,
-	buildUsersPaginatedRpcParams,
-	executeFetchUsersPage,
-	executeUserDelete,
-	resolveDeleteUserInvokeOutcome,
-} from '../../../src/lib/users/usersPageControllerHelpers';
+import { afterAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { fetchUsersPage, runUserDelete } from '../../../src/lib/users/usersPageControllerHelpers';
+import type { UserWithRole } from '../../../src/lib/users/usersPageHelpers';
 
-describe('buildUsersPaginatedRpcParams', () => {
-	it('builds paginated RPC params with defaults', () => {
-		expect(
-			buildUsersPaginatedRpcParams({
-				currentPage: 2,
-				rowsPerPage: 25,
-				debouncedSearchQuery: 'anna',
-				selectedRole: 'staff',
-				sortColumn: 'email',
-				sortDirection: 'desc',
-			}),
-		).toEqual({
-			p_limit: 25,
-			p_offset: 25,
-			p_search: 'anna',
-			p_role: 'staff',
-			p_sort_column: 'email',
-			p_sort_direction: 'desc',
-		});
-	});
+mock.module('sonner', () => ({
+	toast: {
+		error: () => {},
+		success: () => {},
+	},
+}));
 
-	it('maps null role filter to null RPC role', () => {
-		expect(
-			buildUsersPaginatedRpcParams({
-				currentPage: 1,
-				rowsPerPage: 10,
-				debouncedSearchQuery: '',
-				selectedRole: null,
-				sortColumn: null,
-				sortDirection: null,
-			}).p_role,
-		).toBeNull();
-	});
+afterAll(() => {
+	mock.restore();
 });
 
-describe('resolveDeleteUserInvokeOutcome', () => {
-	it('returns invoke-error when invoke fails', () => {
-		expect(resolveDeleteUserInvokeOutcome({ message: 'network' }, null)).toEqual({
-			outcome: 'invoke-error',
-			errorMessage: 'network',
-		});
-	});
-
-	it('returns response-error when response contains error', () => {
-		expect(resolveDeleteUserInvokeOutcome(null, { error: 'forbidden' })).toEqual({
-			outcome: 'response-error',
-			errorMessage: 'forbidden',
-		});
-	});
-
-	it('returns success when no errors are present', () => {
-		expect(resolveDeleteUserInvokeOutcome(null, {})).toEqual({
-			outcome: 'success',
-			errorMessage: null,
-		});
-	});
-});
-
-describe('executeFetchUsersPage', () => {
+describe('fetchUsersPage', () => {
 	it('skips loading when user has no access', async () => {
-		const outcome = await executeFetchUsersPage({
+		let loading = true;
+		await fetchUsersPage({
 			hasAccess: false,
 			currentPage: 1,
 			rowsPerPage: 10,
@@ -76,12 +25,20 @@ describe('executeFetchUsersPage', () => {
 			sortColumn: null,
 			sortDirection: null,
 			supabase: { rpc: async () => ({ data: null, error: null }) } as never,
+			setLoading: (value) => {
+				loading = value;
+			},
+			setTotalCount: () => {},
+			setUsers: () => {},
 		});
-		expect(outcome).toEqual({ kind: 'skipped' });
+		expect(loading).toBe(true);
 	});
 
-	it('returns users on success', async () => {
-		const outcome = await executeFetchUsersPage({
+	it('loads users and total count on success', async () => {
+		let loading = true;
+		let totalCount = 0;
+		let users: UserWithRole[] = [];
+		await fetchUsersPage({
 			hasAccess: true,
 			currentPage: 1,
 			rowsPerPage: 10,
@@ -109,27 +66,35 @@ describe('executeFetchUsersPage', () => {
 					error: null,
 				}),
 			} as never,
+			setLoading: (value) => {
+				loading = value;
+			},
+			setTotalCount: (count) => {
+				totalCount = count;
+			},
+			setUsers: (nextUsers) => {
+				users = nextUsers;
+			},
 		});
-		expect(outcome).toEqual({
-			kind: 'success',
-			totalCount: 1,
-			users: [
-				{
-					user_id: 'user-1',
-					email: 'anna@example.com',
-					first_name: 'Anna',
-					last_name: 'Bakker',
-					phone_number: null,
-					avatar_url: null,
-					created_at: '2026-01-01T00:00:00Z',
-					role: 'staff',
-				},
-			],
-		});
+		expect(loading).toBe(false);
+		expect(totalCount).toBe(1);
+		expect(users).toEqual([
+			{
+				user_id: 'user-1',
+				email: 'anna@example.com',
+				first_name: 'Anna',
+				last_name: 'Bakker',
+				phone_number: null,
+				avatar_url: null,
+				created_at: '2026-01-01T00:00:00Z',
+				role: 'staff',
+			},
+		]);
 	});
 
-	it('returns error when rpc fails', async () => {
-		const outcome = await executeFetchUsersPage({
+	it('stops loading after rpc failure', async () => {
+		let loading = true;
+		await fetchUsersPage({
 			hasAccess: true,
 			currentPage: 1,
 			rowsPerPage: 10,
@@ -140,80 +105,81 @@ describe('executeFetchUsersPage', () => {
 			supabase: {
 				rpc: async () => ({ data: null, error: { message: 'rpc failed' } }),
 			} as never,
+			setLoading: (value) => {
+				loading = value;
+			},
+			setTotalCount: () => {},
+			setUsers: () => {},
 		});
-		expect(outcome).toEqual({ kind: 'error' });
+		expect(loading).toBe(false);
 	});
 });
 
-describe('applyFetchUsersPageOutcome', () => {
-	it('updates users and total count on success', () => {
-		let users: { user_id: string }[] = [];
-		let totalCount = 0;
-		const shouldStopLoading = applyFetchUsersPageOutcome(
-			{
-				kind: 'success',
-				users: [{ user_id: 'user-1' } as never],
-				totalCount: 3,
-			},
-			(nextUsers) => {
-				users = nextUsers;
-			},
-			(count) => {
-				totalCount = count;
-			},
-		);
-		expect(shouldStopLoading).toBe(true);
-		expect(users).toHaveLength(1);
-		expect(totalCount).toBe(3);
-	});
+describe('runUserDelete', () => {
+	const user = {
+		user_id: 'user-1',
+		email: 'anna@example.com',
+		first_name: 'Anna',
+		last_name: 'Bakker',
+		phone_number: null,
+		avatar_url: null,
+		created_at: '2026-01-01T00:00:00Z',
+		role: 'staff' as const,
+	};
 
-	it('returns false when loading was skipped', () => {
-		const shouldStopLoading = applyFetchUsersPageOutcome(
-			{ kind: 'skipped' },
-			() => {},
-			() => {},
-		);
-		expect(shouldStopLoading).toBe(false);
-	});
-});
+	beforeEach(() => {});
 
-describe('executeUserDelete', () => {
-	it('returns success when delete invoke succeeds', async () => {
-		const outcome = await executeUserDelete({
+	it('clears dialog and reloads users on success', async () => {
+		let dialogOpen = true;
+		let reloaded = false;
+		await runUserDelete({
+			user,
+			isSiteAdmin: false,
 			supabase: {
 				functions: {
 					invoke: async () => ({ data: {}, error: null }),
 				},
 			} as never,
-			userId: 'user-1',
-			isSiteAdmin: false,
+			setDeleteDialog: () => {
+				dialogOpen = false;
+			},
+			loadUsers: async () => {
+				reloaded = true;
+			},
 		});
-		expect(outcome).toEqual({ kind: 'success' });
+		expect(dialogOpen).toBe(false);
+		expect(reloaded).toBe(true);
 	});
 
-	it('returns invoke-error when invoke fails', async () => {
-		const outcome = await executeUserDelete({
-			supabase: {
-				functions: {
-					invoke: async () => ({ data: null, error: { message: 'network' } }),
-				},
-			} as never,
-			userId: 'user-1',
-			isSiteAdmin: false,
-		});
-		expect(outcome.kind).toBe('invoke-error');
+	it('throws on invoke error', async () => {
+		await expect(
+			runUserDelete({
+				user,
+				isSiteAdmin: false,
+				supabase: {
+					functions: {
+						invoke: async () => ({ data: null, error: { message: 'network' } }),
+					},
+				} as never,
+				setDeleteDialog: () => {},
+				loadUsers: async () => {},
+			}),
+		).rejects.toThrow('Er is een onbekende fout opgetreden.');
 	});
 
-	it('returns response-error when response contains error', async () => {
-		const outcome = await executeUserDelete({
-			supabase: {
-				functions: {
-					invoke: async () => ({ data: { error: 'forbidden' }, error: null }),
-				},
-			} as never,
-			userId: 'user-1',
-			isSiteAdmin: false,
-		});
-		expect(outcome).toEqual({ kind: 'response-error', message: 'forbidden' });
+	it('throws on response error', async () => {
+		await expect(
+			runUserDelete({
+				user,
+				isSiteAdmin: false,
+				supabase: {
+					functions: {
+						invoke: async () => ({ data: { error: 'forbidden' }, error: null }),
+					},
+				} as never,
+				setDeleteDialog: () => {},
+				loadUsers: async () => {},
+			}),
+		).rejects.toThrow('forbidden');
 	});
 });

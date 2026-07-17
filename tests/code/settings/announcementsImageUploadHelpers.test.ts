@@ -1,54 +1,65 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	buildAnnouncementImageMarkdown,
-	prepareAnnouncementImageUpload,
-	resolveAnnouncementImageUploadToast,
-} from '../../../src/lib/settings/announcementsImageUploadHelpers';
+import { describe, expect, it, mock } from 'bun:test';
+import { runAnnouncementImageUpload } from '../../../src/lib/settings/announcementsImageUploadHelpers';
 
-describe('resolveAnnouncementImageUploadToast', () => {
-	it('returns schema-missing message', () => {
-		expect(resolveAnnouncementImageUploadToast('schema-missing')).toBe('Nieuwsberichten zijn nog niet beschikbaar');
-	});
+mock.module('sonner', () => ({
+	toast: {
+		error: () => {},
+		success: () => {},
+	},
+}));
 
-	it('returns invalid-file message', () => {
-		expect(resolveAnnouncementImageUploadToast('invalid-file')).toBe('Alleen afbeeldingen zijn toegestaan');
-	});
-
-	it('returns null for proceed and no-file gates', () => {
-		expect(resolveAnnouncementImageUploadToast('proceed')).toBeNull();
-		expect(resolveAnnouncementImageUploadToast('no-file')).toBeNull();
-	});
-});
-
-describe('buildAnnouncementImageMarkdown', () => {
-	it('builds markdown image syntax', () => {
-		expect(buildAnnouncementImageMarkdown('photo.png', 'https://example.com/photo.png')).toBe(
-			'![photo.png](https://example.com/photo.png)',
-		);
-	});
-});
-
-describe('prepareAnnouncementImageUpload', () => {
-	it('blocks upload when schema is missing', () => {
+describe('runAnnouncementImageUpload', () => {
+	it('returns blocked when schema is missing', async () => {
 		const file = new File(['content'], 'photo.png', { type: 'image/png' });
-		expect(prepareAnnouncementImageUpload(file, true)).toEqual({
-			status: 'blocked',
-			gate: 'schema-missing',
-		});
-	});
-
-	it('blocks upload when no file is selected', () => {
-		expect(prepareAnnouncementImageUpload(undefined, false)).toEqual({
-			status: 'blocked',
-			gate: 'no-file',
-		});
-	});
-
-	it('returns ready when file is valid', () => {
-		const file = new File(['content'], 'photo.png', { type: 'image/png' });
-		expect(prepareAnnouncementImageUpload(file, false)).toEqual({
-			status: 'ready',
+		const outcome = await runAnnouncementImageUpload({
 			file,
+			isSchemaMissing: true,
+			supabase: {} as never,
+			insertAtCursor: () => {},
 		});
+		expect(outcome).toBe('blocked');
+	});
+
+	it('returns blocked when no file is selected', async () => {
+		const outcome = await runAnnouncementImageUpload({
+			file: undefined,
+			isSchemaMissing: false,
+			supabase: {} as never,
+			insertAtCursor: () => {},
+		});
+		expect(outcome).toBe('blocked');
+	});
+
+	it('returns blocked for non-image files', async () => {
+		const file = new File(['content'], 'notes.txt', { type: 'text/plain' });
+		const outcome = await runAnnouncementImageUpload({
+			file,
+			isSchemaMissing: false,
+			supabase: {} as never,
+			insertAtCursor: () => {},
+		});
+		expect(outcome).toBe('blocked');
+	});
+
+	it('uploads image and inserts markdown at cursor on success', async () => {
+		const file = new File(['content'], 'photo.png', { type: 'image/png' });
+		const inserted: string[] = [];
+		const outcome = await runAnnouncementImageUpload({
+			file,
+			isSchemaMissing: false,
+			supabase: {
+				storage: {
+					from: () => ({
+						upload: async () => ({ error: null }),
+						getPublicUrl: () => ({ data: { publicUrl: 'https://example.com/photo.png' } }),
+					}),
+				},
+			} as never,
+			insertAtCursor: (markdown) => {
+				inserted.push(markdown);
+			},
+		});
+		expect(outcome).toBe('uploaded');
+		expect(inserted).toEqual(['![photo.png](https://example.com/photo.png)']);
 	});
 });

@@ -1,4 +1,3 @@
-import { jsonResponse } from '../_shared/http.ts';
 import type { LessonAgreementPostContext } from '../_shared/http-serve.ts';
 import { createSupabaseClients, requirePrivilegedUser } from '../_shared/supabase.ts';
 import { loadForceStartAgreement } from './loadForceStartAgreement.ts';

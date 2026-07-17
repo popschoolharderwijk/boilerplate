@@ -1,9 +1,9 @@
-export type IncassoStartParams = {
+type IncassoStartParams = {
 	agreementId: string | null;
 	checkoutSessionId: string | null;
 };
 
-export type IncassoCheckoutMode = 'complete' | 'checkout';
+type IncassoCheckoutMode = 'complete' | 'checkout';
 
 export type IncassoStartFlowResult =
 	| { status: 'error'; message: string }
@@ -18,30 +18,30 @@ export type IncassoStartFlowDeps = {
 	getFunctionErrorMessage: (data: unknown, error: unknown, fallback: string) => Promise<string>;
 };
 
-export function parseIncassoStartParams(params: URLSearchParams): IncassoStartParams {
+function parseIncassoStartParams(params: URLSearchParams): IncassoStartParams {
 	return {
 		agreementId: params.get('agreement'),
 		checkoutSessionId: params.get('session_id'),
 	};
 }
 
-export function resolveMissingAgreementError(): string {
+function resolveMissingAgreementError(): string {
 	return 'Ongeldige uitnodigingslink (overeenkomst ontbreekt).';
 }
 
-export function resolveMissingSessionError(): string {
+function resolveMissingSessionError(): string {
 	return 'Geen actieve sessie. Open de link uit de mail opnieuw.';
 }
 
-export function resolveMissingCheckoutUrlError(): string {
+function resolveMissingCheckoutUrlError(): string {
 	return 'Geen checkout-URL ontvangen.';
 }
 
-export function resolveIncassoCheckoutMode(checkoutSessionId: string | null): IncassoCheckoutMode {
+function resolveIncassoCheckoutMode(checkoutSessionId: string | null): IncassoCheckoutMode {
 	return checkoutSessionId ? 'complete' : 'checkout';
 }
 
-export function buildIncassoCheckoutInvokeBody(
+function buildIncassoCheckoutInvokeBody(
 	agreementId: string,
 	mode: IncassoCheckoutMode,
 	checkoutSessionId: string | null,
@@ -56,21 +56,21 @@ export function buildIncassoCheckoutInvokeBody(
 	return { lesson_agreement_id: agreementId, mode: 'checkout' };
 }
 
-export function extractCheckoutRedirectUrl(data: unknown): string | null {
+function extractCheckoutRedirectUrl(data: unknown): string | null {
 	const url = (data as { url?: string } | null)?.url;
 	return url ?? null;
 }
 
-export function hasInvokeResponseError(data: unknown, error: unknown): boolean {
+function hasInvokeResponseError(data: unknown, error: unknown): boolean {
 	const dataError = typeof data === 'object' && data !== null && 'error' in data ? data.error : null;
 	return Boolean(error) || typeof dataError === 'string';
 }
 
-export function resolveIncassoCompleteFallbackError(): string {
+function resolveIncassoCompleteFallbackError(): string {
 	return 'Kon incasso niet afronden.';
 }
 
-export function resolveIncassoCheckoutFallbackError(): string {
+function resolveIncassoCheckoutFallbackError(): string {
 	return 'Kon incasso niet starten.';
 }
 

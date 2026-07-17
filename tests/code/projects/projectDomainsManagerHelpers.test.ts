@@ -1,11 +1,24 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { PostgresErrorCodes } from '../../../src/integrations/supabase/errorcodes';
+import type { ProjectDomain } from '../../../src/types/projects';
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
+
+const mockDomain: ProjectDomain = {
+	id: 'domain-1',
+	name: 'Muziek',
+	created_at: '2026-01-01T00:00:00Z',
+	created_by: null,
+	is_active: true,
+	updated_at: '2026-01-01T00:00:00Z',
+	updated_by: null,
+};
 
 let domainsResult: QueryResult = { data: [], error: null };
 let saveResult: QueryResult = { data: null, error: null };
 let deleteResult: QueryResult = { data: [{ id: 'domain-1' }], error: null };
+
+const toastCalls: { kind: 'error' | 'success'; message: string; description?: string }[] = [];
 
 const supabaseMock = {
 	from: (table: string) => {
@@ -31,8 +44,12 @@ const supabaseMock = {
 
 mock.module('sonner', () => ({
 	toast: {
-		error: () => {},
-		success: () => {},
+		error: (message: string, options?: { description?: string }) => {
+			toastCalls.push({ kind: 'error', message, description: options?.description });
+		},
+		success: (message: string) => {
+			toastCalls.push({ kind: 'success', message });
+		},
 	},
 }));
 
@@ -75,52 +92,37 @@ describe('projectDomainsManagerControllerHelpers', () => {
 	});
 
 	beforeEach(() => {
-		domainsResult = { data: [{ id: 'domain-1', name: 'Muziek' }], error: null };
+		domainsResult = { data: [mockDomain], error: null };
 		saveResult = { data: null, error: null };
 		deleteResult = { data: [{ id: 'domain-1' }], error: null };
+		toastCalls.length = 0;
 	});
 
 	it('executeProjectDomainFetch returns domains on success', async () => {
 		const outcome = await controller.executeProjectDomainFetch(supabaseMock as never);
-		expect(outcome.kind).toBe('success');
-		if (outcome.kind === 'success') {
-			expect(outcome.domains).toHaveLength(1);
-		}
+		expect(outcome).toEqual({
+			kind: 'success',
+			domains: [mockDomain],
+		});
 	});
 
-	it('executeProjectDomainSave returns blocked for empty name', async () => {
-		const outcome = await controller.executeProjectDomainSave({
+	it('runProjectDomainSaveFlow keeps dialog open for empty name', async () => {
+		let dialogOpen = true;
+		let refetched = false;
+		await controller.runProjectDomainSaveFlow({
 			name: '',
 			editing: null,
 			supabase: supabaseMock as never,
+			setSaving: () => {},
+			setDialogOpen: (open) => {
+				dialogOpen = open;
+			},
+			fetchDomains: async () => {
+				refetched = true;
+			},
 		});
-		expect(outcome).toBe('blocked');
-	});
-
-	it('executeProjectDomainSave returns success on create', async () => {
-		const outcome = await controller.executeProjectDomainSave({
-			name: 'Dans',
-			editing: null,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('success');
-	});
-
-	it('executeProjectDomainDelete returns success when domain deleted', async () => {
-		const outcome = await controller.executeProjectDomainDelete({
-			deleteTarget: { id: 'domain-1', name: 'Muziek' } as never,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('success');
-	});
-
-	it('executeProjectDomainDelete returns error-linked for foreign key violation', async () => {
-		deleteResult = { data: null, error: { code: PostgresErrorCodes.FOREIGN_KEY_VIOLATION, message: 'fk' } };
-		const outcome = await controller.executeProjectDomainDelete({
-			deleteTarget: { id: 'domain-1', name: 'Muziek' } as never,
-			supabase: supabaseMock as never,
-		});
-		expect(outcome).toBe('error-linked');
+		expect(dialogOpen).toBe(true);
+		expect(refetched).toBe(false);
 	});
 
 	it('runProjectDomainSaveFlow closes dialog and refetches on success', async () => {
@@ -140,9 +142,10 @@ describe('projectDomainsManagerControllerHelpers', () => {
 		});
 		expect(dialogOpen).toBe(false);
 		expect(refetched).toBe(true);
+		expect(toastCalls[0]?.message).toBe('Domein aangemaakt');
 	});
 
-	it('runProjectDomainDeleteFlow clears delete target and refetches', async () => {
+	it('runProjectDomainDeleteFlow clears delete target and refetches on success', async () => {
 		let deleteTarget: { id: string; name: string } | null = { id: 'domain-1', name: 'Muziek' };
 		let refetched = false;
 		await controller.runProjectDomainDeleteFlow({
@@ -157,5 +160,18 @@ describe('projectDomainsManagerControllerHelpers', () => {
 		});
 		expect(deleteTarget).toBeNull();
 		expect(refetched).toBe(true);
+		expect(toastCalls[0]?.message).toBe('Domein verwijderd');
+	});
+
+	it('runProjectDomainDeleteFlow shows linked labels toast for foreign key violation', async () => {
+		deleteResult = { data: null, error: { code: PostgresErrorCodes.FOREIGN_KEY_VIOLATION, message: 'fk' } };
+		await controller.runProjectDomainDeleteFlow({
+			deleteTarget: { id: 'domain-1', name: 'Muziek' } as never,
+			supabase: supabaseMock as never,
+			setDeleteTarget: () => {},
+			fetchDomains: async () => {},
+		});
+		expect(toastCalls[0]?.message).toBe('Domein niet verwijderd');
+		expect(toastCalls[0]?.description).toContain('labels');
 	});
 });

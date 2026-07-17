@@ -59,7 +59,7 @@ export function resolveAgendaDeleteClickAction(input: ResolveAgendaDeleteClickAc
 	return 'open-confirm';
 }
 
-export function canExecuteAgendaMutation(allowed: boolean, eventId: string | undefined, handler: unknown): boolean {
+function canExecuteAgendaMutation(allowed: boolean, eventId: string | undefined, handler: unknown): boolean {
 	return allowed && Boolean(eventId) && Boolean(handler);
 }
 

@@ -22,7 +22,7 @@ interface MemberRow {
 	lesson_group_id: string;
 }
 
-export function mapPublicSignupGroupOptions(
+function mapPublicSignupGroupOptions(
 	lessonGroups: LessonGroupRow[],
 	profiles: ProfileRow[],
 	members: MemberRow[],
@@ -50,11 +50,11 @@ export function mapPublicSignupGroupOptions(
 	});
 }
 
-export function collectUniqueTeacherIds(lessonGroups: LessonGroupRow[]): string[] {
+function collectUniqueTeacherIds(lessonGroups: LessonGroupRow[]): string[] {
 	return [...new Set(lessonGroups.map((group) => group.teacher_user_id))];
 }
 
-export function collectLessonGroupIds(lessonGroups: LessonGroupRow[]): string[] {
+function collectLessonGroupIds(lessonGroups: LessonGroupRow[]): string[] {
 	return lessonGroups.map((group) => group.id);
 }
 

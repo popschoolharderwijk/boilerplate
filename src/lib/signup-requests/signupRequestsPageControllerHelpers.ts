@@ -7,12 +7,12 @@ import {
 	shouldSkipAgreementWizard,
 } from '@/lib/signup-requests/signupRequestsPageHelpers';
 
-export interface ApproveSignupInvokeResult {
+interface ApproveSignupInvokeResult {
 	student_user_id?: string;
 	error?: string;
 }
 
-export function resolveApproveSignupError(
+function resolveApproveSignupError(
 	invokeError: { message?: string } | null,
 	data: ApproveSignupInvokeResult | null | undefined,
 ): string | null {

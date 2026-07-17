@@ -5,7 +5,7 @@ import { getDisplayName } from '@/lib/display-name';
 import type { AppRole } from '@/lib/roles';
 import { mapUsersSortColumn, parsePaginatedUsersResponse, type UserWithRole } from '@/lib/users/usersPageHelpers';
 
-export interface UsersPaginatedRpcParams {
+interface UsersPaginatedRpcParams {
 	p_limit: number;
 	p_offset: number;
 	p_search: string | null;
@@ -14,7 +14,7 @@ export interface UsersPaginatedRpcParams {
 	p_sort_direction: 'asc' | 'desc';
 }
 
-export function buildUsersPaginatedRpcParams(params: {
+function buildUsersPaginatedRpcParams(params: {
 	currentPage: number;
 	rowsPerPage: number;
 	debouncedSearchQuery: string;
@@ -32,9 +32,9 @@ export function buildUsersPaginatedRpcParams(params: {
 	};
 }
 
-export type DeleteUserInvokeOutcome = 'success' | 'invoke-error' | 'response-error';
+type DeleteUserInvokeOutcome = 'success' | 'invoke-error' | 'response-error';
 
-export function resolveDeleteUserInvokeOutcome(
+function resolveDeleteUserInvokeOutcome(
 	invokeError: { message?: string } | null,
 	data: { error?: string } | null | undefined,
 ): { outcome: DeleteUserInvokeOutcome; errorMessage: string | null } {
@@ -61,12 +61,12 @@ export interface FetchUsersPageParams {
 	setUsers: (users: UserWithRole[]) => void;
 }
 
-export type FetchUsersPageOutcome =
+type FetchUsersPageOutcome =
 	| { kind: 'skipped' }
 	| { kind: 'error' }
 	| { kind: 'success'; users: UserWithRole[]; totalCount: number };
 
-export interface ExecuteFetchUsersPageParams {
+interface ExecuteFetchUsersPageParams {
 	hasAccess: boolean;
 	currentPage: number;
 	rowsPerPage: number;
@@ -77,7 +77,7 @@ export interface ExecuteFetchUsersPageParams {
 	supabase: SupabaseClient;
 }
 
-export async function executeFetchUsersPage(params: ExecuteFetchUsersPageParams): Promise<FetchUsersPageOutcome> {
+async function executeFetchUsersPage(params: ExecuteFetchUsersPageParams): Promise<FetchUsersPageOutcome> {
 	if (!params.hasAccess) return { kind: 'skipped' };
 
 	try {
@@ -102,7 +102,7 @@ export async function executeFetchUsersPage(params: ExecuteFetchUsersPageParams)
 	}
 }
 
-export function applyFetchUsersPageOutcome(
+function applyFetchUsersPageOutcome(
 	outcome: FetchUsersPageOutcome,
 	setUsers: (users: UserWithRole[]) => void,
 	setTotalCount: (count: number) => void,
@@ -131,12 +131,12 @@ export interface RunUserDeleteParams {
 	loadUsers: () => Promise<void>;
 }
 
-export type ExecuteUserDeleteOutcome =
+type ExecuteUserDeleteOutcome =
 	| { kind: 'success' }
 	| { kind: 'invoke-error'; message: string }
 	| { kind: 'response-error'; message: string };
 
-export async function executeUserDelete(params: {
+async function executeUserDelete(params: {
 	supabase: SupabaseClient;
 	userId: string;
 	isSiteAdmin: boolean;

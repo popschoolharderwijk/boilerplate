@@ -3,11 +3,6 @@ import type { Student } from '@/types/students';
 export function shouldShowStudentDateOfBirth(dateOfBirth: string | null | undefined): boolean {
 	return Boolean(dateOfBirth);
 }
-
-export function shouldShowStudentPrivilegedSections(canViewFullData: boolean, fullData: Student | null): boolean {
-	return canViewFullData && fullData !== null;
-}
-
 export function shouldShowStudentLimitedAccessNotice(canViewFullData: boolean): boolean {
 	return !canViewFullData;
 }

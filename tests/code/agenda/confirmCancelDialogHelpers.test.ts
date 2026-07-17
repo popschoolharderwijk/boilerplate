@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	buildCancelConfirmPayload,
 	canConfirmCancel,
 	createInitialConfirmCancelState,
 	getCancelStudentLabel,
@@ -37,20 +36,6 @@ describe('confirmCancelDialogHelpers', () => {
 		expect(canConfirmCancel(true, false, ['a'])).toBe(true);
 	});
 
-	it('builds cancel payload for partial group cancel', () => {
-		expect(buildCancelConfirmPayload(true, false, ['a'], 'student')).toEqual({
-			cancellationType: 'student',
-			cancelledParticipantIds: ['a'],
-		});
-	});
-
-	it('builds cancel payload for full group cancel', () => {
-		expect(buildCancelConfirmPayload(true, true, ['a'], 'teacher')).toEqual({
-			cancellationType: 'teacher',
-			cancelledParticipantIds: null,
-		});
-	});
-
 	it('returns student label variants', () => {
 		expect(getCancelStudentLabel(true, false)).toBe('Deelnemer(s) hebben afgezegd');
 		expect(getCancelStudentLabel(false, true)).toBe('Leerling heeft afgezegd');
@@ -61,7 +46,7 @@ describe('confirmCancelDialogHelpers', () => {
 		expect(isConfirmCancelTeacherDisabled(true, true)).toBe(false);
 	});
 
-	it('handles confirm selection', () => {
+	it('handles partial group cancel confirm selection', () => {
 		const confirmed: Array<[string, string[] | null]> = [];
 		handleConfirmCancelSelection(
 			() => undefined,
@@ -74,5 +59,20 @@ describe('confirmCancelDialogHelpers', () => {
 			'student',
 		);
 		expect(confirmed).toEqual([['student', ['student-1']]]);
+	});
+
+	it('handles full group cancel confirm selection', () => {
+		const confirmed: Array<[string, string[] | null]> = [];
+		handleConfirmCancelSelection(
+			() => undefined,
+			(cancellationType, cancelledParticipantIds) => {
+				confirmed.push([cancellationType, cancelledParticipantIds]);
+			},
+			true,
+			true,
+			['student-1'],
+			'teacher',
+		);
+		expect(confirmed).toEqual([['teacher', null]]);
 	});
 });

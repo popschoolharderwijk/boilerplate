@@ -1,8 +1,5 @@
 import { beforeAll, describe, expect, it, mock } from 'bun:test';
-import {
-	handleLessonGroupSlotClickState,
-	isLessonGroupWizardFormComplete,
-} from '../../../src/components/lesson-groups/wizard/lessonGroupWizardActionHelpers';
+import { handleLessonGroupSlotClickState } from '../../../src/components/lesson-groups/wizard/lessonGroupWizardActionHelpers';
 
 const toastCalls: { kind: 'error' | 'success'; message: string; description?: string }[] = [];
 let saveShouldReject = false;
@@ -50,16 +47,6 @@ const completeForm = {
 	selectedRequestIds: [],
 	scheduleInAgenda: true,
 };
-
-describe('isLessonGroupWizardFormComplete', () => {
-	it('returns true when required fields are present', () => {
-		expect(isLessonGroupWizardFormComplete(completeForm)).toBe(true);
-	});
-
-	it('returns false when required fields are missing', () => {
-		expect(isLessonGroupWizardFormComplete({ ...completeForm, slot: null })).toBe(false);
-	});
-});
 
 describe('handleLessonGroupSlotClickState', () => {
 	it('maps slot statuses to click actions', () => {

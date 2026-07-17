@@ -23,17 +23,15 @@ export async function executeProjectDomainFetch(supabase: SupabaseClient): Promi
 	return { kind: 'success', domains: data ?? [] };
 }
 
-export type ProjectDomainSaveOutcome = 'blocked' | 'success' | 'error';
+type ProjectDomainSaveOutcome = 'blocked' | 'success' | 'error';
 
-export interface ExecuteProjectDomainSaveParams {
+interface ExecuteProjectDomainSaveParams {
 	name: string;
 	editing: ProjectDomain | null;
 	supabase: SupabaseClient;
 }
 
-export async function executeProjectDomainSave(
-	params: ExecuteProjectDomainSaveParams,
-): Promise<ProjectDomainSaveOutcome> {
+async function executeProjectDomainSave(params: ExecuteProjectDomainSaveParams): Promise<ProjectDomainSaveOutcome> {
 	if (shouldBlockProjectDomainSave(params.name)) {
 		return 'blocked';
 	}
@@ -59,12 +57,12 @@ function showProjectDomainNotDeletedToast(outcome: ProjectDomainDeleteOutcome): 
 	});
 }
 
-export interface ExecuteProjectDomainDeleteParams {
+interface ExecuteProjectDomainDeleteParams {
 	deleteTarget: ProjectDomain;
 	supabase: SupabaseClient;
 }
 
-export async function executeProjectDomainDelete(
+async function executeProjectDomainDelete(
 	params: ExecuteProjectDomainDeleteParams,
 ): Promise<ProjectDomainDeleteOutcome> {
 	const { data, error } = await params.supabase

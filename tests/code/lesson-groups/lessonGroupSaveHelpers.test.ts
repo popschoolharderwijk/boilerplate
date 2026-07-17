@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import { computeGroupMemberSyncPlan } from '../../../src/components/lesson-groups/wizard/lessonGroupMemberSyncPlan';
 import {
 	buildLessonGroupDbPayload,
-	computeGroupMemberSyncPlan,
-	computeLessonGroupEndTime,
-	computeLessonGroupFirstOccurrenceDate,
 	normalizeLessonGroupStartTime,
+	scheduleLessonGroupInAgenda,
 } from '../../../src/components/lesson-groups/wizard/lessonGroupSaveHelpers';
 
 describe('normalizeLessonGroupStartTime', () => {
@@ -17,15 +16,61 @@ describe('normalizeLessonGroupStartTime', () => {
 	});
 });
 
-describe('computeLessonGroupEndTime', () => {
-	it('adds duration minutes to start time', () => {
-		expect(computeLessonGroupEndTime('14:30:00', 45)).toBe('15:15:00');
-	});
-});
+describe('scheduleLessonGroupInAgenda', () => {
+	it('computes first occurrence date and end time from start time and duration', async () => {
+		let insertedPayload!: Record<string, unknown>;
+		const supabase = {
+			from: () => ({
+				insert: async (payload: Record<string, unknown>) => {
+					insertedPayload = payload;
+					return { error: null };
+				},
+			}),
+		} as never;
 
-describe('computeLessonGroupFirstOccurrenceDate', () => {
-	it('returns the first matching weekday on or after start date', () => {
-		expect(computeLessonGroupFirstOccurrenceDate('2026-09-01', 1)).toBe('2026-09-07');
+		await scheduleLessonGroupInAgenda(
+			supabase,
+			'group-1',
+			{
+				name: 'Groep A',
+				lessonTypeId: 'lt-1',
+				teacherUserId: 'teacher-1',
+				durationMinutes: 45,
+				frequency: 'weekly',
+				pricePerLesson: 30,
+				startDate: '2026-09-01',
+				endDate: '2026-12-31',
+				slot: null,
+				memberIds: [],
+				selectedRequestIds: [],
+				scheduleInAgenda: true,
+			},
+			{
+				day_of_week: 1,
+				start_time: '14:30:00',
+				end_time: '18:00:00',
+				status: 'free',
+				totalOccurrences: 10,
+				occupiedOccurrences: 0,
+			},
+			'14:30:00',
+			'teacher-1',
+		);
+
+		expect(insertedPayload).toEqual({
+			source_type: 'lesson_group',
+			source_id: 'group-1',
+			owner_user_id: 'teacher-1',
+			title: 'Groep A',
+			start_date: '2026-09-07',
+			start_time: '14:30:00',
+			end_date: '2026-09-07',
+			end_time: '15:15:00',
+			is_all_day: false,
+			recurring: true,
+			recurring_frequency: 'weekly',
+			recurring_end_date: '2026-12-31',
+		});
 	});
 });
 

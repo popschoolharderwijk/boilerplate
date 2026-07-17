@@ -1,9 +1,9 @@
-export function extractInvoicePdfSignedUrl(data: unknown): string | null {
+function extractInvoicePdfSignedUrl(data: unknown): string | null {
 	const url = (data as { signed_url?: string } | null)?.signed_url;
 	return url ?? null;
 }
 
-export function resolveMissingInvoicePdfUrlError(): string {
+function resolveMissingInvoicePdfUrlError(): string {
 	return 'Geen PDF-URL ontvangen.';
 }
 

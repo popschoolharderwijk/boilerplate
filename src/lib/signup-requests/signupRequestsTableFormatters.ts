@@ -1,6 +1,6 @@
 import type { SignupRequestRowBase } from '@/lib/signup-requests/signupRequestsPageHelpers';
 
-export type SignupLessonTypeSecondary = { kind: 'group'; groupName: string } | { kind: 'waitlist' } | null;
+type SignupLessonTypeSecondary = { kind: 'group'; groupName: string } | { kind: 'waitlist' } | null;
 
 export interface SignupLessonTypeCellContent {
 	lessonTypeName: string | null;

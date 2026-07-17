@@ -1,22 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	downloadInvoicePdf,
-	extractInvoicePdfSignedUrl,
-	formatInvoiceStudentName,
-	resolveMissingInvoicePdfUrlError,
-} from '../../../src/lib/invoices/invoicePdfDownloadHelpers';
-
-describe('extractInvoicePdfSignedUrl', () => {
-	it('returns signed url from invoke response', () => {
-		expect(extractInvoicePdfSignedUrl({ signed_url: 'https://storage.example/pdf' })).toBe(
-			'https://storage.example/pdf',
-		);
-	});
-
-	it('returns null when signed url is missing', () => {
-		expect(extractInvoicePdfSignedUrl({})).toBeNull();
-	});
-});
+import { downloadInvoicePdf, formatInvoiceStudentName } from '../../../src/lib/invoices/invoicePdfDownloadHelpers';
 
 describe('downloadInvoicePdf', () => {
 	it('returns url when invoke succeeds', async () => {
@@ -37,7 +20,7 @@ describe('downloadInvoicePdf', () => {
 
 	it('returns missing url error when signed url is absent', async () => {
 		const result = await downloadInvoicePdf(async () => ({ data: {}, error: null }), 'invoice-1');
-		expect(result).toEqual({ ok: false, message: resolveMissingInvoicePdfUrlError() });
+		expect(result).toEqual({ ok: false, message: 'Geen PDF-URL ontvangen.' });
 	});
 });
 

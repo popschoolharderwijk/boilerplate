@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	applyPublicSignupSubmitOutcome,
-	buildSignupRequestBody,
 	executePublicSignupSubmit,
 	isStep2NextDisabled,
-	parseSignupResponseError,
-	resolveLessonTypeOptionId,
-	resolvePublicSignupSubmitPayload,
-	resolveSignupGroupId,
 	validateSepaFields,
 } from '../../../src/lib/signup/publicSignupHelpers';
 
@@ -87,119 +82,6 @@ describe('validateSepaFields', () => {
 	});
 });
 
-describe('resolveLessonTypeOptionId', () => {
-	const options = [
-		{
-			id: 'opt-1',
-			duration_minutes: 45,
-			frequency: 'weekly' as const,
-			price_per_lesson: 25,
-		},
-	];
-
-	it('returns matching option id', () => {
-		expect(
-			resolveLessonTypeOptionId(options, {
-				duration_minutes: 45,
-				frequency: 'weekly',
-				price_per_lesson: 25,
-			}),
-		).toBe('opt-1');
-	});
-
-	it('returns null when no option matches', () => {
-		expect(
-			resolveLessonTypeOptionId(options, {
-				duration_minutes: 60,
-				frequency: 'weekly',
-				price_per_lesson: 25,
-			}),
-		).toBeNull();
-	});
-
-	it('returns null when selected option is null', () => {
-		expect(resolveLessonTypeOptionId(options, null)).toBeNull();
-	});
-});
-
-describe('resolveSignupGroupId', () => {
-	it('returns null for individual lesson types', () => {
-		expect(resolveSignupGroupId({ id: 'lt-1', is_group_lesson: false }, 'group-1')).toBeNull();
-	});
-
-	it('returns null for waitlist selection', () => {
-		expect(resolveSignupGroupId({ id: 'lt-1', is_group_lesson: true }, 'waitlist')).toBeNull();
-	});
-
-	it('returns group id for group lesson selection', () => {
-		expect(resolveSignupGroupId({ id: 'lt-1', is_group_lesson: true }, 'group-1')).toBe('group-1');
-	});
-});
-
-describe('buildSignupRequestBody', () => {
-	it('builds request body without SEPA fields', () => {
-		expect(
-			buildSignupRequestBody(
-				{ id: 'lt-1', is_group_lesson: false },
-				baseForm,
-				{ enabled: false, iban: '', holder: '', bic: '', consent: false },
-				null,
-				'opt-1',
-			),
-		).toEqual({
-			lesson_type_id: 'lt-1',
-			lesson_group_id: null,
-			lesson_type_option_id: 'opt-1',
-			...baseForm,
-			sepa_iban: null,
-			sepa_account_holder: null,
-			sepa_bic: null,
-		});
-	});
-
-	it('normalizes SEPA fields when enabled', () => {
-		expect(
-			buildSignupRequestBody(
-				{ id: 'lt-1', is_group_lesson: true },
-				baseForm,
-				{
-					enabled: true,
-					iban: 'nl91 abna 0417 1643 00',
-					holder: ' Anna Bakker ',
-					bic: ' abnanl2a ',
-					consent: true,
-				},
-				'group-1',
-				null,
-			),
-		).toEqual({
-			lesson_type_id: 'lt-1',
-			lesson_group_id: 'group-1',
-			lesson_type_option_id: null,
-			...baseForm,
-			sepa_iban: 'NL91ABNA0417164300',
-			sepa_account_holder: 'Anna Bakker',
-			sepa_bic: 'ABNANL2A',
-		});
-	});
-});
-
-describe('parseSignupResponseError', () => {
-	it('returns error message from response body', () => {
-		expect(parseSignupResponseError({ error: 'E-mailadres is al in gebruik' })).toBe(
-			'E-mailadres is al in gebruik',
-		);
-	});
-
-	it('returns null when response has no error', () => {
-		expect(parseSignupResponseError({ success: true })).toBeNull();
-	});
-
-	it('returns null for non-object responses', () => {
-		expect(parseSignupResponseError(null)).toBeNull();
-	});
-});
-
 describe('isStep2NextDisabled', () => {
 	it('requires group selection for group lessons', () => {
 		expect(isStep2NextDisabled(true, null, 0, false)).toBe(true);
@@ -213,29 +95,6 @@ describe('isStep2NextDisabled', () => {
 
 	it('allows next when no options exist for individual lessons', () => {
 		expect(isStep2NextDisabled(false, null, 0, false)).toBe(false);
-	});
-});
-
-describe('resolvePublicSignupSubmitPayload', () => {
-	it('builds payload for group lessons', () => {
-		expect(
-			resolvePublicSignupSubmitPayload({
-				selectedType: { id: 'lt-1', is_group_lesson: true },
-				selectedGroupId: 'group-1',
-				selectedOption: null,
-				lessonTypeOptions: [],
-				form: baseForm,
-				sepa: { enabled: false, iban: '', holder: '', bic: '', consent: false },
-			}),
-		).toEqual({
-			lesson_type_id: 'lt-1',
-			lesson_group_id: 'group-1',
-			lesson_type_option_id: null,
-			...baseForm,
-			sepa_iban: null,
-			sepa_account_holder: null,
-			sepa_bic: null,
-		});
 	});
 });
 
@@ -280,6 +139,79 @@ describe('executePublicSignupSubmit', () => {
 			getInvokeErrorMessage: async () => 'invoke failed',
 		});
 		expect(outcome).toEqual({ kind: 'response-error', message: 'duplicate email' });
+	});
+
+	it('builds group lesson payload with normalized SEPA fields', async () => {
+		const invokedBodies: unknown[] = [];
+		await executePublicSignupSubmit({
+			selectedType: { id: 'lt-1', is_group_lesson: true },
+			selectedGroupId: 'group-1',
+			selectedOption: null,
+			lessonTypeOptions: [],
+			form: baseForm,
+			sepa: {
+				enabled: true,
+				iban: 'nl91 abna 0417 1643 00',
+				holder: ' Anna Bakker ',
+				bic: ' abnanl2a ',
+				consent: true,
+			},
+			invoke: async (body) => {
+				invokedBodies.push(body);
+				return { data: { success: true }, error: null };
+			},
+			getInvokeErrorMessage: async () => 'invoke failed',
+		});
+		expect(invokedBodies).toEqual([
+			{
+				lesson_type_id: 'lt-1',
+				lesson_group_id: 'group-1',
+				lesson_type_option_id: null,
+				...baseForm,
+				sepa_iban: 'NL91ABNA0417164300',
+				sepa_account_holder: 'Anna Bakker',
+				sepa_bic: 'ABNANL2A',
+			},
+		]);
+	});
+
+	it('resolves lesson type option id for individual lessons', async () => {
+		const invokedBodies: unknown[] = [];
+		await executePublicSignupSubmit({
+			selectedType: { id: 'lt-1', is_group_lesson: false },
+			selectedGroupId: null,
+			selectedOption: {
+				duration_minutes: 45,
+				frequency: 'weekly',
+				price_per_lesson: 25,
+			},
+			lessonTypeOptions: [
+				{
+					id: 'opt-1',
+					duration_minutes: 45,
+					frequency: 'weekly',
+					price_per_lesson: 25,
+				},
+			],
+			form: baseForm,
+			sepa: { enabled: false, iban: '', holder: '', bic: '', consent: false },
+			invoke: async (body) => {
+				invokedBodies.push(body);
+				return { data: { success: true }, error: null };
+			},
+			getInvokeErrorMessage: async () => 'invoke failed',
+		});
+		expect(invokedBodies).toEqual([
+			{
+				lesson_type_id: 'lt-1',
+				lesson_group_id: null,
+				lesson_type_option_id: 'opt-1',
+				...baseForm,
+				sepa_iban: null,
+				sepa_account_holder: null,
+				sepa_bic: null,
+			},
+		]);
 	});
 });
 

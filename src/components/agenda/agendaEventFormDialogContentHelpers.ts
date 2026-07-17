@@ -14,15 +14,15 @@ export function shouldShowAgendaProjectButton(isPrivileged: boolean): boolean {
 	return isPrivileged;
 }
 
-export function shouldShowAgendaDeviationBanner(canRevert: boolean, hasTimeOrDateChange: boolean | undefined): boolean {
+function shouldShowAgendaDeviationBanner(canRevert: boolean, hasTimeOrDateChange: boolean | undefined): boolean {
 	return canRevert && Boolean(hasTimeOrDateChange);
 }
 
-export function shouldShowAgendaCancellationBanner(isCancelledEvent: boolean, cancelType: unknown): boolean {
+function shouldShowAgendaCancellationBanner(isCancelledEvent: boolean, cancelType: unknown): boolean {
 	return isCancelledEvent && cancelType != null;
 }
 
-export function shouldRenderAgendaDeviationBanner(
+function shouldRenderAgendaDeviationBanner(
 	canRevert: boolean,
 	hasTimeOrDateChange: boolean | undefined,
 	deviationInfo: unknown,
@@ -30,7 +30,7 @@ export function shouldRenderAgendaDeviationBanner(
 	return shouldShowAgendaDeviationBanner(canRevert, hasTimeOrDateChange) && deviationInfo != null;
 }
 
-export function shouldRenderAgendaCancellationBanner(isCancelledEvent: boolean, cancelType: unknown): boolean {
+function shouldRenderAgendaCancellationBanner(isCancelledEvent: boolean, cancelType: unknown): boolean {
 	return shouldShowAgendaCancellationBanner(isCancelledEvent, cancelType) && cancelType != null;
 }
 

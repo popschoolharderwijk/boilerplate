@@ -5,7 +5,6 @@ import {
 	resolveAuthUserCreateResult,
 	resolveCreateStudentUserIdAfterAuth,
 	resolveCreateStudentUserIdFromSelection,
-	resolveExistingUserIdForCreate,
 	resolveStudentInsertResult,
 } from '../../../src/components/students/studentFormPersistenceHelpers';
 import { emptyStudentForm } from '../../../src/components/students/studentFormTypes';
@@ -21,15 +20,9 @@ describe('resolveCreateStudentUserIdFromSelection', () => {
 	it('returns success without user id for new-user mode', () => {
 		expect(resolveCreateStudentUserIdFromSelection('new-user', null)).toEqual({ ok: true });
 	});
-});
 
-describe('resolveExistingUserIdForCreate', () => {
-	it('returns selected user id for existing-user mode', () => {
-		expect(resolveExistingUserIdForCreate('existing-user', 'user-1')).toBe('user-1');
-	});
-
-	it('returns null for new-user mode', () => {
-		expect(resolveExistingUserIdForCreate('new-user', 'user-1')).toBeNull();
+	it('returns success without user id when existing-user mode has no selection', () => {
+		expect(resolveCreateStudentUserIdFromSelection('existing-user', null)).toEqual({ ok: true });
 	});
 });
 

@@ -6,17 +6,15 @@ export function resolveAccountingReportInvoiceCount(invoiceCount: number | undef
 	return invoiceCount ?? 0;
 }
 
-export function shouldRenderAccountingSummaryCards(summary: unknown): boolean {
+function shouldRenderAccountingSummaryCards(summary: unknown): boolean {
 	return summary != null;
 }
 
-export function shouldShowAccountingCostCenterTable(byCostCenterLength: number | undefined): boolean {
+function shouldShowAccountingCostCenterTable(byCostCenterLength: number | undefined): boolean {
 	return (byCostCenterLength ?? 0) > 0;
 }
 
-export function shouldRenderAccountingCostCenterTable(
-	report: { by_cost_center: unknown[] } | null | undefined,
-): boolean {
+function shouldRenderAccountingCostCenterTable(report: { by_cost_center: unknown[] } | null | undefined): boolean {
 	return report != null && shouldShowAccountingCostCenterTable(report.by_cost_center.length);
 }
 

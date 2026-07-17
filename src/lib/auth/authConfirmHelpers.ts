@@ -1,11 +1,11 @@
-export const EMAIL_OTP_TYPES = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email', 'email_change']);
+const EMAIL_OTP_TYPES = new Set(['signup', 'invite', 'magiclink', 'recovery', 'email', 'email_change']);
 
-export function getSafeNext(value: string | null): string {
+function getSafeNext(value: string | null): string {
 	if (!value?.startsWith('/') || value.startsWith('//')) return '/';
 	return value;
 }
 
-export function isValidEmailOtpType(type: string): boolean {
+function isValidEmailOtpType(type: string): boolean {
 	return EMAIL_OTP_TYPES.has(type);
 }
 

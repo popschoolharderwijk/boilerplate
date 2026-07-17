@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	applyUserFormDialogSubmitSuccess,
 	buildUserFormStateForOpen,
 	handleUserFormDialogCancel,
 	handleUserFormDialogOpenChange,
-	resolveUserFormEditContext,
+	runUserFormDialogSubmit,
 } from '../../../src/lib/users/userFormDialogHelpers';
 import type { UserFormState } from '../../../src/lib/users/userFormHelpers';
 
@@ -121,30 +120,30 @@ describe('handleUserFormDialogOpenChange', () => {
 	});
 });
 
-describe('resolveUserFormEditContext', () => {
-	it('returns null for create mode', () => {
-		expect(resolveUserFormEditContext(false, undefined)).toBeNull();
-	});
-
-	it('returns null when edit mode has no user', () => {
-		expect(resolveUserFormEditContext(true, undefined)).toBeNull();
-	});
-
-	it('returns the edit context for edit mode', () => {
-		expect(
-			resolveUserFormEditContext(true, {
-				user_id: 'user-1',
-				role: 'admin',
-			}),
-		).toEqual({
-			user_id: 'user-1',
-			role: 'admin',
+describe('runUserFormDialogSubmit', () => {
+	it('returns early when submit fails', async () => {
+		let closed = false;
+		let successCalled = false;
+		await runUserFormDialogSubmit({
+			form: emptyForm,
+			isSiteAdmin: false,
+			isEditMode: false,
+			editUser: undefined,
+			setForm: () => {},
+			emptyForm,
+			onOpenChange: (open) => {
+				closed = open;
+			},
+			onSuccess: () => {
+				successCalled = true;
+			},
+			submitUserForm: async () => ({ ok: false, title: 'Opslaan mislukt' }),
 		});
+		expect(closed).toBe(false);
+		expect(successCalled).toBe(false);
 	});
-});
 
-describe('applyUserFormDialogSubmitSuccess', () => {
-	it('closes the dialog and passes the created user on create', () => {
+	it('closes dialog and passes created user on create success', async () => {
 		let nextForm: UserFormState = {
 			email: 'jan@example.com',
 			first_name: 'Jan',
@@ -152,10 +151,24 @@ describe('applyUserFormDialogSubmitSuccess', () => {
 			phone_number: '',
 			role: null,
 		};
-		let closed = false;
+		let closed = true;
 		let createdUserId: string | undefined;
-		applyUserFormDialogSubmitSuccess({
-			result: {
+		await runUserFormDialogSubmit({
+			form: nextForm,
+			isSiteAdmin: false,
+			isEditMode: false,
+			editUser: undefined,
+			setForm: (form) => {
+				nextForm = form;
+			},
+			emptyForm,
+			onOpenChange: (open) => {
+				closed = open;
+			},
+			onSuccess: (createdUser) => {
+				createdUserId = createdUser?.user_id;
+			},
+			submitUserForm: async () => ({
 				ok: true,
 				mode: 'create',
 				createdUser: {
@@ -166,31 +179,21 @@ describe('applyUserFormDialogSubmitSuccess', () => {
 					phone_number: null,
 					avatar_url: null,
 				},
-			},
-			setForm: (form) => {
-				nextForm = form;
-			},
-			emptyForm,
-			onOpenChange: (open) => {
-				closed = !open;
-			},
-			onSuccess: (createdUser) => {
-				createdUserId = createdUser?.user_id;
-			},
+			}),
 		});
 		expect(nextForm).toEqual(emptyForm);
-		expect(closed).toBe(true);
+		expect(closed).toBe(false);
 		expect(createdUserId).toBe('user-1');
 	});
 
-	it('closes the dialog without a created user on edit', () => {
+	it('closes dialog without created user on edit success', async () => {
 		let successCalled = false;
 		let createdUserId: string | undefined = 'pending';
-		applyUserFormDialogSubmitSuccess({
-			result: {
-				ok: true,
-				mode: 'edit',
-			},
+		await runUserFormDialogSubmit({
+			form: emptyForm,
+			isSiteAdmin: false,
+			isEditMode: true,
+			editUser: { user_id: 'user-1', role: 'admin' },
 			setForm: () => {},
 			emptyForm,
 			onOpenChange: () => {},
@@ -198,6 +201,7 @@ describe('applyUserFormDialogSubmitSuccess', () => {
 				successCalled = true;
 				createdUserId = createdUser?.user_id;
 			},
+			submitUserForm: async () => ({ ok: true, mode: 'edit' }),
 		});
 		expect(successCalled).toBe(true);
 		expect(createdUserId).toBeUndefined();

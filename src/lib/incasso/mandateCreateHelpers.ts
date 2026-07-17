@@ -12,7 +12,7 @@ export interface MandateFormInput {
 
 export type MandateFormValidationError = 'missing-fields' | 'invalid-iban';
 
-export function validateMandateFormInput(input: MandateFormInput): {
+function validateMandateFormInput(input: MandateFormInput): {
 	error: MandateFormValidationError | null;
 	normalizedIban: string;
 } {
@@ -26,7 +26,7 @@ export function validateMandateFormInput(input: MandateFormInput): {
 	return { error: null, normalizedIban };
 }
 
-export function buildMandateInsertPayload(input: MandateFormInput, mandateReference: string, normalizedIban: string) {
+function buildMandateInsertPayload(input: MandateFormInput, mandateReference: string, normalizedIban: string) {
 	return {
 		student_user_id: input.studentId as string,
 		mandate_reference: mandateReference,
@@ -61,7 +61,7 @@ export type MandateCreateResult =
 	| { ok: false; kind: 'reference'; message: string }
 	| { ok: false; kind: 'insert'; message: string };
 
-export async function fetchNextMandateReference(
+async function fetchNextMandateReference(
 	supabase: SupabaseClient,
 ): Promise<{ ok: true; reference: string } | { ok: false; message: string }> {
 	const { data, error } = await supabase.rpc('next_mandate_reference');
@@ -71,7 +71,7 @@ export async function fetchNextMandateReference(
 	return { ok: true, reference: data as string };
 }
 
-export async function insertSepaMandate(
+async function insertSepaMandate(
 	supabase: SupabaseClient,
 	payload: ReturnType<typeof buildMandateInsertPayload>,
 ): Promise<{ ok: true } | { ok: false; message: string }> {

@@ -36,16 +36,16 @@ export async function executeProjectLabelFetch(supabase: SupabaseClient): Promis
 	};
 }
 
-export type ProjectLabelSaveOutcome = 'blocked' | 'success' | 'error';
+type ProjectLabelSaveOutcome = 'blocked' | 'success' | 'error';
 
-export interface ExecuteProjectLabelSaveParams {
+interface ExecuteProjectLabelSaveParams {
 	name: string;
 	domainId: string;
 	editing: LabelWithDomain | null;
 	supabase: SupabaseClient;
 }
 
-export async function executeProjectLabelSave(params: ExecuteProjectLabelSaveParams): Promise<ProjectLabelSaveOutcome> {
+async function executeProjectLabelSave(params: ExecuteProjectLabelSaveParams): Promise<ProjectLabelSaveOutcome> {
 	if (shouldBlockProjectLabelSave(params.name, params.domainId)) {
 		return 'blocked';
 	}
@@ -89,14 +89,12 @@ function showProjectLabelDeleteErrorToast(outcome: ProjectLabelDeleteOutcome): v
 	});
 }
 
-export interface ExecuteProjectLabelDeleteParams {
+interface ExecuteProjectLabelDeleteParams {
 	deleteTarget: LabelWithDomain;
 	supabase: SupabaseClient;
 }
 
-export async function executeProjectLabelDelete(
-	params: ExecuteProjectLabelDeleteParams,
-): Promise<ProjectLabelDeleteOutcome> {
+async function executeProjectLabelDelete(params: ExecuteProjectLabelDeleteParams): Promise<ProjectLabelDeleteOutcome> {
 	const { data: linkedProjects } = await params.supabase
 		.from('projects')
 		.select('id')

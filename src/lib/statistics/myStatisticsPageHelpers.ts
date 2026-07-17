@@ -5,13 +5,13 @@ export function shouldLoadMyStatistics(authLoading: boolean, isTeacher: boolean)
 	return !authLoading && isTeacher;
 }
 
-export function shouldRunStatisticsQuery(isTeacher: boolean, teacherUserId: string | null | undefined): boolean {
+function shouldRunStatisticsQuery(isTeacher: boolean, teacherUserId: string | null | undefined): boolean {
 	return isTeacher && Boolean(teacherUserId);
 }
 
 export type MyStatisticsLoadOutcome = { kind: 'error' } | { kind: 'success'; stats: TeacherStatistics };
 
-export function resolveMyStatisticsLoadOutcome(
+function resolveMyStatisticsLoadOutcome(
 	agreementsError: { message?: string } | null,
 	agreements: TeacherStatisticsAgreement[] | null,
 ): MyStatisticsLoadOutcome {

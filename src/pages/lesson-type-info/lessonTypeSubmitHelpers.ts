@@ -10,7 +10,7 @@ import { optionSort } from '@/pages/lesson-type-info/utils';
 import { buildLessonTypePayload } from '@/pages/lesson-type-info/validateLessonTypeForm';
 import type { LessonTypeFormState, LessonTypeOptionRow, LessonTypeRow } from '@/types/lesson-agreements';
 
-export async function syncLessonTypeOptions(lessonTypeId: string, optionsForm: OptionRowWithKey[]): Promise<void> {
+async function syncLessonTypeOptions(lessonTypeId: string, optionsForm: OptionRowWithKey[]): Promise<void> {
 	const sorted = [...optionsForm].sort(optionSort);
 	for (const option of sorted) {
 		const payload = buildLessonTypeOptionRowPayload(option);
@@ -24,7 +24,7 @@ export async function syncLessonTypeOptions(lessonTypeId: string, optionsForm: O
 	}
 }
 
-export async function deleteRemovedLessonTypeOptions(
+async function deleteRemovedLessonTypeOptions(
 	options: LessonTypeOptionRow[],
 	optionsForm: OptionRowWithKey[],
 ): Promise<void> {
@@ -57,7 +57,7 @@ async function insertNewLessonTypeRecord(
 	return { ok: true, lessonTypeId: inserted?.id ?? '' };
 }
 
-export async function saveLessonTypeRecord(
+async function saveLessonTypeRecord(
 	isEditMode: boolean,
 	lessonType: LessonTypeRow | null,
 	form: LessonTypeFormState,

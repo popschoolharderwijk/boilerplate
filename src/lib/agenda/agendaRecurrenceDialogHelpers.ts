@@ -17,12 +17,12 @@ interface RecurrenceSelectedEvent {
 
 export type RecurrenceScopeChoiceAction = 'change' | 'cancel' | null;
 
-export type RecurrenceScopeChoiceResult =
+type RecurrenceScopeChoiceResult =
 	| { kind: 'apply-drop'; scope: RecurrenceScope }
 	| { kind: 'open-cancel-confirm'; scope: RecurrenceScope }
 	| { kind: 'noop' };
 
-export function resolveRecurrenceScopeChoice(params: {
+function resolveRecurrenceScopeChoice(params: {
 	action: RecurrenceScopeChoiceAction;
 	scope: RecurrenceScope;
 	hasPendingDrop: boolean;
@@ -36,7 +36,7 @@ export function resolveRecurrenceScopeChoice(params: {
 	return { kind: 'noop' };
 }
 
-export function shouldClearPendingDropOnRecurrenceClose(open: boolean): boolean {
+function shouldClearPendingDropOnRecurrenceClose(open: boolean): boolean {
 	return !open;
 }
 

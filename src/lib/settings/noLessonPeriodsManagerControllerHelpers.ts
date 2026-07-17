@@ -17,15 +17,13 @@ export interface NoLessonPeriodListItem {
 	description: string | null;
 }
 
-export type NoLessonPeriodSaveOperation = NoLessonPeriodSaveMode;
+type NoLessonPeriodSaveOperation = NoLessonPeriodSaveMode;
 
-export function resolveNoLessonPeriodSaveOperation(
-	editing: NoLessonPeriodListItem | null,
-): NoLessonPeriodSaveOperation {
+function resolveNoLessonPeriodSaveOperation(editing: NoLessonPeriodListItem | null): NoLessonPeriodSaveOperation {
 	return editing ? 'update' : 'create';
 }
 
-export function shouldBlockNoLessonPeriodSave(isFormValid: boolean): boolean {
+function shouldBlockNoLessonPeriodSave(isFormValid: boolean): boolean {
 	return !isFormValid;
 }
 

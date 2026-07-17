@@ -1,8 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import {
 	applyTeacherAvailabilityLoadOutcome,
-	buildTeacherAvailabilityOverviewTeachers,
 	getTeacherAvailabilityOverviewName,
+	loadTeacherAvailabilityOverview,
 } from '../../../src/lib/teachers/loadTeacherAvailabilityOverview';
 
 type QueryResult = { data: unknown; error: { message: string } | null };
@@ -25,31 +25,6 @@ mock.module('../../../src/integrations/supabase/client', () => ({
 		from: (table: string) => thenableResult(table),
 	},
 }));
-
-describe('buildTeacherAvailabilityOverviewTeachers', () => {
-	it('combines teacher rows with profile data', () => {
-		expect(
-			buildTeacherAvailabilityOverviewTeachers(
-				[{ user_id: 'teacher-1' }],
-				[{ user_id: 'teacher-1', first_name: 'Piet', last_name: 'Docent', email: 'piet@example.com' }],
-			),
-		).toEqual([
-			{
-				user_id: 'teacher-1',
-				profile: { first_name: 'Piet', last_name: 'Docent', email: 'piet@example.com' },
-			},
-		]);
-	});
-
-	it('uses empty profile defaults when a profile is missing', () => {
-		expect(buildTeacherAvailabilityOverviewTeachers([{ user_id: 'teacher-1' }], [])).toEqual([
-			{
-				user_id: 'teacher-1',
-				profile: { first_name: null, last_name: null, email: '' },
-			},
-		]);
-	});
-});
 
 describe('getTeacherAvailabilityOverviewName', () => {
 	it('returns the full name when both names are present', () => {
@@ -90,12 +65,8 @@ describe('applyTeacherAvailabilityLoadOutcome', () => {
 });
 
 describe('loadTeacherAvailabilityOverview', () => {
-	let loadTeacherAvailabilityOverview: typeof import('../../../src/lib/teachers/loadTeacherAvailabilityOverview').loadTeacherAvailabilityOverview;
-
 	beforeAll(async () => {
-		({ loadTeacherAvailabilityOverview } = await import(
-			'../../../src/lib/teachers/loadTeacherAvailabilityOverview'
-		));
+		await import('../../../src/lib/teachers/loadTeacherAvailabilityOverview');
 	});
 
 	beforeEach(() => {
@@ -156,6 +127,26 @@ describe('loadTeacherAvailabilityOverview', () => {
 						updated_by: null,
 					},
 				],
+			},
+		});
+	});
+
+	it('uses empty profile defaults when a profile is missing', async () => {
+		tableResults.teachers = { data: [{ user_id: 'teacher-1' }], error: null };
+		tableResults.profiles = { data: [], error: null };
+		tableResults.teacher_availability = { data: [], error: null };
+
+		const outcome = await loadTeacherAvailabilityOverview();
+		expect(outcome).toEqual({
+			kind: 'success',
+			data: {
+				teachers: [
+					{
+						user_id: 'teacher-1',
+						profile: { first_name: null, last_name: null, email: '' },
+					},
+				],
+				availability: [],
 			},
 		});
 	});

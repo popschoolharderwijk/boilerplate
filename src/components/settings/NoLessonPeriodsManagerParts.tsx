@@ -11,14 +11,7 @@ import {
 	resolveNoLessonPeriodEditorDialogTitle,
 	shouldShowNoLessonPeriodEndDateError,
 } from '@/lib/settings/noLessonPeriodEditorHelpers';
-
-export interface NoLessonPeriodListItem {
-	id: string;
-	name: string;
-	start_date: string;
-	end_date: string;
-	description: string | null;
-}
+import type { NoLessonPeriodListItem } from '@/lib/settings/noLessonPeriodsManagerControllerHelpers';
 
 interface NoLessonPeriodFormState {
 	name: string;

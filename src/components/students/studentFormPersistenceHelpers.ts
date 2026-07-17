@@ -4,7 +4,7 @@ export type StudentSubmitError = { ok: false; title: string; description?: strin
 export type StudentSubmitSuccess = { ok: true; userId?: string };
 export type StudentSubmitResult = StudentSubmitError | StudentSubmitSuccess;
 
-export function resolveExistingUserIdForCreate(mode: StudentFormMode, selectedUserId: string | null): string | null {
+function resolveExistingUserIdForCreate(mode: StudentFormMode, selectedUserId: string | null): string | null {
 	if (mode === 'existing-user' && selectedUserId) return selectedUserId;
 	return null;
 }

@@ -1,5 +1,5 @@
+import { applyGroupMemberSync } from '@/components/lesson-groups/wizard/lessonGroupMemberSyncHelpers';
 import {
-	applyGroupMemberSync,
 	approveSelectedSignupRequests,
 	buildLessonGroupDbPayload,
 	normalizeLessonGroupStartTime,

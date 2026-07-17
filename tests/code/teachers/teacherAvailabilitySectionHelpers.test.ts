@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	availabilityBlockDurationMinutes,
 	buildAvailabilityBlocks,
 	buildAvailabilitySlotFormFromClick,
 	findAvailabilityBlockCoveringTime,
@@ -10,7 +9,6 @@ import {
 	getAvailabilityDialogDescriptionText,
 	getAvailabilityDialogTitle,
 	getAvailabilityEndTimeOptions,
-	getNextAvailabilityTimeSlot,
 	getTeacherAvailabilityCardDescription,
 	isAvailabilityTimeRangeValid,
 	shouldShowAvailabilityBlockTimes,
@@ -74,16 +72,13 @@ describe('getAvailabilityBlocksForDay', () => {
 	});
 });
 
-describe('getNextAvailabilityTimeSlot', () => {
-	it('returns the slot two steps ahead', () => {
-		const slots = ['08:00', '08:30', '09:00', '09:30'];
-		expect(getNextAvailabilityTimeSlot('08:00', 2, slots)).toBe('09:00');
-	});
-});
-
-describe('availabilityBlockDurationMinutes', () => {
-	it('returns the duration in minutes', () => {
-		expect(availabilityBlockDurationMinutes('09:00', '09:30')).toBe(30);
+describe('buildAvailabilitySlotFormFromClick', () => {
+	it('builds a default one hour slot from a clicked time', () => {
+		const slots = ['09:00', '09:30', '10:00', '10:30', '11:00'];
+		expect(buildAvailabilitySlotFormFromClick('09:00', slots)).toEqual({
+			start_time: '09:00',
+			end_time: '10:00',
+		});
 	});
 });
 
@@ -123,16 +118,6 @@ describe('findAvailabilityBlockCoveringTime', () => {
 			},
 		]);
 		expect(findAvailabilityBlockCoveringTime(blocks, '09:00:00')?.id).toBe('slot-1');
-	});
-});
-
-describe('buildAvailabilitySlotFormFromClick', () => {
-	it('builds a default one hour slot from a clicked time', () => {
-		const slots = ['09:00', '09:30', '10:00', '10:30', '11:00'];
-		expect(buildAvailabilitySlotFormFromClick('09:00', slots)).toEqual({
-			start_time: '09:00',
-			end_time: '10:00',
-		});
 	});
 });
 

@@ -15,7 +15,7 @@ export interface TeacherOptFields {
 	avatarUrl: string | null;
 }
 
-export function buildTeacherOpt(userId: string, profile: TeacherProfileFields | undefined): TeacherOptFields {
+function buildTeacherOpt(userId: string, profile: TeacherProfileFields | undefined): TeacherOptFields {
 	return {
 		id: userId,
 		userId,
@@ -38,7 +38,7 @@ export function buildTeacherOptsFromActives(
 	return teachers;
 }
 
-export function isBookingInDateRange(
+function isBookingInDateRange(
 	row: { start_date: string; end_date: string | null },
 	startDate: string,
 	endDate: string,

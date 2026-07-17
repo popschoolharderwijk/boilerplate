@@ -58,7 +58,7 @@ async function runTeacherFormEdit(teacher: Teacher, form: TeacherFormState): Pro
 	return { ok: true };
 }
 
-export function validateTeacherFormSubmit(isEditMode: boolean, selectedUserId: string | null): boolean {
+function validateTeacherFormSubmit(isEditMode: boolean, selectedUserId: string | null): boolean {
 	if (isEditMode) {
 		return true;
 	}

@@ -4,7 +4,6 @@ import {
 	shouldRenderStudentInfoPrivilegedBlock,
 	shouldShowStudentDateOfBirth,
 	shouldShowStudentLimitedAccessNotice,
-	shouldShowStudentPrivilegedSections,
 } from '../../../src/lib/students/studentInfoModalBodyHelpers';
 
 const fullData = {
@@ -40,20 +39,6 @@ describe('shouldShowStudentDateOfBirth', () => {
 	});
 });
 
-describe('shouldShowStudentPrivilegedSections', () => {
-	it('returns true for privileged viewers with full data', () => {
-		expect(shouldShowStudentPrivilegedSections(true, fullData)).toBe(true);
-	});
-
-	it('returns false without full data', () => {
-		expect(shouldShowStudentPrivilegedSections(true, null)).toBe(false);
-	});
-
-	it('returns false for non-privileged viewers', () => {
-		expect(shouldShowStudentPrivilegedSections(false, fullData)).toBe(false);
-	});
-});
-
 describe('shouldShowStudentLimitedAccessNotice', () => {
 	it('returns true for non-privileged viewers', () => {
 		expect(shouldShowStudentLimitedAccessNotice(false)).toBe(true);
@@ -81,5 +66,9 @@ describe('shouldRenderStudentInfoPrivilegedBlock', () => {
 
 	it('returns false without full data', () => {
 		expect(shouldRenderStudentInfoPrivilegedBlock(true, null)).toBe(false);
+	});
+
+	it('returns false for non-privileged viewers with full data', () => {
+		expect(shouldRenderStudentInfoPrivilegedBlock(false, fullData)).toBe(false);
 	});
 });

@@ -4,7 +4,7 @@ import { formatAgendaEventSaveError, saveAgendaEventForm } from '@/lib/agenda/ag
 import type { AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
-export function canPerformAgendaEventSave(
+function canPerformAgendaEventSave(
 	userId: string | undefined,
 	startDate: string | null,
 	startTime: string,
@@ -12,7 +12,7 @@ export function canPerformAgendaEventSave(
 	return Boolean(userId && startDate && startTime);
 }
 
-export function getAgendaEventSaveFields(
+function getAgendaEventSaveFields(
 	userId: string | undefined,
 	startDate: string | null,
 	startTime: string,
@@ -51,10 +51,7 @@ export interface RunPerformAgendaEventSaveParams {
 
 type AgendaEventSaveFields = { userId: string; startDate: string; startTime: string };
 
-export function buildAgendaEventFormSaveInput(
-	saveFields: AgendaEventSaveFields,
-	params: RunPerformAgendaEventSaveParams,
-) {
+function buildAgendaEventFormSaveInput(saveFields: AgendaEventSaveFields, params: RunPerformAgendaEventSaveParams) {
 	return {
 		userId: saveFields.userId,
 		startDate: saveFields.startDate,

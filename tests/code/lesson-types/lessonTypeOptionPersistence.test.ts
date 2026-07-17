@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'bun:test';
-import {
-	buildOptionFormRow,
-	isDuplicateOption,
-	isOptionDuplicateCandidate,
-} from '../../../src/pages/lesson-type-info/lessonTypeOptionPersistence';
+import { beforeAll, describe, expect, it, mock } from 'bun:test';
 import type { OptionModalFormState, OptionRowWithKey } from '../../../src/pages/lesson-type-info/types';
+
+mock.module('../../../src/integrations/supabase/client', () => ({
+	supabase: { from: () => ({}) },
+}));
+
+mock.module('@/integrations/supabase/client', () => ({
+	supabase: { from: () => ({}) },
+}));
 
 const optionsForm: OptionRowWithKey[] = [
 	{
@@ -25,24 +28,17 @@ const modalForm: OptionModalFormState = {
 	price_per_lesson_adult: '30.00',
 };
 
-describe('isOptionDuplicateCandidate', () => {
-	it('returns true when duration and frequency match for new options', () => {
-		expect(isOptionDuplicateCandidate(optionsForm[0], modalForm, optionsForm[0], false)).toBe(true);
-	});
-
-	it('returns false when editing the same existing option', () => {
-		expect(isOptionDuplicateCandidate(optionsForm[0], modalForm, optionsForm[0], true)).toBe(false);
-	});
-
-	it('returns false when frequency differs', () => {
-		expect(
-			isOptionDuplicateCandidate(optionsForm[0], { ...modalForm, frequency: 'biweekly' }, optionsForm[0], false),
-		).toBe(false);
-	});
-});
-
 describe('isDuplicateOption', () => {
-	it('returns true when another option matches duration and frequency', () => {
+	let isDuplicateOption: typeof import('../../../src/pages/lesson-type-info/lessonTypeOptionPersistence').isDuplicateOption;
+	let buildOptionFormRow: typeof import('../../../src/pages/lesson-type-info/lessonTypeOptionPersistence').buildOptionFormRow;
+
+	beforeAll(async () => {
+		({ isDuplicateOption, buildOptionFormRow } = await import(
+			'../../../src/pages/lesson-type-info/lessonTypeOptionPersistence'
+		));
+	});
+
+	it('returns true when duration and frequency match for new options', () => {
 		expect(isDuplicateOption(optionsForm, modalForm, optionsForm[0], false)).toBe(true);
 	});
 
@@ -50,14 +46,18 @@ describe('isDuplicateOption', () => {
 		expect(isDuplicateOption(optionsForm, modalForm, optionsForm[0], true)).toBe(false);
 	});
 
+	it('returns false when frequency differs', () => {
+		expect(isDuplicateOption(optionsForm, { ...modalForm, frequency: 'biweekly' }, optionsForm[0], false)).toBe(
+			false,
+		);
+	});
+
 	it('returns false when duration differs', () => {
 		expect(isDuplicateOption(optionsForm, { ...modalForm, duration_minutes: '60' }, optionsForm[0], false)).toBe(
 			false,
 		);
 	});
-});
 
-describe('buildOptionFormRow', () => {
 	it('builds updated option row from modal form', () => {
 		expect(buildOptionFormRow(optionsForm[0], modalForm, 30)).toEqual({
 			_newId: 'new-1',

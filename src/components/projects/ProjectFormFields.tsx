@@ -3,12 +3,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { UserSelectSingle } from '@/components/ui/user-select';
-import type { ProjectFormSaveInput, ProjectLabelOption } from '@/lib/projects/projectFormDialogHelpers';
+import type { ProjectFormSaveInput } from '@/lib/projects/projectFormDialogHelpers';
 import {
 	buildProjectLabelSelectKey,
 	getProjectLabelSelectPlaceholder,
 	shouldShowProjectActiveCheckbox,
 } from '@/lib/projects/projectFormFieldsHelpers';
+import type { ProjectLabelOption } from '@/lib/projects/projectFormLabelHelpers';
 
 interface ProjectFormFieldsProps {
 	form: ProjectFormSaveInput & { id?: string };

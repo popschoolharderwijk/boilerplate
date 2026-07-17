@@ -1,9 +1,18 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
 import {
-	runLegacyImportExecutionBase64,
+	runLegacyImportExecution,
 	runLegacyImportTemplateDownload,
-	runLegacyImportValidationBase64,
+	runLegacyImportValidation,
 } from '../../../src/lib/settings/legacyImportManagerActions';
+
+mock.module('../../../src/lib/settings/legacyImportManagerHelpers', () => ({
+	fileToBase64: async () => 'dGVzdA==',
+	downloadBlobFile: () => {},
+	fetchLegacyImportTemplate: async () => new Blob(),
+	resolveLegacyValidationToast: () => undefined,
+	resolveLegacyImportToast: () => undefined,
+	toErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+}));
 
 describe('runLegacyImportTemplateDownload', () => {
 	it('returns error when not logged in', async () => {
@@ -16,15 +25,16 @@ describe('runLegacyImportTemplateDownload', () => {
 	});
 });
 
-describe('runLegacyImportValidationBase64', () => {
+describe('runLegacyImportValidation', () => {
 	it('returns error when validation throws', async () => {
-		const result = await runLegacyImportValidationBase64(
+		const file = new File(['test'], 'import.xlsx');
+		const result = await runLegacyImportValidation(
 			{
 				functions: {
 					invoke: async () => ({ data: null, error: new Error('network') }),
 				},
 			} as never,
-			'dGVzdA==',
+			file,
 		);
 		expect(result).toEqual({
 			ok: false,
@@ -34,15 +44,16 @@ describe('runLegacyImportValidationBase64', () => {
 	});
 });
 
-describe('runLegacyImportExecutionBase64', () => {
+describe('runLegacyImportExecution', () => {
 	it('returns error when import throws', async () => {
-		const result = await runLegacyImportExecutionBase64(
+		const file = new File(['test'], 'import.xlsx');
+		const result = await runLegacyImportExecution(
 			{
 				functions: {
 					invoke: async () => ({ data: null, error: new Error('import failed') }),
 				},
 			} as never,
-			'dGVzdA==',
+			file,
 		);
 		expect(result).toEqual({
 			ok: false,

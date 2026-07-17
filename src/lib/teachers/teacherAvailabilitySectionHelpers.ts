@@ -67,7 +67,7 @@ export function getAvailabilityBlocksForDay(blocks: AvailabilityBlock[], display
 	return blocks.filter((block) => block.displayDay === displayDay);
 }
 
-export function getNextAvailabilityTimeSlot(time: string, slots: number, timeSlots: string[]): string {
+function getNextAvailabilityTimeSlot(time: string, slots: number, timeSlots: string[]): string {
 	const index = timeSlots.indexOf(time);
 	if (index === -1 || index + slots >= timeSlots.length) {
 		return timeSlots[timeSlots.length - 1];
@@ -75,7 +75,7 @@ export function getNextAvailabilityTimeSlot(time: string, slots: number, timeSlo
 	return timeSlots[index + slots];
 }
 
-export function availabilityBlockDurationMinutes(startTime: string, endTime: string): number {
+function availabilityBlockDurationMinutes(startTime: string, endTime: string): number {
 	const [startHour, startMinute] = startTime.split(':').map(Number);
 	const [endHour, endMinute] = endTime.split(':').map(Number);
 	return (endHour - startHour) * 60 + (endMinute - startMinute);

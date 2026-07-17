@@ -1,5 +1,8 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { CalendarEvent } from '../../../src/components/agenda/types';
+import * as deleteAgendaEventModule from '../../../src/lib/agenda/deleteAgendaEvent';
+import * as notifyAgendaOpResultModule from '../../../src/lib/agenda/notifyAgendaOpResult';
+import * as revertDeviationModule from '../../../src/lib/agenda/revertDeviation';
 
 const toastMessages: { type: 'error' | 'success'; message: string }[] = [];
 const deleteCalls: { eventId: string; scope: string; occurrenceDate?: string; userId: string }[] = [];
@@ -7,43 +10,6 @@ const revertCalls: { eventId?: string; originalDate?: string }[] = [];
 const notifyCalls: { throwOnError?: boolean }[] = [];
 let updateError: { message: string } | null = null;
 let rpcError: { message: string } | null = null;
-
-mock.module('sonner', () => ({
-	toast: {
-		error: (message: string) => {
-			toastMessages.push({ type: 'error', message });
-		},
-		success: (message: string) => {
-			toastMessages.push({ type: 'success', message });
-		},
-	},
-}));
-
-mock.module('../../../src/lib/agenda/deleteAgendaEvent', () => ({
-	deleteAgendaEvent: async (params: { eventId: string; scope: string; occurrenceDate?: string; userId: string }) => {
-		deleteCalls.push(params);
-		return { ok: true };
-	},
-}));
-
-mock.module('../../../src/lib/agenda/revertDeviation', () => ({
-	revertDeviation: async (params: { eventId?: string; originalDate?: string }) => {
-		revertCalls.push(params);
-		return { ok: true };
-	},
-}));
-
-mock.module('../../../src/lib/agenda/notifyAgendaOpResult', () => ({
-	notifyAgendaOpResult: async (
-		result: unknown,
-		reloadAgenda: () => void | Promise<void>,
-		options?: { throwOnError?: boolean },
-	) => {
-		notifyCalls.push(options ?? {});
-		await reloadAgenda();
-		return result;
-	},
-}));
 
 const supabaseMock = {
 	from: (table: string) => ({
@@ -56,10 +22,6 @@ const supabaseMock = {
 	}),
 	rpc: () => Promise.resolve({ error: rpcError }),
 };
-
-mock.module('../../../src/integrations/supabase/client', () => ({
-	supabase: supabaseMock,
-}));
 
 function mockCalendarEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 	return {
@@ -133,18 +95,67 @@ function createUiState(): UiState {
 
 describe('agendaFormDialogActions', () => {
 	let actions: typeof import('../../../src/components/agenda/agendaFormDialogActions');
+	let deleteAgendaEventSpy: ReturnType<typeof spyOn>;
+	let revertDeviationSpy: ReturnType<typeof spyOn>;
+	let notifyAgendaOpResultSpy: ReturnType<typeof spyOn>;
 
 	beforeAll(async () => {
+		mock.module('sonner', () => ({
+			toast: {
+				error: (message: string) => {
+					toastMessages.push({ type: 'error', message });
+				},
+				success: (message: string) => {
+					toastMessages.push({ type: 'success', message });
+				},
+			},
+		}));
+		mock.module('../../../src/integrations/supabase/client', () => ({
+			supabase: supabaseMock,
+		}));
 		actions = await import('../../../src/components/agenda/agendaFormDialogActions');
 	});
 
+	afterAll(() => {
+		mock.restore();
+	});
+
 	beforeEach(() => {
+		deleteAgendaEventSpy = spyOn(deleteAgendaEventModule, 'deleteAgendaEvent').mockImplementation(
+			async (params: { eventId: string; scope: string; occurrenceDate?: string; userId: string }) => {
+				deleteCalls.push(params);
+				return { ok: true, message: '' };
+			},
+		);
+		revertDeviationSpy = spyOn(revertDeviationModule, 'revertDeviation').mockImplementation(
+			async (params: { eventId?: string; originalDate?: string }) => {
+				revertCalls.push(params);
+				return { ok: true, message: '' };
+			},
+		);
+		notifyAgendaOpResultSpy = spyOn(notifyAgendaOpResultModule, 'notifyAgendaOpResult').mockImplementation(
+			async (
+				result: notifyAgendaOpResultModule.AgendaOpResult,
+				onSuccess?: () => void | Promise<void>,
+				options?: { throwOnError?: boolean },
+			) => {
+				notifyCalls.push(options ?? {});
+				await onSuccess?.();
+				return result.ok;
+			},
+		);
 		toastMessages.length = 0;
 		deleteCalls.length = 0;
 		revertCalls.length = 0;
 		notifyCalls.length = 0;
 		updateError = null;
 		rpcError = null;
+	});
+
+	afterEach(() => {
+		deleteAgendaEventSpy.mockRestore();
+		revertDeviationSpy.mockRestore();
+		notifyAgendaOpResultSpy.mockRestore();
 	});
 
 	it('returns undefined delete handler without manage permissions', () => {

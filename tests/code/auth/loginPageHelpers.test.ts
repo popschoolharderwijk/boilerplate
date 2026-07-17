@@ -1,17 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	buildMagicLinkRedirectUrl,
 	buildMagicLinkSignInOptions,
 	resolveLoginPageContent,
 	resolveLoginViewMode,
 	shouldShowLoginLoadingScreen,
 } from '../../../src/lib/auth/loginPageHelpers';
-
-describe('buildMagicLinkRedirectUrl', () => {
-	it('builds auth callback redirect url', () => {
-		expect(buildMagicLinkRedirectUrl('https://app.example.com')).toBe('https://app.example.com/auth/callback');
-	});
-});
 
 describe('buildMagicLinkSignInOptions', () => {
 	it('disables user creation and sets redirect url', () => {

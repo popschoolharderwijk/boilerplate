@@ -48,27 +48,6 @@ describe('noLessonPeriodsManagerControllerHelpers', () => {
 		deleteResult = { data: [{ id: 'period-1' }], error: null };
 	});
 
-	it('resolveNoLessonPeriodSaveOperation returns update when editing', () => {
-		expect(
-			helpers.resolveNoLessonPeriodSaveOperation({
-				id: 'period-1',
-				name: 'Kerst',
-				start_date: '2026-12-20',
-				end_date: '2026-12-31',
-				description: null,
-			}),
-		).toBe('update');
-	});
-
-	it('resolveNoLessonPeriodSaveOperation returns create when not editing', () => {
-		expect(helpers.resolveNoLessonPeriodSaveOperation(null)).toBe('create');
-	});
-
-	it('shouldBlockNoLessonPeriodSave blocks invalid forms', () => {
-		expect(helpers.shouldBlockNoLessonPeriodSave(false)).toBe(true);
-		expect(helpers.shouldBlockNoLessonPeriodSave(true)).toBe(false);
-	});
-
 	it('executeNoLessonPeriodFetch returns periods on success', async () => {
 		const outcome = await helpers.executeNoLessonPeriodFetch(supabaseMock as never);
 		expect(outcome).toEqual({
@@ -100,6 +79,22 @@ describe('noLessonPeriodsManagerControllerHelpers', () => {
 			isFormValid: true,
 			form: { name: 'Kerst', start_date: '2026-12-20', end_date: '2026-12-31', description: '' },
 			editing: null,
+			supabase: supabaseMock as never,
+		});
+		expect(outcome).toBe('success');
+	});
+
+	it('executeNoLessonPeriodSave returns success on update', async () => {
+		const outcome = await helpers.executeNoLessonPeriodSave({
+			isFormValid: true,
+			form: { name: 'Kerst', start_date: '2026-12-20', end_date: '2026-12-31', description: '' },
+			editing: {
+				id: 'period-1',
+				name: 'Kerst',
+				start_date: '2026-12-20',
+				end_date: '2026-12-31',
+				description: null,
+			},
 			supabase: supabaseMock as never,
 		});
 		expect(outcome).toBe('success');

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import {
-	canExecuteAgendaMutation,
 	executeAgendaDelete,
 	getAgendaRevertErrorMessage,
 	resolveAgendaDeleteClickAction,
@@ -83,21 +82,6 @@ describe('resolveAgendaDeleteClickAction', () => {
 	});
 });
 
-describe('canExecuteAgendaMutation', () => {
-	it('returns true when all preconditions are met', () => {
-		expect(canExecuteAgendaMutation(true, 'event-1', () => undefined)).toBe(true);
-	});
-
-	it('returns false when delete is not allowed', () => {
-		expect(canExecuteAgendaMutation(false, 'event-1', () => undefined)).toBe(false);
-	});
-
-	it('returns false when event id or handler is missing', () => {
-		expect(canExecuteAgendaMutation(true, undefined, () => undefined)).toBe(false);
-		expect(canExecuteAgendaMutation(true, 'event-1', undefined)).toBe(false);
-	});
-});
-
 describe('getAgendaRevertErrorMessage', () => {
 	it('returns the error message for Error instances', () => {
 		expect(getAgendaRevertErrorMessage(new Error('Revert failed'))).toBe('Revert failed');
@@ -139,5 +123,33 @@ describe('executeAgendaDelete', () => {
 			onOpenChange: () => undefined,
 		});
 		expect(deleted).toBe(false);
+	});
+
+	it('does nothing when event id is missing', async () => {
+		let deleted = false;
+		await executeAgendaDelete({
+			canDelete: true,
+			eventId: undefined,
+			onDelete: async () => {
+				deleted = true;
+			},
+			scope: 'all',
+			onOpenChange: () => undefined,
+		});
+		expect(deleted).toBe(false);
+	});
+
+	it('does nothing when delete handler is missing', async () => {
+		let closed = false;
+		await executeAgendaDelete({
+			canDelete: true,
+			eventId: 'event-1',
+			onDelete: undefined,
+			scope: 'all',
+			onOpenChange: (open) => {
+				closed = !open;
+			},
+		});
+		expect(closed).toBe(false);
 	});
 });

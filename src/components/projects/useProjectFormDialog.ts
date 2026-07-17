@@ -4,10 +4,10 @@ import {
 	loadProjectLabelOptions,
 	mergeProjectFormLabelAfterLoad,
 	type ProjectFormSaveInput,
-	type ProjectLabelOption,
 	resolveProjectFormDialogInitialState,
 	runProjectFormDialogSubmit,
 } from '@/lib/projects/projectFormDialogHelpers';
+import type { ProjectLabelOption } from '@/lib/projects/projectFormLabelHelpers';
 
 interface UseProjectFormDialogParams {
 	open: boolean;
@@ -80,5 +80,3 @@ export function useProjectFormDialog({ open, project, onOpenChange, onSaved }: U
 		onOpenChange,
 	};
 }
-
-export type ProjectFormDialogViewModel = ReturnType<typeof useProjectFormDialog>;

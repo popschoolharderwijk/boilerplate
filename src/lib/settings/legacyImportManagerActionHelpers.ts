@@ -1,13 +1,13 @@
 import { toast } from 'sonner';
 import type { LegacyImportActionResult } from '@/lib/settings/legacyImportManagerActions';
 
-export function applyLegacyImportActionToast(toastResult?: { kind: 'success' | 'warning'; message: string }) {
+function applyLegacyImportActionToast(toastResult?: { kind: 'success' | 'warning'; message: string }) {
 	if (!toastResult) return;
 	if (toastResult.kind === 'success') toast.success(toastResult.message);
 	else toast.warning(toastResult.message);
 }
 
-export function reportLegacyImportActionError(result: Extract<LegacyImportActionResult<unknown>, { ok: false }>) {
+function reportLegacyImportActionError(result: Extract<LegacyImportActionResult<unknown>, { ok: false }>) {
 	toast.error(result.title, { description: result.message });
 }
 

@@ -41,7 +41,7 @@ export function validateSepaFields(sepa: SignupSepaFields): string | null {
 	return null;
 }
 
-export function resolveLessonTypeOptionId(
+function resolveLessonTypeOptionId(
 	lessonTypeOptions: LessonTypeOptionMatch[],
 	selectedOption: OptionSnapshot | null,
 ): string | null {
@@ -55,7 +55,7 @@ export function resolveLessonTypeOptionId(
 	return match?.id ?? null;
 }
 
-export function resolveSignupGroupId(
+function resolveSignupGroupId(
 	selectedType: SignupLessonType,
 	selectedGroupId: string | 'waitlist' | null,
 ): string | null {
@@ -64,7 +64,7 @@ export function resolveSignupGroupId(
 	return selectedGroupId;
 }
 
-export function buildSignupRequestBody(
+function buildSignupRequestBody(
 	selectedType: SignupLessonType,
 	form: SignupFormFields,
 	sepa: SignupSepaFields,
@@ -82,13 +82,13 @@ export function buildSignupRequestBody(
 	};
 }
 
-export function parseSignupResponseError(data: unknown): string | null {
+function parseSignupResponseError(data: unknown): string | null {
 	if (!data || typeof data !== 'object') return null;
 	const error = (data as { error?: unknown }).error;
 	return typeof error === 'string' ? error : null;
 }
 
-export function resolvePublicSignupSubmitPayload(params: {
+function resolvePublicSignupSubmitPayload(params: {
 	selectedType: SignupLessonType;
 	selectedGroupId: string | 'waitlist' | null;
 	selectedOption: OptionSnapshot | null;

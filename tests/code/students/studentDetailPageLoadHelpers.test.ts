@@ -1,6 +1,41 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { SignupRequestDetail } from '../../../src/components/students/SignupRequestDialog';
+import type { LessonAgreementWithTeacher } from '../../../src/types/lesson-agreements';
 
 let profileResult: { data: unknown; error: unknown } = { data: null, error: null };
+
+const mockAgreement: LessonAgreementWithTeacher = {
+	id: 'agreement-1',
+	day_of_week: 1,
+	start_time: '09:00:00',
+	start_date: '2026-09-01',
+	end_date: null,
+	is_active: true,
+	notes: null,
+	duration_minutes: 45,
+	frequency: 'weekly',
+	price_per_lesson: 30,
+	teacher: { first_name: 'Piet', last_name: 'Docent', avatar_url: null },
+	lesson_type: { id: 'lt-1', name: 'Piano', icon: 'piano', color: '#000000' },
+};
+
+const mockSignupRequest: SignupRequestDetail = {
+	id: 'signup-1',
+	first_name: 'Anna',
+	last_name: 'Bakker',
+	email: 'jan@test.nl',
+	phone_number: null,
+	parent_name: null,
+	parent_email: null,
+	parent_phone_number: null,
+	date_of_birth: null,
+	notes: null,
+	status: 'pending',
+	created_at: '2026-01-01T00:00:00Z',
+	processed_at: null,
+	lesson_type_name: 'Piano',
+	lesson_group_name: null,
+};
 
 const supabaseMock = {
 	from: (table: string) => {
@@ -22,19 +57,20 @@ mock.module('sonner', () => ({
 }));
 
 mock.module('../../../src/lib/students/fetchStudentAgreements', () => ({
-	fetchStudentAgreementsForProfile: async () => [{ id: 'agreement-1' }],
-	fetchStudentAgreementsWithRelations: async () => [{ id: 'agreement-1' }],
+	fetchStudentAgreementsForProfile: async () => [mockAgreement],
+	fetchStudentAgreementsWithRelations: async () => [mockAgreement],
 }));
 
 mock.module('../../../src/lib/signup-requests/signupRequestMappers', () => ({
-	fetchSignupRequestsByEmail: async () => [{ id: 'signup-1' }],
+	fetchSignupRequestsByEmail: async () => [mockSignupRequest],
+	fetchSignupRequestsByEmails: async () => new Map(),
 }));
 
-describe('studentDetailPageLoadHelpers', () => {
-	let helpers: typeof import('../../../src/lib/students/studentDetailPageLoadHelpers');
+describe('runStudentDetailPageLoad', () => {
+	let runStudentDetailPageLoad: typeof import('../../../src/lib/students/studentDetailPageLoadHelpers').runStudentDetailPageLoad;
 
 	beforeAll(async () => {
-		helpers = await import('../../../src/lib/students/studentDetailPageLoadHelpers');
+		({ runStudentDetailPageLoad } = await import('../../../src/lib/students/studentDetailPageLoadHelpers'));
 	});
 
 	beforeEach(() => {
@@ -51,35 +87,25 @@ describe('studentDetailPageLoadHelpers', () => {
 		};
 	});
 
-	it('loadStudentProfileForDetailPage returns profile data on success', async () => {
-		const profile = await helpers.loadStudentProfileForDetailPage(supabaseMock as never, 'user-1');
-		expect(profile).toEqual({
-			user_id: 'user-1',
-			email: 'jan@test.nl',
-			first_name: 'Jan',
-			last_name: 'Leerling',
-			phone_number: null,
-			avatar_url: null,
+	it('returns profile agreements and signup requests', async () => {
+		const result = await runStudentDetailPageLoad(supabaseMock as never, 'user-1');
+		expect(result).toEqual({
+			profile: {
+				user_id: 'user-1',
+				email: 'jan@test.nl',
+				first_name: 'Jan',
+				last_name: 'Leerling',
+				phone_number: null,
+				avatar_url: null,
+			},
+			agreements: [mockAgreement],
+			signupRequests: [mockSignupRequest],
 		});
 	});
 
-	it('loadStudentProfileForDetailPage returns null when profile is missing', async () => {
+	it('returns null when profile is missing', async () => {
 		profileResult = { data: null, error: null };
-		const profile = await helpers.loadStudentProfileForDetailPage(supabaseMock as never, 'user-1');
-		expect(profile).toBeNull();
-	});
-
-	it('runStudentDetailPageLoad returns profile agreements and signup requests', async () => {
-		const result = await helpers.runStudentDetailPageLoad(supabaseMock as never, 'user-1');
-		expect(result).not.toBeNull();
-		expect(result?.profile.user_id).toBe('user-1');
-		expect(result?.agreements).toHaveLength(1);
-		expect(result?.signupRequests).toHaveLength(1);
-	});
-
-	it('runStudentDetailPageLoad returns null when profile is missing', async () => {
-		profileResult = { data: null, error: null };
-		const result = await helpers.runStudentDetailPageLoad(supabaseMock as never, 'user-1');
+		const result = await runStudentDetailPageLoad(supabaseMock as never, 'user-1');
 		expect(result).toBeNull();
 	});
 });

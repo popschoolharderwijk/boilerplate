@@ -1,9 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
-import {
-	executeAgreementDelete,
-	resolveAgreementRunActionKind,
-	runAgreementPageAction,
-} from '../../../src/lib/agreements/agreementsPageActionHelpers';
+import { beforeAll, describe, expect, it, mock } from 'bun:test';
 
 let deleteError: { message: string } | null = null;
 
@@ -24,25 +19,13 @@ mock.module('../../../src/integrations/supabase/client', () => ({
 	},
 }));
 
-describe('resolveAgreementRunActionKind', () => {
-	it('maps edit actions to navigate-edit', () => {
-		expect(resolveAgreementRunActionKind({ kind: 'edit', agreement: { id: 'a-1' } as never })).toBe(
-			'navigate-edit',
-		);
-	});
-
-	it('maps delete actions to open-delete', () => {
-		expect(resolveAgreementRunActionKind({ kind: 'delete', agreement: { id: 'a-1' } as never })).toBe(
-			'open-delete',
-		);
-	});
-
-	it('maps confirm-delete actions to confirm-delete', () => {
-		expect(resolveAgreementRunActionKind({ kind: 'confirm-delete' })).toBe('confirm-delete');
-	});
-});
-
 describe('runAgreementPageAction', () => {
+	let runAgreementPageAction: typeof import('../../../src/lib/agreements/agreementsPageActionHelpers').runAgreementPageAction;
+
+	beforeAll(async () => {
+		({ runAgreementPageAction } = await import('../../../src/lib/agreements/agreementsPageActionHelpers'));
+	});
+
 	it('navigates on edit action', async () => {
 		let navigatedPath = '';
 		await runAgreementPageAction({ kind: 'edit', agreement: { id: 'agreement-1' } as never }, null, {
@@ -82,35 +65,40 @@ describe('runAgreementPageAction', () => {
 		});
 		expect(reloaded).toBe(false);
 	});
-});
 
-describe('executeAgreementDelete', () => {
-	beforeEach(() => {
+	it('clears dialog and reloads on confirm-delete success', async () => {
 		deleteError = null;
-	});
-
-	it('clears dialog and reloads on success', async () => {
-		let dialogValue: unknown = 'open';
+		let dialogValue: unknown = { open: true, agreement: { id: 'agreement-1' } };
 		let reloaded = false;
-		await executeAgreementDelete('agreement-1', {
-			setDeleteDialog: (value) => {
-				dialogValue = value;
+		await runAgreementPageAction(
+			{ kind: 'confirm-delete' },
+			{ open: true, agreement: { id: 'agreement-1' } as never },
+			{
+				navigate: () => {},
+				setDeleteDialog: (value) => {
+					dialogValue = value;
+				},
+				reloadAgreements: () => {
+					reloaded = true;
+				},
 			},
-			reloadAgreements: () => {
-				reloaded = true;
-			},
-		});
+		);
 		expect(dialogValue).toBeNull();
 		expect(reloaded).toBe(true);
 	});
 
-	it('throws when delete fails', async () => {
+	it('throws when confirm-delete fails', async () => {
 		deleteError = { message: 'delete failed' };
 		await expect(
-			executeAgreementDelete('agreement-1', {
-				setDeleteDialog: () => {},
-				reloadAgreements: () => {},
-			}),
+			runAgreementPageAction(
+				{ kind: 'confirm-delete' },
+				{ open: true, agreement: { id: 'agreement-1' } as never },
+				{
+					navigate: () => {},
+					setDeleteDialog: () => {},
+					reloadAgreements: () => {},
+				},
+			),
 		).rejects.toThrow('delete failed');
 	});
 });

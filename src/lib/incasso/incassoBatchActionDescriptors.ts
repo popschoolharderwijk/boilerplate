@@ -33,7 +33,7 @@ const INCASSO_BATCH_ACTION_DESCRIPTOR_BUILDERS: Record<
 	close: () => ({ label: 'Markeer als afgerond', variant: 'outline', disabled: false }),
 };
 
-export function buildIncassoBatchActionDescriptor(
+function buildIncassoBatchActionDescriptor(
 	kind: IncassoBatchActionKind,
 	ctx: DescriptorContext,
 ): IncassoBatchActionDescriptor {

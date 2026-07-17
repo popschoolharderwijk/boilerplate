@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-	shouldShowTeacherLessonTypesAddPopover,
-	shouldShowTeacherLessonTypesEmptyState,
-} from '../../../src/components/teachers/teacherLessonTypesSectionHelpers';
+import { shouldShowTeacherLessonTypesAddPopover } from '../../../src/components/teachers/teacherLessonTypesSectionHelpers';
 
 describe('shouldShowTeacherLessonTypesAddPopover', () => {
 	it('returns true when editing is allowed and options exist', () => {
@@ -12,14 +9,8 @@ describe('shouldShowTeacherLessonTypesAddPopover', () => {
 	it('returns false when no options exist', () => {
 		expect(shouldShowTeacherLessonTypesAddPopover(true, 0)).toBe(false);
 	});
-});
 
-describe('shouldShowTeacherLessonTypesEmptyState', () => {
-	it('returns true when no lesson types are assigned', () => {
-		expect(shouldShowTeacherLessonTypesEmptyState(0)).toBe(true);
-	});
-
-	it('returns false when lesson types exist', () => {
-		expect(shouldShowTeacherLessonTypesEmptyState(1)).toBe(false);
+	it('returns false when editing is not allowed', () => {
+		expect(shouldShowTeacherLessonTypesAddPopover(false, 2)).toBe(false);
 	});
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildTopNavNavigationCallbacks, resolveTopNavNextTheme } from '../../../src/lib/layout/topNavHookHelpers';
+import { buildTopNavNavigationCallbacks } from '../../../src/lib/layout/topNavHookHelpers';
 
 describe('buildTopNavNavigationCallbacks', () => {
 	it('builds navigation callbacks with profile and account routes', async () => {
@@ -31,14 +31,19 @@ describe('buildTopNavNavigationCallbacks', () => {
 		expect(signedOut).toBe(true);
 		expect(state.theme).toBe('dark');
 	});
-});
 
-describe('resolveTopNavNextTheme', () => {
-	it('returns light when current theme is dark', () => {
-		expect(resolveTopNavNextTheme('dark')).toBe('light');
-	});
+	it('toggles theme from dark to light', () => {
+		const state = { theme: 'dark' as 'light' | 'dark' };
+		const callbacks = buildTopNavNavigationCallbacks(
+			(() => {}) as never,
+			async () => {},
+			'dark',
+			(nextTheme: 'light' | 'dark') => {
+				state.theme = nextTheme;
+			},
+		);
 
-	it('returns dark when current theme is light', () => {
-		expect(resolveTopNavNextTheme('light')).toBe('dark');
+		callbacks.onToggleTheme();
+		expect(state.theme).toBe('light');
 	});
 });

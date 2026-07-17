@@ -37,7 +37,7 @@ const STUDENT_SELECT =
 	'user_id, parent_name, parent_email, parent_phone_number, debtor_info_same_as_student, debtor_name, debtor_address, debtor_postal_code, debtor_city';
 const PROFILE_SELECT = 'email, first_name, last_name, phone_number, avatar_url';
 
-export function reportMyStudentProfileLoadError(error: unknown): MyStudentProfileLoadOutcome {
+function reportMyStudentProfileLoadError(error: unknown): MyStudentProfileLoadOutcome {
 	console.error('Error loading profile:', error);
 	toast.error('Fout bij laden profiel');
 	return { kind: 'error' };

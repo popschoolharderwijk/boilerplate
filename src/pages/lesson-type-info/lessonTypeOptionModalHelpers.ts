@@ -36,11 +36,11 @@ export function resolveSaveOptionInModalFlow(params: ResolveSaveOptionInModalFlo
 	return { kind: 'create-new' };
 }
 
-export function shouldShowLocalUpdateSuccessToast(flow: SaveOptionInModalFlow): boolean {
+function shouldShowLocalUpdateSuccessToast(flow: SaveOptionInModalFlow): boolean {
 	return flow.kind === 'update-existing' && !flow.persistToDatabase;
 }
 
-export function shouldClearEditingOptionAfterSave(flow: SaveOptionInModalFlow, persisted: boolean): boolean {
+function shouldClearEditingOptionAfterSave(flow: SaveOptionInModalFlow, persisted: boolean): boolean {
 	if (flow.kind === 'update-existing') {
 		return flow.persistToDatabase ? persisted : true;
 	}
@@ -63,7 +63,7 @@ export function isEditingExistingOption(editingOption: OptionRowWithKey): boolea
 	return Boolean(editingOption.id);
 }
 
-export function resolveSaveOptionAbortToast(flow: SaveOptionInModalFlow): string | null {
+function resolveSaveOptionAbortToast(flow: SaveOptionInModalFlow): string | null {
 	if (flow.kind === 'abort-validation') {
 		return flow.message;
 	}
@@ -73,13 +73,13 @@ export function resolveSaveOptionAbortToast(flow: SaveOptionInModalFlow): string
 	return null;
 }
 
-export type RemoveOptionOutcome =
+type RemoveOptionOutcome =
 	| { kind: 'noop-no-selection' }
 	| { kind: 'noop-missing-index' }
 	| { kind: 'persist-delete'; optionId: string; index: number }
 	| { kind: 'remove-local'; index: number };
 
-export function resolveRemoveOptionOutcome(params: {
+function resolveRemoveOptionOutcome(params: {
 	optionToDelete: OptionRowWithKey | null;
 	index: number;
 	isEditMode: boolean;
@@ -97,7 +97,7 @@ export function resolveRemoveOptionOutcome(params: {
 	return { kind: 'remove-local', index: params.index };
 }
 
-export async function runPersistedOptionRemoval(
+async function runPersistedOptionRemoval(
 	optionId: string,
 	deletePersistedOption: (id: string) => Promise<boolean>,
 	removePersistedOptionFromState: (id: string) => void,
