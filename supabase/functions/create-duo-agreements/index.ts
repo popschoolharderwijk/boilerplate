@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: getSafeErrorMessage(errB ?? new Error('Aanmaken overeenkomst B mislukt')) });
 	}
 
-	// Bevestigingsmails naar beide leerlingen en de docent (best-effort).
+	// Confirmation emails to both students and the teacher (best-effort).
 	try {
 		const { data: lt } = await admin
 			.from('lesson_types')

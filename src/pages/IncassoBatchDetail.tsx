@@ -82,7 +82,7 @@ function Detail() {
 			toast.error(error.message);
 			return;
 		}
-		// Genereer facturen + verstuur per e-mail
+		// Generate invoices + send by email
 		toast.info('Facturen worden aangemaakt en gemaild...');
 		const { data: invResp, error: invErr } = await supabase.functions.invoke('generate-invoice', {
 			body: { batch_id: id, send_email: true },

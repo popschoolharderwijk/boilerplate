@@ -24,21 +24,6 @@ export interface Invoice {
 	updated_at: string;
 }
 
-export interface InvoiceLine {
-	id: string;
-	invoice_id: string;
-	batch_item_id: string | null;
-	description: string;
-	lesson_date: string | null;
-	quantity: number;
-	unit_price_cents: number;
-	btw_rate: number;
-	amount_excl_btw_cents: number;
-	btw_amount_cents: number;
-	amount_total_cents: number;
-	sort_order: number;
-}
-
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
 	draft: 'Concept',
 	issued: 'Verstuurd',

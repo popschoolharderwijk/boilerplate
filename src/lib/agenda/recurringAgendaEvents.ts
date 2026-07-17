@@ -10,7 +10,7 @@ import {
 import { applyTimeToDate, hasTimeChange } from '@/lib/time/time-format';
 import type { AgendaEventDeviationRow, AgendaEventRow, CancellationType } from '@/types/agenda-events';
 import type { LessonAgreementWithStudent, LessonFrequency } from '@/types/lesson-agreements';
-import { findNoLessonPeriod, type NoLessonPeriod } from './eventGenerators';
+import { findNoLessonPeriod, type NoLessonPeriod } from './noLessonPeriod';
 
 type RecurringContext = {
 	ev: AgendaEventRow;

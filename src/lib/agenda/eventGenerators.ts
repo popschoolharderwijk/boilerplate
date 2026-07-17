@@ -1,20 +1,11 @@
 import type { CalendarEvent } from '@/components/agenda/types';
-import { addMinutes, formatDateToDb } from '@/lib/date/date-format';
+import { addMinutes } from '@/lib/date/date-format';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
 import type { LessonAgreementWithStudent } from '@/types/lesson-agreements';
+import type { NoLessonPeriod } from './noLessonPeriod';
 import { appendRecurringAgendaEvents } from './recurringAgendaEvents';
 
-export interface NoLessonPeriod {
-	start_date: string;
-	end_date: string;
-	name?: string | null;
-}
-
-export function findNoLessonPeriod(date: Date, periods: NoLessonPeriod[] | undefined): NoLessonPeriod | undefined {
-	if (!periods?.length) return undefined;
-	const dateStr = formatDateToDb(date);
-	return periods.find((p) => p.start_date <= dateStr && dateStr <= p.end_date);
-}
+export type { NoLessonPeriod } from './noLessonPeriod';
 
 /**
  * Generate calendar events from agenda_events (manual events). Uses lessonHelpers for recurrence.

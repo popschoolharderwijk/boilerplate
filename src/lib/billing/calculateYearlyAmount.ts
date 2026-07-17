@@ -12,9 +12,9 @@ import type { LessonFrequency } from '@/types/lesson-agreements';
 import { BILLING_MONTHS_PER_YEAR, isNonBillingMonthString } from './schoolYear';
 
 export interface NoLessonPeriod {
-	/** YYYY-MM-DD (inclusief). */
+	/** YYYY-MM-DD (inclusive). */
 	start_date: string;
-	/** YYYY-MM-DD (inclusief). */
+	/** YYYY-MM-DD (inclusive). */
 	end_date: string;
 }
 

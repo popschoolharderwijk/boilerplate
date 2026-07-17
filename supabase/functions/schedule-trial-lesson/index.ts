@@ -258,12 +258,12 @@ Deno.serve(async (req) => {
 
 		// Email to teacher
 		if (teacherProfile?.email) {
-			const docentNaam =
+			const teacherName =
 				`${teacherProfile.first_name ?? ''} ${teacherProfile.last_name ?? ''}`.trim() || 'docent';
 			await sendTemplateEmail({
 				event_key: 'trial_scheduled_teacher',
 				to: teacherProfile.email.toLowerCase(),
-				vars: { ...sharedVars, docent_naam: docentNaam },
+				vars: { ...sharedVars, docent_naam: teacherName },
 				origin,
 			});
 		}

@@ -17,7 +17,7 @@ export function filterAgreementRows(rows: AgreementTableRow[], search: string): 
 	return filtered;
 }
 
-export function sortAgreementRowsByProfile(
+function sortAgreementRowsByProfile(
 	rows: AgreementTableRow[],
 	sortColumn: 'student' | 'teacher',
 	sortDirection: 'asc' | 'desc' | null,

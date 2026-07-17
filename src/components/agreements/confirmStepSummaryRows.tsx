@@ -15,7 +15,7 @@ import type {
 import { ConfirmStepRow } from './ConfirmStepRow';
 import { formatLessonPrice } from './confirmStepShared';
 
-export function ConfirmLessonTypeRow({
+function ConfirmLessonTypeRow({
 	lessonTypeName,
 	frequency,
 }: {
@@ -30,7 +30,7 @@ export function ConfirmLessonTypeRow({
 	);
 }
 
-export function ConfirmDurationRow({ minutes }: { minutes: number | null | undefined }) {
+function ConfirmDurationRow({ minutes }: { minutes: number | null | undefined }) {
 	return (
 		<ConfirmStepRow label="Duur" alwaysSame>
 			<span>{minutes != null ? `${minutes} min` : '-'}</span>
@@ -38,7 +38,7 @@ export function ConfirmDurationRow({ minutes }: { minutes: number | null | undef
 	);
 }
 
-export function ConfirmPriceRow({ price }: { price: number | null | undefined }) {
+function ConfirmPriceRow({ price }: { price: number | null | undefined }) {
 	return (
 		<ConfirmStepRow label="Prijs" alwaysSame>
 			<span>{formatLessonPrice(price)}</span>

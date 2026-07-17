@@ -1,7 +1,7 @@
 import { STEP_ORDER, WizardStep } from '@/components/agreements/WizardStepIndicator';
 import type { AgreementTableRow } from '@/types/lesson-agreements';
 
-export function formPatchFromAgreement(agreement: AgreementTableRow, defaultEndDate: string) {
+function formPatchFromAgreement(agreement: AgreementTableRow, defaultEndDate: string) {
 	return {
 		studentUserId: agreement.student_user_id,
 		user: {
@@ -34,7 +34,7 @@ export function formPatchFromAgreement(agreement: AgreementTableRow, defaultEndD
 	};
 }
 
-export function agreementBreadcrumbSuffix(agreement: AgreementTableRow, id: string) {
+function agreementBreadcrumbSuffix(agreement: AgreementTableRow, id: string) {
 	const studentName = [agreement.student.first_name, agreement.student.last_name].filter(Boolean).join(' ');
 	const label = studentName ? `${studentName} (${agreement.lesson_type.name})` : agreement.lesson_type.name;
 	return [{ label, href: `/agreements/${id}` }];

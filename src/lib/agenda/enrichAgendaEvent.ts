@@ -29,7 +29,7 @@ function withParticipants(ev: CalendarEvent, ctx: EnrichAgendaEventContext): Cal
 	};
 }
 
-export function enrichProjectAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventContext): CalendarEvent | null {
+function enrichProjectAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventContext): CalendarEvent | null {
 	if (ev.resource.sourceType !== 'project' || !ev.resource.agreementId) return null;
 	const project = ctx.projectsMap.get(ev.resource.agreementId);
 	if (!project) return null;
@@ -48,7 +48,7 @@ export function enrichProjectAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEve
 	};
 }
 
-export function enrichLessonGroupAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventContext): CalendarEvent | null {
+function enrichLessonGroupAgendaEvent(ev: CalendarEvent, ctx: EnrichAgendaEventContext): CalendarEvent | null {
 	if (ev.resource.sourceType !== 'lesson_group' || !ev.resource.agreementId) return null;
 	const group = ctx.lessonGroupsMap.get(ev.resource.agreementId);
 	if (!group) return null;
@@ -81,7 +81,7 @@ export function enrichLessonGroupAgendaEvent(ev: CalendarEvent, ctx: EnrichAgend
 	};
 }
 
-export function enrichLessonAgreementAgendaEvent(
+function enrichLessonAgreementAgendaEvent(
 	ev: CalendarEvent,
 	ctx: EnrichAgendaEventContext,
 ): CalendarEvent | null {

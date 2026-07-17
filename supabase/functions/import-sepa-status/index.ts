@@ -1,22 +1,22 @@
-// Verwerkt een SEPA pain.002.001 status-rapport van de bank en werkt de
-// statussen van incasso_batch_items (en eventueel de batch / mandaten) bij.
+// Processes a SEPA pain.002.001 status report from the bank and updates
+// statuses on incasso_batch_items (and optionally the batch / mandates).
 //
 // Body (application/json):
 //   {
-//     "xml": "<Document...>...</Document>",   // verplicht: ruwe pain.002 XML
-//     "batch_id"?: "uuid"                      // optioneel: forceer batch indien OrgnlMsgId niet matcht
+//     "xml": "<Document...>...</Document>",   // required: raw pain.002 XML
+//     "batch_id"?: "uuid"                      // optional: force batch when OrgnlMsgId does not match
 //   }
 //
-// Auth: admin of site_admin.
+// Auth: admin or site_admin.
 //
 // Mapping pain.002 TxSts -> incasso_batch_items.status:
 //   ACSC / ACCC / ACSP / ACCP / ACWC  -> 'accepted'
 //   RJCT                              -> 'rejected'
-//   PDNG / overige                    -> 'submitted' (laten staan)
+//   PDNG / other                      -> 'submitted' (leave as-is)
 //
-// Bij volledige succes-set (>=1 item, alle items accepted of reversed) wordt
-// de batch op 'closed' gezet. Mandaten met sequence_type 'FRST' die geslaagd
-// zijn worden naar 'RCUR' gepromoveerd en first_used_at gezet.
+// When the success set is complete (>=1 item, all items accepted or reversed),
+// the batch is set to 'closed'. Mandates with sequence_type 'FRST' that succeeded
+// are promoted to 'RCUR' and first_used_at is set.
 
 import { XMLParser } from 'npm:fast-xml-parser@4.5.0';
 import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 		return jsonResponse(400, { error: `XML ongeldig: ${msg}` });
 	}
 
-	// Zoek de batch: voorkeur op original_message_id, anders op meegegeven batch_id.
+	// Find the batch: prefer original_message_id, otherwise the provided batch_id.
 	let batchQuery = admin.from('incasso_batches').select('id, message_id, status').limit(1);
 	if (report.original_message_id) {
 		batchQuery = batchQuery.eq('message_id', report.original_message_id);
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
 		});
 	}
 
-	// Haal alle items van de batch op (voor lookup op end_to_end_id).
+	// Load all batch items (for lookup by end_to_end_id).
 	const { data: items, error: itemsErr } = await admin
 		.from('incasso_batch_items')
 		.select('id, end_to_end_id, mandate_id, status, sequence_type')
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
 		}
 	}
 
-	// Promoot mandaten van FRST naar RCUR + zet first_used_at.
+	// Promote mandates from FRST to RCUR and set first_used_at.
 	if (mandatesToPromote.size > 0) {
 		const { error: mandateErr } = await admin
 			.from('sepa_mandates')
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
 		}
 	}
 
-	// Sluit batch wanneer er geen items meer in 'submitted' of 'pending' staan.
+	// Close the batch when no items remain in 'submitted' or 'pending'.
 	const { data: remaining, error: remainingErr } = await admin
 		.from('incasso_batch_items')
 		.select('id', { count: 'exact', head: true })
