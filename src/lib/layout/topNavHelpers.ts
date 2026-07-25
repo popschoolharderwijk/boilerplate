@@ -20,6 +20,10 @@ export function buildQuickNavItems(isAdmin: boolean, isSiteAdmin: boolean): Quic
 	return items;
 }
 
+export function canViewAppVersion(isAdmin: boolean, isSiteAdmin: boolean): boolean {
+	return isAdmin || isSiteAdmin;
+}
+
 export function formatTopNavDisplayName(profile: TopNavProfile | null, email: string | null | undefined): string {
 	if (profile?.first_name && profile?.last_name) {
 		return `${profile.first_name} ${profile.last_name}`;

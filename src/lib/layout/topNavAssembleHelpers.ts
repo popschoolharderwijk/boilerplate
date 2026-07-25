@@ -3,6 +3,7 @@ import type { TopNavProfile } from '@/lib/layout/topNavHelpers';
 import {
 	buildQuickNavItems,
 	buildTopNavUserInitialsInput,
+	canViewAppVersion,
 	formatTopNavDisplayName,
 	formatTopNavRoleLabel,
 } from '@/lib/layout/topNavHelpers';
@@ -46,6 +47,7 @@ export function assembleTopNavHookResult(input: TopNavHookInput) {
 			userInitialsInput,
 			avatarUrl: input.profile?.avatar_url,
 			resolvedTheme: input.resolvedTheme,
+			showAppVersion: canViewAppVersion(input.isAdmin, input.isSiteAdmin),
 		},
 		navigationCallbacks,
 	);

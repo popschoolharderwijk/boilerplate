@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	buildQuickNavItems,
 	buildTopNavUserInitialsInput,
+	canViewAppVersion,
 	formatTopNavDisplayName,
 	formatTopNavRoleLabel,
 	getNextTheme,
@@ -17,6 +18,20 @@ describe('buildQuickNavItems', () => {
 			{ href: '/', label: 'Dashboard', group: 'Navigatie' },
 			{ href: '/teachers', label: 'Docenten', group: 'Navigatie' },
 		]);
+	});
+});
+
+describe('canViewAppVersion', () => {
+	it('returns true for admin', () => {
+		expect(canViewAppVersion(true, false)).toBe(true);
+	});
+
+	it('returns true for site admin', () => {
+		expect(canViewAppVersion(false, true)).toBe(true);
+	});
+
+	it('returns false for non-admin users', () => {
+		expect(canViewAppVersion(false, false)).toBe(false);
 	});
 });
 

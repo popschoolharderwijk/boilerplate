@@ -22,6 +22,7 @@ export function TopNav() {
 					userInitials={getUserInitials(topNav.userInitialsInput)}
 					avatarUrl={topNav.avatarUrl}
 					resolvedTheme={topNav.resolvedTheme}
+					showAppVersion={topNav.showAppVersion}
 					onNavigateProfile={topNav.onNavigateProfile}
 					onNavigateAppearance={topNav.onNavigateAppearance}
 					onNavigateAccount={topNav.onNavigateAccount}

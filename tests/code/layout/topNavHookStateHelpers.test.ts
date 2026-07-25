@@ -16,6 +16,7 @@ describe('buildTopNavHookState', () => {
 				userInitialsInput: { first_name: 'Anna', last_name: 'Bakker', email: 'anna@example.com' },
 				avatarUrl: null,
 				resolvedTheme: 'light',
+				showAppVersion: true,
 			},
 			{
 				onNavigateProfile,

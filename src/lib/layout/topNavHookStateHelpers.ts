@@ -12,6 +12,7 @@ export interface TopNavHookState {
 	userInitialsInput: TopNavUserInitialsInput;
 	avatarUrl: string | null | undefined;
 	resolvedTheme: string;
+	showAppVersion: boolean;
 }
 
 export function buildTopNavHookState(

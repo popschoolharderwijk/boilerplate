@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { LuLogOut, LuMoon, LuPalette, LuSearch, LuShieldAlert, LuSun, LuUser } from 'react-icons/lu';
+import { ChangelogDialog } from '@/components/layout/ChangelogDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +20,7 @@ interface TopNavUserMenuProps {
 	userInitials: string;
 	avatarUrl: string | null | undefined;
 	resolvedTheme: string;
+	showAppVersion: boolean;
 	onNavigateProfile: () => void;
 	onNavigateAppearance: () => void;
 	onNavigateAccount: () => void;
@@ -32,12 +35,17 @@ export function TopNavUserMenu({
 	userInitials,
 	avatarUrl,
 	resolvedTheme,
+	showAppVersion,
 	onNavigateProfile,
 	onNavigateAppearance,
 	onNavigateAccount,
 	onSignOut,
 	onToggleTheme,
 }: TopNavUserMenuProps) {
+	const [changelogOpen, setChangelogOpen] = useState(false);
+	const appVersion = import.meta.env.VITE_APP_VERSION;
+	const showVersion = showAppVersion && Boolean(appVersion);
+
 	return (
 		<>
 			<Button variant="ghost" size="icon" className="h-9 w-9" onClick={onToggleTheme}>
@@ -86,8 +94,22 @@ export function TopNavUserMenu({
 						<LuLogOut className="mr-2 h-4 w-4" />
 						<span>Uitloggen</span>
 					</DropdownMenuItem>
+					{showVersion && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								className="justify-center text-xs text-muted-foreground tabular-nums"
+								onSelect={() => setChangelogOpen(true)}
+								aria-label={`Versie ${appVersion}, bekijk changelog`}
+							>
+								v{appVersion}
+							</DropdownMenuItem>
+						</>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
+
+			{showVersion && <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />}
 		</>
 	);
 }
