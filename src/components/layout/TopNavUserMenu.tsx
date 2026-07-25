@@ -45,23 +45,6 @@ function TopNavThemeToggleButton({
 	);
 }
 
-function TopNavUserAvatarButton({
-	userInitials,
-	avatarUrl,
-}: {
-	userInitials: string;
-	avatarUrl: string | null | undefined;
-}) {
-	return (
-		<Button variant="ghost" className="relative h-9 w-9 rounded-full">
-			<Avatar className="h-9 w-9">
-				<AvatarImage src={avatarUrl ?? undefined} alt="Avatar" />
-				<AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
-			</Avatar>
-		</Button>
-	);
-}
-
 function TopNavUserMenuHeader({
 	displayName,
 	email,
@@ -163,9 +146,16 @@ export function TopNavUserMenu({
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<TopNavUserAvatarButton userInitials={userInitials} avatarUrl={avatarUrl} />
+					<Button variant="ghost" className="relative h-9 w-9 rounded-full">
+						<Avatar className="h-9 w-9">
+							<AvatarImage src={avatarUrl ?? undefined} alt="Avatar" />
+							<AvatarFallback className="bg-primary text-primary-foreground text-sm">
+								{userInitials}
+							</AvatarFallback>
+						</Avatar>
+					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="w-56" align="end" forceMount>
+				<DropdownMenuContent className="w-56" align="end">
 					<TopNavUserMenuHeader displayName={displayName} email={email} roleLabel={roleLabel} />
 					<DropdownMenuSeparator />
 					<DropdownMenuItem onClick={onNavigateProfile}>
