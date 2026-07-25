@@ -109,6 +109,12 @@ verify_jwt = false
 [functions.create-user]
 verify_jwt = false
 
+[functions.generate-invoice]
+verify_jwt = false
+
+[functions.get-invoice-pdf]
+verify_jwt = false
+
 # Stripe webhook is publiek — signature wordt in de function geverifieerd
 [functions.stripe-webhook]
 verify_jwt = false

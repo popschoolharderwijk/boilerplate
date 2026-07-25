@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
 import {
 	buildGenerateInvoiceSuccessPayload,
@@ -54,18 +55,23 @@ async function processGenerateInvoiceBatch(
 }
 
 export async function handleGenerateInvoiceRequest(req: Request): Promise<Response> {
-	const begun = await beginAuthenticatedPostRequest<Body>(req);
-	if (!begun.ok) return begun.response;
-	const { authHeader, body } = begun;
-	if (!body.batch_id) {
-		const missingBatch = resolveGenerateInvoiceMissingBatchError();
-		return jsonResponse(missingBatch.status, { error: missingBatch.error });
+	try {
+		const begun = await beginAuthenticatedPostRequest<Body>(req);
+		if (!begun.ok) return begun.response;
+		const { authHeader, body } = begun;
+		if (!body.batch_id) {
+			const missingBatch = resolveGenerateInvoiceMissingBatchError();
+			return jsonResponse(missingBatch.status, { error: missingBatch.error });
+		}
+
+		const env = readGenerateInvoiceEnv((key) => Deno.env.get(key));
+		const authError = await verifyAdminAccess(authHeader, env.supabaseUrl, env.anonKey, env.serviceKey);
+		if (authError) return authError;
+
+		const admin = createGenerateInvoiceAdminClient(env);
+		return await processGenerateInvoiceBatch(admin, body.batch_id, body);
+	} catch (err) {
+		console.error('generate-invoice failed', err);
+		return jsonResponse(500, { error: getSafeErrorMessage(err) });
 	}
-
-	const env = readGenerateInvoiceEnv((key) => Deno.env.get(key));
-	const authError = await verifyAdminAccess(authHeader, env.supabaseUrl, env.anonKey, env.serviceKey);
-	if (authError) return authError;
-
-	const admin = createGenerateInvoiceAdminClient(env);
-	return processGenerateInvoiceBatch(admin, body.batch_id, body);
 }
