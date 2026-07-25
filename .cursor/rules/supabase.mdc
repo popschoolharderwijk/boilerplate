@@ -17,3 +17,19 @@ After migration or schema changes: **tell the user** to run `bun run db:reset` (
   - All other Supabase commands that work with the database must also use `--linked`
 * Local Supabase (`supabase start`) is NOT used as of now.
 * Development workflow always works with the remote dev instance (mcp-dev) via `--linked`
+
+## Edge function module naming (`supabase/functions/`)
+
+Use one naming scheme for Bun-testable / no-IO modules: **`*Pure.ts`**. Do not mix with `*Helpers*`.
+
+| Kind | Naming | Examples |
+|------|--------|----------|
+| Pure logic (no DB/Stripe/HTTP IO; Bun-testable) | `*Pure.ts` | `billingPure.ts`, `invoicePure.ts`, `rebuildSchedulePure.ts` |
+| IO wrappers / orchestration (DB, Stripe, Deno APIs) | plain name, no `Pure`/`Helpers` suffix | `billing.ts`, `invoice.ts`, `subscription-storage.ts` |
+
+### Rules
+
+* **Always** name new edge extract modules `*Pure.ts` when they are side-effect-free and tested from `tests/code/`.
+* **Never** introduce `*Helpers.ts` (or `*HelpersPure.ts`) under `supabase/functions/` — that naming is for the frontend (`src/`), not edge.
+* Keep IO in the plain-named sibling; re-export pure symbols from the IO module when callers need a single import surface.
+* Matching Bun tests live under `tests/code/` and import the `*Pure` module (e.g. `billingPure.test.ts` → `billingPure.ts`).

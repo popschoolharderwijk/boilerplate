@@ -8,7 +8,7 @@ import {
 	findExistingInvoice,
 	readInvoiceMailEnv,
 	shouldRecordInvoiceEmailSent,
-} from './invoiceHelpers.ts';
+} from './invoice.ts';
 import {
 	buildInvoiceInsertRow,
 	buildInvoiceLineInsertRows,

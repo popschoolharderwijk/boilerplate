@@ -4,14 +4,14 @@ import {
 	fromRequestBody,
 	fromSignupRequest,
 	isSignupRequestEligibleForTrialScheduling,
-} from './resolveStudentDataHelpers.ts';
+} from './resolveStudentDataPure.ts';
 import type { Body, ResolvedStudentData, SignupRequestRow } from './types.ts';
 
 export {
 	fromRequestBody,
 	fromSignupRequest,
 	isSignupRequestEligibleForTrialScheduling,
-} from './resolveStudentDataHelpers.ts';
+} from './resolveStudentDataPure.ts';
 
 export async function resolveStudentData(
 	admin: SupabaseClient,

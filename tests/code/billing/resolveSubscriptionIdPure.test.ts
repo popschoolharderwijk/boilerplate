@@ -4,7 +4,7 @@ import {
 	buildResolvedSubscriptionFromRow,
 	extractReleasedSubscriptionId,
 	resolveDirectStripeSubscription,
-} from '../../../supabase/functions/sync-stripe-subscription/resolveSubscriptionIdHelpers';
+} from '../../../supabase/functions/sync-stripe-subscription/resolveSubscriptionIdPure';
 
 describe('resolveDirectStripeSubscription', () => {
 	it('returns resolved subscription when stripe id is provided', () => {

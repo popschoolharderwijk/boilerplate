@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
 	buildLegacyProfilePayload,
 	resolveLegacyPersonCreated,
-} from '../../../supabase/functions/_shared/legacyImportHelpers';
+} from '../../../supabase/functions/_shared/legacyImportPure';
 
 describe('resolveLegacyPersonCreated', () => {
 	it('returns true when no existing user id is mapped', () => {

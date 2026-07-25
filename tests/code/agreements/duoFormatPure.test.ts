@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { formatDate, formatPrice } from '../../../supabase/functions/create-duo-agreements/formatHelpers';
+import { formatDate, formatPrice } from '../../../supabase/functions/create-duo-agreements/formatPure';
 
 describe('formatPrice', () => {
 	it('formats euro amounts for nl-NL', () => {

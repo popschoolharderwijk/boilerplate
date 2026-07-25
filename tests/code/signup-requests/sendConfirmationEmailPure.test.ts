@@ -5,7 +5,7 @@ import {
 	buildSignupConfirmationOptionDetails,
 	formatSignupOptionPrice,
 	resolveSignupConfirmationRecipientEmail,
-} from '../../../supabase/functions/submit-signup-request/sendConfirmationEmailHelpers';
+} from '../../../supabase/functions/submit-signup-request/sendConfirmationEmailPure';
 
 const body = {
 	lesson_type_id: 'lesson-type-1',

@@ -1,4 +1,4 @@
-import { formatDate, formatPrice } from './formatHelpers.ts';
+import { formatDate, formatPrice } from './formatPure.ts';
 import { type Body, DAY_NAMES_NL, FREQUENCY_LABELS, PAYMENT_METHOD_LABELS } from './types.ts';
 
 export interface DuoProfileRow {

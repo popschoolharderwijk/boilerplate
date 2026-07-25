@@ -1,5 +1,5 @@
 import type { ItemRow } from './types.ts';
-import { fmtAmount, xmlEscape } from './xmlHelpers.ts';
+import { fmtAmount, xmlEscape } from './xmlPure.ts';
 
 export function groupItemsBySequenceType(items: ItemRow[]): Map<string, ItemRow[]> {
 	const groups = new Map<string, ItemRow[]>();

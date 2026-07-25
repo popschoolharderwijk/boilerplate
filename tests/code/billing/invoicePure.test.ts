@@ -19,7 +19,7 @@ import {
 	resolveInvoiceEmailRecipient,
 	shouldRecordInvoiceEmailSent,
 	stripBearerToken,
-} from '../../../supabase/functions/generate-invoice/invoiceHelpersPure';
+} from '../../../supabase/functions/generate-invoice/invoicePure';
 import type {
 	BatchItem,
 	IncassoBatch,

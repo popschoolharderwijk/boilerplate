@@ -5,7 +5,7 @@ import {
 	resolveDuoPairInsertFailureMessage,
 	resolveDuoPairInsertFailureResponse,
 	resolveDuoPairInsertOutcome,
-} from '../../../supabase/functions/create-duo-agreements/createDuoPairHelpers';
+} from '../../../supabase/functions/create-duo-agreements/createDuoPairPure';
 
 const body = {
 	student_user_id_a: 'student-a',

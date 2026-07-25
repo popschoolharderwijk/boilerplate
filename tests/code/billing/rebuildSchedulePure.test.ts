@@ -3,7 +3,7 @@ import {
 	collectKeptSchedulePhases,
 	inheritSchedulePaymentMethod,
 	resolveSchedulePhasePaymentMethod,
-} from '../../../supabase/functions/_shared/rebuildScheduleHelpers';
+} from '../../../supabase/functions/_shared/rebuildSchedulePure';
 
 describe('resolveSchedulePhasePaymentMethod', () => {
 	it('returns string payment method ids', () => {

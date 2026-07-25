@@ -146,10 +146,8 @@ stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook
 # (of naar een remote preview branch)
 stripe listen --forward-to https://<preview-ref>.supabase.co/functions/v1/stripe-webhook
 
-# Unit tests voor billing-logica (Deno)
-cd supabase/functions/_shared && deno test billing_test.ts
-
-# Verschuif-logica tests (Bun, app-side)
+# Billing unit tests (Bun, app-side — source of truth)
+bun test tests/code/billing/calculateYearlyAmount.test.ts
 bun test tests/code/billing/shiftNoLessonPeriod.test.ts
 ```
 

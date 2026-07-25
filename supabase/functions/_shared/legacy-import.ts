@@ -4,7 +4,7 @@ export {
 	resolveLegacyPersonUserId,
 	upsertLegacyProfile,
 	upsertLegacyRole,
-} from './legacyImportHelpers.ts';
+} from './legacyImportPure.ts';
 
 export interface ImportSummary {
 	tab: string;

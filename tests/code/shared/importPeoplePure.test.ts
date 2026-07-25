@@ -12,7 +12,7 @@ import {
 	resolveLegacyTeacherImportOutcome,
 	shouldLookupDuplicateAuthUser,
 	shouldStopAuthUserPagination,
-} from '../../../supabase/functions/import-legacy-data/importPeopleHelpers';
+} from '../../../supabase/functions/import-legacy-data/importPeoplePure';
 
 describe('parseLessonTypeLegacyIds', () => {
 	it('returns an empty array for missing values', () => {

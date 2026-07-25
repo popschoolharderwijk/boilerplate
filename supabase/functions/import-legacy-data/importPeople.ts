@@ -11,7 +11,7 @@ import {
 	resolveLegacyTeacherImportOutcome,
 	shouldLookupDuplicateAuthUser,
 	shouldStopAuthUserPagination,
-} from './importPeopleHelpers.ts';
+} from './importPeoplePure.ts';
 import type { ImportSummary, RowError, StudentImportRow, TeacherImportRow } from './types.ts';
 
 export async function findAuthUserByEmail(admin: SupabaseClient, email: string): Promise<string | null> {

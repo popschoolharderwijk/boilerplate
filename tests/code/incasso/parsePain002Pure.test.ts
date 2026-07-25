@@ -5,7 +5,7 @@ import {
 	buildParsedReportFromDoc,
 	extractReason,
 	mapTxSts,
-} from '../../../supabase/functions/import-sepa-status/parsePain002Helpers';
+} from '../../../supabase/functions/import-sepa-status/parsePain002Pure';
 
 const pain002Doc = {
 	Document: {

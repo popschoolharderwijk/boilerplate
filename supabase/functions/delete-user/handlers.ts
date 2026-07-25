@@ -5,10 +5,10 @@ import {
 	isSelfDeleteRequest,
 	resolveDeleteUserRoleFromQuery,
 	resolveDeleteUserTargetFromRole,
-} from './handlersHelpers.ts';
+} from './handlersPure.ts';
 
-export type { DeleteUserBody } from './handlersHelpers.ts';
-export { parseDeleteUserBody } from './handlersHelpers.ts';
+export type { DeleteUserBody } from './handlersPure.ts';
+export { parseDeleteUserBody } from './handlersPure.ts';
 
 export async function resolveDeleteUserTargetId(
 	supabaseAdmin: SupabaseClient,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { escapeXmlChar, fmtAmount, xmlEscape } from '../../../supabase/functions/generate-sepa-xml/xmlHelpers';
+import { escapeXmlChar, fmtAmount, xmlEscape } from '../../../supabase/functions/generate-sepa-xml/xmlPure';
 
 describe('escapeXmlChar', () => {
 	it('escapes less-than characters', () => {

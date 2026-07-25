@@ -4,7 +4,7 @@ import {
 	buildSignupConfirmationEmailVars,
 	buildSignupConfirmationOptionDetails,
 	resolveSignupConfirmationRecipientEmail,
-} from './sendConfirmationEmailHelpers.ts';
+} from './sendConfirmationEmailPure.ts';
 import type { SignupRequest } from './types.ts';
 
 export async function sendSignupConfirmationEmail(

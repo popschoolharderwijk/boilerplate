@@ -3,7 +3,7 @@ import {
 	fromRequestBody,
 	fromSignupRequest,
 	isSignupRequestEligibleForTrialScheduling,
-} from '../../../supabase/functions/schedule-trial-lesson/resolveStudentDataHelpers';
+} from '../../../supabase/functions/schedule-trial-lesson/resolveStudentDataPure';
 import type { Body, SignupRequestRow } from '../../../supabase/functions/schedule-trial-lesson/types';
 
 const LESSON_TYPE_ID = '11111111-1111-1111-1111-111111111111';

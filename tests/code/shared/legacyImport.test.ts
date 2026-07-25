@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { resolveLegacyPersonUserId } from '../../../supabase/functions/_shared/legacyImportHelpers';
+import { resolveLegacyPersonUserId } from '../../../supabase/functions/_shared/legacyImportPure';
 
 type UpsertCall = { table: string; payload: unknown; options?: unknown };
 

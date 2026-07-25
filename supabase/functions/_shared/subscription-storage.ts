@@ -17,37 +17,64 @@ export interface SubscriptionState {
 	latest_invoice_id?: string | null;
 }
 
-async function findExistingSubscriptionId(admin: SupabaseClient, state: SubscriptionState): Promise<string | null> {
-	if (state.stripe_subscription_id) {
-		const { data, error } = await admin
-			.from('subscriptions')
-			.select('id')
-			.eq('stripe_subscription_id', state.stripe_subscription_id)
-			.maybeSingle();
-		if (error) throw error;
-		if (data?.id) return data.id;
-	}
-
-	if (state.stripe_schedule_id) {
-		const { data, error } = await admin
-			.from('subscriptions')
-			.select('id')
-			.eq('stripe_schedule_id', state.stripe_schedule_id)
-			.maybeSingle();
-		if (error) throw error;
-		if (data?.id) return data.id;
-	}
-
+async function findIdByStripeSubscriptionId(
+	admin: SupabaseClient,
+	stripeSubscriptionId: string,
+): Promise<string | null> {
 	const { data, error } = await admin
 		.from('subscriptions')
 		.select('id')
-		.eq('lesson_agreement_id', state.lesson_agreement_id)
+		.eq('stripe_subscription_id', stripeSubscriptionId)
+		.maybeSingle();
+	if (error) throw error;
+	return data?.id ?? null;
+}
+
+async function findIdByStripeScheduleId(admin: SupabaseClient, stripeScheduleId: string): Promise<string | null> {
+	const { data, error } = await admin
+		.from('subscriptions')
+		.select('id')
+		.eq('stripe_schedule_id', stripeScheduleId)
+		.maybeSingle();
+	if (error) throw error;
+	return data?.id ?? null;
+}
+
+async function findActiveIdByAgreementId(admin: SupabaseClient, lessonAgreementId: string): Promise<string | null> {
+	const { data, error } = await admin
+		.from('subscriptions')
+		.select('id')
+		.eq('lesson_agreement_id', lessonAgreementId)
 		.in('status', ACTIVE_SUBSCRIPTION_STATUSES)
 		.order('created_at', { ascending: false })
 		.limit(1)
 		.maybeSingle();
 	if (error) throw error;
 	return data?.id ?? null;
+}
+
+async function findByOptionalStripeSubscriptionId(
+	admin: SupabaseClient,
+	stripeSubscriptionId: string | null,
+): Promise<string | null> {
+	if (!stripeSubscriptionId) return null;
+	return findIdByStripeSubscriptionId(admin, stripeSubscriptionId);
+}
+
+async function findByOptionalStripeScheduleId(
+	admin: SupabaseClient,
+	stripeScheduleId: string | null | undefined,
+): Promise<string | null> {
+	if (!stripeScheduleId) return null;
+	return findIdByStripeScheduleId(admin, stripeScheduleId);
+}
+
+async function findExistingSubscriptionId(admin: SupabaseClient, state: SubscriptionState): Promise<string | null> {
+	return (
+		(await findByOptionalStripeSubscriptionId(admin, state.stripe_subscription_id)) ??
+		(await findByOptionalStripeScheduleId(admin, state.stripe_schedule_id)) ??
+		(await findActiveIdByAgreementId(admin, state.lesson_agreement_id))
+	);
 }
 
 export async function writeSubscriptionState(admin: SupabaseClient, state: SubscriptionState): Promise<void> {

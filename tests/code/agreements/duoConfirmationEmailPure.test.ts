@@ -8,7 +8,7 @@ import {
 	type DuoProfileRow,
 	dispatchDuoConfirmationEmailJobs,
 	formatPersonDisplayName,
-} from '../../../supabase/functions/create-duo-agreements/duoConfirmationEmailHelpers';
+} from '../../../supabase/functions/create-duo-agreements/duoConfirmationEmailPure';
 import type { Body } from '../../../supabase/functions/create-duo-agreements/types';
 
 const STUDENT_A = '11111111-1111-1111-1111-111111111111';

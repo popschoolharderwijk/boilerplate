@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
-import { resolveStripeSubscriptionId } from '../../../supabase/functions/sync-stripe-subscription/resolveSubscriptionIdHelpers';
+import { resolveStripeSubscriptionId } from '../../../supabase/functions/sync-stripe-subscription/resolveSubscriptionIdPure';
 
 type SubscriptionRowResult = {
 	data: { stripe_subscription_id: string | null; stripe_schedule_id: string | null } | null;

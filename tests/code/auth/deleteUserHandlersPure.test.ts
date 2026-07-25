@@ -8,7 +8,7 @@ import {
 	resolveDeleteUserPermission,
 	resolveDeleteUserRoleFromQuery,
 	resolveDeleteUserTargetFromRole,
-} from '../../../supabase/functions/delete-user/handlersHelpers';
+} from '../../../supabase/functions/delete-user/handlersPure';
 
 describe('parseDeleteUserBody', () => {
 	it('returns empty object for empty text', () => {

@@ -4,7 +4,7 @@ import {
 	computeTotals,
 	filterStudentItems,
 	resolveAgeCategory,
-} from './invoiceHelpersPure.ts';
+} from './invoicePure.ts';
 import type { BatchItem, InvoiceLine, InvoiceTotals, ProfileRow, StudentInvoiceResult, StudentRow } from './types.ts';
 
 export function buildInvoiceStoragePath(studentUserId: string, invoiceId: string): string {

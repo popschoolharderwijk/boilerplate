@@ -5,7 +5,7 @@ import {
 	buildTrialAgendaEventTitle,
 	buildTrialLessonInsertRow,
 	normalizeTrialLessonNotes,
-} from '../../../supabase/functions/schedule-trial-lesson/trialSchedulePayloadHelpers';
+} from '../../../supabase/functions/schedule-trial-lesson/trialSchedulePayloadPure';
 import type { Body } from '../../../supabase/functions/schedule-trial-lesson/types';
 
 const SIGNUP_REQUEST_ID = '11111111-1111-1111-1111-111111111111';

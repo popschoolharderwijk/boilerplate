@@ -9,7 +9,7 @@ import {
 	resolveGenerateInvoiceMissingBatchError,
 	resolveGenerateInvoiceSendEmail,
 } from './generateInvoiceHandlerPure.ts';
-import { computeDueDate, verifyAdminAccess } from './invoiceHelpers.ts';
+import { computeDueDate, verifyAdminAccess } from './invoice.ts';
 import { loadBatchContext } from './loadBatchContext.ts';
 import { processStudentInvoice } from './processStudentInvoice.ts';
 import type { Body } from './types.ts';

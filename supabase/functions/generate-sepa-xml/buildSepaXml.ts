@@ -1,13 +1,13 @@
-import { buildPaymentInfoBlocks, groupItemsBySequenceType } from './buildSepaXmlHelpers.ts';
+import { buildPaymentInfoBlocks, groupItemsBySequenceType } from './buildSepaXmlPure.ts';
 import type { BatchRow, ItemRow, SepaXmlContext } from './types.ts';
-import { fmtAmount, xmlEscape } from './xmlHelpers.ts';
+import { fmtAmount, xmlEscape } from './xmlPure.ts';
 
 export {
 	buildPaymentInfoBlock,
 	buildPaymentInfoBlocks,
 	buildTransactionBlock,
 	groupItemsBySequenceType,
-} from './buildSepaXmlHelpers.ts';
+} from './buildSepaXmlPure.ts';
 
 export function buildSepaXml(
 	settings: SepaXmlContext['settings'],

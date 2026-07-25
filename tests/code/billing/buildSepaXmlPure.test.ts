@@ -3,7 +3,7 @@ import {
 	buildPaymentInfoBlock,
 	buildTransactionBlock,
 	groupItemsBySequenceType,
-} from '../../../supabase/functions/generate-sepa-xml/buildSepaXmlHelpers';
+} from '../../../supabase/functions/generate-sepa-xml/buildSepaXmlPure';
 import type { ItemRow } from '../../../supabase/functions/generate-sepa-xml/types';
 
 const baseItem: ItemRow = {
