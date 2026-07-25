@@ -7,6 +7,7 @@ Nodig voor CI workflows. Beheer via **[GitHub Actions Secrets → popschoolharde
 | Secret | Waarde | Gebruik |
 |--------|--------|---------|
 | `SUPABASE_ACCESS_TOKEN` | Access token uit Supabase (Account → Access Tokens) | `supabase link` + `db reset --linked` in CI |
+| `SUPABASE_DB_PASSWORD` | Database password van **mcp-test** (Project Settings → Database) | `db reset --linked` / CLI DB-connectie (omzeilt kapotte `cli_login_postgres`-flow) |
 | `SUPABASE_PROJECT_REF` | Project ref van **mcp-test** (`jserlqacarlgtdzrblic`) | CI linkt hiernaar |
 | `SUPABASE_URL` | API URL van mcp-test | Test runtime |
 | `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Anon key van mcp-test | Test runtime |
