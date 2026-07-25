@@ -135,3 +135,20 @@ CREATE POLICY invoice_lines_delete ON public.invoice_lines
 CREATE TRIGGER trg_audit_invoice_lines
   BEFORE INSERT OR UPDATE ON public.invoice_lines
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
+
+-- Storage policies for private invoices bucket
+CREATE POLICY "invoices_storage_admin_all"
+  ON storage.objects
+  FOR ALL
+  TO authenticated
+  USING (bucket_id = 'invoices' AND (public.is_admin() OR public.is_site_admin()))
+  WITH CHECK (bucket_id = 'invoices' AND (public.is_admin() OR public.is_site_admin()));
+
+CREATE POLICY "invoices_storage_student_select"
+  ON storage.objects
+  FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'invoices'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );

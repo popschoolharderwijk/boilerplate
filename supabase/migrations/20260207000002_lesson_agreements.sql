@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.lesson_agreements (
   -- Snapshot of chosen option at creation time (duration/frequency/price; "a deal is a deal")
   duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0),
   frequency public.lesson_frequency NOT NULL,
-  price_per_lesson NUMERIC(10,2) NOT NULL CHECK (price_per_lesson > 0),
+  price_per_lesson NUMERIC(10,2) NOT NULL CHECK (price_per_lesson >= 0),
 
   -- Scheduling
   day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),

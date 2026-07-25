@@ -54,19 +54,7 @@ supabase link --project-ref <project-id>
 supabase db push
 ```
 
-Dit past toe:
-- `20260116145900_baseline.sql` - Basis tabellen (profiles, user_roles), RLS policies en role management
-- `20260116160000_add_security_introspection.sql` - Security helper functies voor testing
-- `20260117000000_create_avatars_storage.sql` - Storage bucket RLS policies
-- `20260206000000_lesson_types.sql` - Lestypes tabel met RLS policies
-- `20260207000000_students.sql` - Students tabel, helper functions (`is_student`)
-- `20260207000001_teachers.sql` - Teachers tabel, helper functions (`is_teacher`, `get_teacher_user_id`)
-- `20260207000002_lesson_agreements.sql` - Lesovereenkomsten tabel met RLS policies
-- `20260210000000_shared_pagination_views.sql` - Gedeelde paginatie-views
-- `20260210000001_students_paginated_function.sql` t/m `20260210000004_users_paginated_function.sql` - Paginated functies
-- `20260211000000_agenda_events.sql` - Agenda (agenda_events, agenda_participants, deviations)
-- `20260226155756_reports.sql` - Reports tabel met RLS policies
-- `20260311194748_projects.sql` - Projecten (project_domains, project_labels, projects) met RLS
+Migraties staan in `supabase/migrations/` als domain-bestanden (bijv. `_lesson_groups`, `_projects`, `_sepa_incasso`). Iteratieve GRANT/DROP-patches zijn samengevoegd in die domain-migraties. Na schema-wijzigingen: `bun run db:reset`.
 
 ---
 

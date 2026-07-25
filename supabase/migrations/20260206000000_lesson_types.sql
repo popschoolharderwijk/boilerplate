@@ -198,6 +198,8 @@ GRANT SELECT ON public.lesson_types TO anon;
 GRANT SELECT ON public.lesson_type_options TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_types TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_type_options TO authenticated;
+GRANT ALL ON public.lesson_types TO service_role;
+GRANT ALL ON public.lesson_type_options TO service_role;
 
 -- =============================================================================
 -- END OF LESSON TYPES MIGRATION

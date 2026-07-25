@@ -267,3 +267,8 @@ $$;
 CREATE TRIGGER trg_lesson_group_members_sync_participants
   AFTER INSERT OR UPDATE OR DELETE ON public.lesson_group_members
   FOR EACH ROW EXECUTE FUNCTION public.trg_sync_participants_on_member_change();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_groups TO authenticated;
+GRANT ALL ON public.lesson_groups TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_group_members TO authenticated;
+GRANT ALL ON public.lesson_group_members TO service_role;

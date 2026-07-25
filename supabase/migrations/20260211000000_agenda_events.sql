@@ -162,6 +162,8 @@ COMMENT ON TABLE public.agenda_participants IS 'Participants for agenda events. 
 -- SECTION 3: AGENDA_EVENT_DEVIATIONS TABLE
 -- =============================================================================
 
+CREATE TYPE public.cancellation_type AS ENUM ('student', 'teacher');
+
 CREATE TABLE IF NOT EXISTS public.agenda_event_deviations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES public.agenda_events(id) ON DELETE CASCADE,
@@ -177,6 +179,11 @@ CREATE TABLE IF NOT EXISTS public.agenda_event_deviations (
   description TEXT,
   color TEXT,
   participant_ids UUID[],
+  cancellation_type public.cancellation_type DEFAULT NULL,
+  needs_reschedule boolean NOT NULL DEFAULT false,
+  -- For lesson_group events: participant user_ids who cancelled this occurrence.
+  -- NULL = no per-participant cancellation; whole-lesson cancellation via is_cancelled.
+  cancelled_participant_ids UUID[],
 
   CONSTRAINT agenda_event_deviations_unique UNIQUE (event_id, original_date)
   -- No CHECK (actual_date >= CURRENT_DATE): validate in app or trigger to avoid timezone/backup issues
@@ -190,6 +197,10 @@ CREATE INDEX IF NOT EXISTS idx_agenda_event_deviations_spans_end_date ON public.
 CREATE INDEX IF NOT EXISTS idx_agenda_event_deviations_spans_future ON public.agenda_event_deviations(event_id) WHERE spans_future_occurrences = true;
 
 COMMENT ON COLUMN public.agenda_event_deviations.spans_future_occurrences IS 'True when this deviation applies to original_date and all future occurrences until spans_end_date (cf. agenda_events.recurring = event repeats).';
+COMMENT ON COLUMN public.agenda_event_deviations.cancellation_type IS 'Who cancelled: student or teacher. Only set when is_cancelled = true.';
+COMMENT ON COLUMN public.agenda_event_deviations.needs_reschedule IS 'True when teacher cancelled and lesson needs to be rescheduled.';
+COMMENT ON COLUMN public.agenda_event_deviations.cancelled_participant_ids IS
+  'For lesson_group events: list of participant user_ids who cancelled this occurrence. NULL = no per-participant cancellation; whole-lesson cancellation handled via is_cancelled.';
 COMMENT ON TABLE public.agenda_event_deviations IS 'Deviations for any recurring agenda event (move/cancel occurrences). Replaces lesson_appointment_deviations.';
 
 -- =============================================================================

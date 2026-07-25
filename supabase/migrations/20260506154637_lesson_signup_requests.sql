@@ -9,12 +9,18 @@ CREATE INDEX IF NOT EXISTS idx_lesson_agreements_lesson_group_id
 
 -- 2. Enum + table lesson_signup_requests
 DO $$ BEGIN
-  CREATE TYPE public.signup_request_status AS ENUM ('pending', 'approved', 'rejected');
+  CREATE TYPE public.signup_request_status AS ENUM (
+    'pending',
+    'approved',
+    'rejected',
+    'trial_scheduled'
+  );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS public.lesson_signup_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_type_id uuid NOT NULL REFERENCES public.lesson_types(id) ON DELETE RESTRICT,
+  lesson_type_option_id uuid NULL REFERENCES public.lesson_type_options(id) ON DELETE SET NULL,
   lesson_group_id uuid NULL REFERENCES public.lesson_groups(id) ON DELETE SET NULL,
   first_name text NOT NULL,
   last_name text NOT NULL,
@@ -25,6 +31,9 @@ CREATE TABLE IF NOT EXISTS public.lesson_signup_requests (
   parent_email text NULL,
   parent_phone_number text NULL,
   notes text NULL,
+  sepa_iban text NULL,
+  sepa_account_holder text NULL,
+  sepa_bic text NULL,
   status public.signup_request_status NOT NULL DEFAULT 'pending',
   created_agreement_id uuid NULL REFERENCES public.lesson_agreements(id) ON DELETE SET NULL,
   processed_by uuid NULL,
@@ -59,11 +68,15 @@ CREATE POLICY lesson_signup_requests_insert_public
     AND processed_at IS NULL
   );
 
-CREATE POLICY lesson_signup_requests_select_staff
+-- Privileged staff see all; authenticated users see requests matching their own email
+CREATE POLICY lesson_signup_requests_select
   ON public.lesson_signup_requests
   FOR SELECT
   TO authenticated
-  USING (public.is_privileged());
+  USING (
+    is_privileged()
+    OR lower(email) = lower((SELECT p.email FROM public.profiles p WHERE p.user_id = current_user_id()))
+  );
 
 CREATE POLICY lesson_signup_requests_update_staff
   ON public.lesson_signup_requests
@@ -77,6 +90,10 @@ CREATE POLICY lesson_signup_requests_delete_staff
   FOR DELETE
   TO authenticated
   USING (public.is_privileged());
+
+GRANT INSERT ON public.lesson_signup_requests TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_signup_requests TO authenticated;
+GRANT ALL ON public.lesson_signup_requests TO service_role;
 
 -- 4. Sync trigger lesson_group_members -> lesson_agreements
 CREATE OR REPLACE FUNCTION public.sync_group_member_to_agreement()

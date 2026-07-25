@@ -1,13 +1,15 @@
--- Consolidated Stripe/billing setup: stripe_customers, subscriptions, subscription_invoices,
--- age-based pricing on lesson_type_options, and follow-up adjustments on subscriptions.
+-- Stripe/billing: stripe_customers, subscriptions, subscription_invoices,
+-- age-based pricing on lesson_type_options, and agreement Stripe linkage.
 
--- ============================================================
--- Part 1: initial stripe_customers / subscriptions / invoices
--- ============================================================
-
--- Add stripe_price_id to lesson_agreements (phase 1: manual mapping)
+-- Add Stripe linkage columns on lesson_agreements
 ALTER TABLE public.lesson_agreements
-  ADD COLUMN IF NOT EXISTS stripe_price_id text;
+  ADD COLUMN IF NOT EXISTS stripe_price_id text,
+  ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
+
+-- Age-specific prices on lesson options (in cents)
+ALTER TABLE public.lesson_type_options
+  ADD COLUMN IF NOT EXISTS price_per_lesson_under_21_cents integer,
+  ADD COLUMN IF NOT EXISTS price_per_lesson_adult_cents integer;
 
 -- ============================================================
 -- stripe_customers: 1 customer per user
@@ -29,13 +31,15 @@ SELECT public.apply_audit_trail('public.stripe_customers'::regclass);
 
 -- ============================================================
 -- subscriptions: 1 row per Stripe subscription, linked to lesson_agreement
+-- Teachers must not see billing; students see own; privileged see all.
 -- ============================================================
 CREATE TABLE public.subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_agreement_id uuid NOT NULL REFERENCES public.lesson_agreements(id) ON DELETE CASCADE,
   stripe_customer_id text NOT NULL,
-  stripe_subscription_id text NOT NULL UNIQUE,
+  stripe_subscription_id text,
   stripe_price_id text NOT NULL,
+  stripe_schedule_id text,
   status text NOT NULL,
   current_period_start timestamptz,
   current_period_end timestamptz,
@@ -44,31 +48,37 @@ CREATE TABLE public.subscriptions (
   default_payment_method_brand text,
   latest_invoice_id text,
   CONSTRAINT subscriptions_status_check CHECK (status IN (
-    'trialing','active','past_due','canceled','unpaid','incomplete','incomplete_expired','paused'
+    'scheduled','trialing','active','past_due','canceled','unpaid','incomplete','incomplete_expired','paused'
   ))
 );
 
 CREATE INDEX idx_subscriptions_lesson_agreement_id ON public.subscriptions(lesson_agreement_id);
 CREATE INDEX idx_subscriptions_status ON public.subscriptions(status);
+
+CREATE UNIQUE INDEX idx_subscriptions_stripe_subscription_id_unique
+  ON public.subscriptions(stripe_subscription_id)
+  WHERE stripe_subscription_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_subscriptions_stripe_schedule_id_unique
+  ON public.subscriptions(stripe_schedule_id)
+  WHERE stripe_schedule_id IS NOT NULL;
+
 CREATE UNIQUE INDEX idx_subscriptions_active_per_agreement
   ON public.subscriptions(lesson_agreement_id)
-  WHERE status IN ('trialing','active','past_due','unpaid','incomplete','paused');
+  WHERE status IN ('scheduled','trialing','active','past_due','unpaid','incomplete','paused');
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions FORCE ROW LEVEL SECURITY;
 
-CREATE POLICY "subscriptions_select"
-  ON public.subscriptions FOR SELECT
-  TO authenticated
-  USING (
-    public.is_privileged()
-    OR EXISTS (
-      SELECT 1 FROM public.lesson_agreements la
-      WHERE la.id = subscriptions.lesson_agreement_id
-        AND (la.student_user_id = public.current_user_id()
-             OR la.teacher_user_id = public.current_user_id())
-    )
-  );
+CREATE POLICY subscriptions_select ON public.subscriptions
+FOR SELECT TO authenticated
+USING (
+  is_privileged() OR EXISTS (
+    SELECT 1 FROM lesson_agreements la
+    WHERE la.id = subscriptions.lesson_agreement_id
+      AND la.student_user_id = current_user_id()
+  )
+);
 
 SELECT public.apply_audit_trail('public.subscriptions'::regclass);
 
@@ -96,65 +106,17 @@ CREATE INDEX idx_subscription_invoices_status ON public.subscription_invoices(st
 ALTER TABLE public.subscription_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_invoices FORCE ROW LEVEL SECURITY;
 
-CREATE POLICY "subscription_invoices_select"
-  ON public.subscription_invoices FOR SELECT
-  TO authenticated
-  USING (
-    public.is_privileged()
-    OR EXISTS (
-      SELECT 1 FROM public.subscriptions s
-      JOIN public.lesson_agreements la ON la.id = s.lesson_agreement_id
-      WHERE s.id = subscription_invoices.subscription_id
-        AND (la.student_user_id = public.current_user_id()
-             OR la.teacher_user_id = public.current_user_id())
-    )
-  );
+CREATE POLICY subscription_invoices_select ON public.subscription_invoices
+FOR SELECT TO authenticated
+USING (
+  is_privileged() OR EXISTS (
+    SELECT 1 FROM subscriptions s
+    JOIN lesson_agreements la ON la.id = s.lesson_agreement_id
+    WHERE s.id = subscription_invoices.subscription_id
+      AND la.student_user_id = current_user_id()
+  )
+);
 
 SELECT public.apply_audit_trail('public.subscription_invoices'::regclass);
 
--- ============================================================
--- Part 2: age-based pricing + stripe_schedule_id linkage
--- ============================================================
--- Age-specific prices on lesson options (in cents to avoid rounding errors)
-ALTER TABLE public.lesson_type_options
-  ADD COLUMN IF NOT EXISTS price_per_lesson_under_21_cents integer,
-  ADD COLUMN IF NOT EXISTS price_per_lesson_adult_cents integer;
-
--- Stripe Subscription Schedule linkage
-ALTER TABLE public.subscriptions
-  ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
-
-ALTER TABLE public.lesson_agreements
-  ADD COLUMN IF NOT EXISTS stripe_schedule_id text;
-
 -- (Backfill of weekly/biweekly rates in supabase/seeds/bootstrap.sql)
--- ============================================================
--- Part 3: subscriptions adjustments (nullable stripe_subscription_id, status set, unique index)
--- ============================================================
-ALTER TABLE public.subscriptions
-  ALTER COLUMN stripe_subscription_id DROP NOT NULL;
-
-ALTER TABLE public.subscriptions
-  DROP CONSTRAINT IF EXISTS subscriptions_stripe_subscription_id_key;
-
-DROP INDEX IF EXISTS public.idx_subscriptions_active_per_agreement;
-
-ALTER TABLE public.subscriptions
-  DROP CONSTRAINT IF EXISTS subscriptions_status_check;
-
-ALTER TABLE public.subscriptions
-  ADD CONSTRAINT subscriptions_status_check CHECK (status IN (
-    'scheduled','trialing','active','past_due','canceled','unpaid','incomplete','incomplete_expired','paused'
-  ));
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id_unique
-  ON public.subscriptions(stripe_subscription_id)
-  WHERE stripe_subscription_id IS NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_stripe_schedule_id_unique
-  ON public.subscriptions(stripe_schedule_id)
-  WHERE stripe_schedule_id IS NOT NULL;
-
-CREATE UNIQUE INDEX idx_subscriptions_active_per_agreement
-  ON public.subscriptions(lesson_agreement_id)
-  WHERE status IN ('scheduled','trialing','active','past_due','unpaid','incomplete','paused');
