@@ -7,6 +7,12 @@
 			"skillPath": "skills/caveman/SKILL.md",
 			"computedHash": "b0e7741886c0c32270cedc1a2fc21c2879d90964d3ce00f24952de7064613404"
 		},
+		"caveman-commit": {
+			"source": "JuliusBrussee/caveman",
+			"sourceType": "github",
+			"skillPath": "skills/caveman-commit/SKILL.md",
+			"computedHash": "790a4eeace0be35c6691faf923518ba5bd50f1f1305d1101d09dd4971be94e00"
+		},
 		"fallow": {
 			"source": "fallow-rs/fallow-skills",
 			"sourceType": "github",
