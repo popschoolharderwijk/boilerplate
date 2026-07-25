@@ -81,17 +81,6 @@ supabase gen types typescript --linked > src/integrations/supabase/types.ts
 
 ---
 
-## Storage Buckets
-
-```bash
-# Maak avatars storage bucket aan (vereist .env met SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY)
-bun run create-storage-bucket
-```
-
-> ⚠️ Storage buckets kunnen niet via SQL migraties worden aangemaakt. Run dit script **voor** je de storage RLS migratie toepast.
-
----
-
 ## User Management
 
 ```bash

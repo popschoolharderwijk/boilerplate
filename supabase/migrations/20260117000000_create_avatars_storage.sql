@@ -1,18 +1,21 @@
 -- =============================================================================
--- STORAGE: AVATARS BUCKET POLICIES
+-- STORAGE: AVATARS BUCKET + POLICIES
 -- =============================================================================
--- Storage buckets cannot be created via SQL migrations.
--- Run: bun run scripts/create-storage-bucket.ts
--- Or create manually in Supabase Dashboard: Storage > Create bucket > "avatars" (public)
---
--- This migration only creates the RLS policies for the avatars bucket.
--- =============================================================================
-
--- Note: The bucket must be created first via the script or dashboard.
--- These policies assume the bucket name is 'avatars' and it's public.
-
 -- File path format: {user_id}.{ext} (e.g., abc-def-123.png)
 -- Using consistent filename allows overwriting previous avatar (no storage leak)
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+	'avatars',
+	'avatars',
+	true,
+	5242880,
+	ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+)
+ON CONFLICT (id) DO UPDATE SET
+	public = excluded.public,
+	file_size_limit = excluded.file_size_limit,
+	allowed_mime_types = excluded.allowed_mime_types;
 
 -- Allow authenticated users to upload their own avatar
 CREATE POLICY "Users can upload own avatar"
