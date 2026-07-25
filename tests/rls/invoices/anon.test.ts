@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAnon } from '../../db';
-import { expectInsufficientPrivilege, unwrapError } from '../../utils';
+import { expectInsufficientPrivilege, unwrap, unwrapError } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 
 let initialState: DatabaseState;
@@ -17,9 +17,10 @@ afterAll(async () => {
 const fakeUuid = '00000000-0000-0000-0000-000000000001';
 
 describe('RLS: anonymous – invoices / invoice_lines', () => {
-	it('anon cannot select invoices', async () => {
+	it('anon select on invoices returns no rows', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(unwrapError(await db.from('invoices').select('*')));
+		const data = unwrap(await db.from('invoices').select('*'));
+		expect(data).toHaveLength(0);
 	});
 
 	it('anon cannot insert invoices', async () => {
@@ -38,9 +39,10 @@ describe('RLS: anonymous – invoices / invoice_lines', () => {
 		);
 	});
 
-	it('anon cannot select invoice_lines', async () => {
+	it('anon select on invoice_lines returns no rows', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(unwrapError(await db.from('invoice_lines').select('*')));
+		const data = unwrap(await db.from('invoice_lines').select('*'));
+		expect(data).toHaveLength(0);
 	});
 
 	it('anon cannot insert invoice_lines', async () => {

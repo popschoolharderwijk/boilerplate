@@ -1,8 +1,9 @@
-import { afterAll, beforeAll, describe, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAnon } from '../../db';
 import type { LessonTypeOptionInsert } from '../../types';
-import { expectInsufficientPrivilege, unwrapError } from '../../utils';
+import { expectInsufficientPrivilege, unwrap, unwrapError } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
+import { LESSON_TYPE_OPTIONS } from '../seed-data-constants';
 
 let initialState: DatabaseState;
 const { setupState, verifyState } = setupDatabaseStateVerification();
@@ -18,12 +19,14 @@ afterAll(async () => {
 const fakeId = '00000000-0000-0000-0000-000000000001';
 
 /**
- * RLS on lesson_type_options is authenticated-only; anon has no table access.
+ * Public signup (/aanmelden): anon may SELECT options for active lesson types.
+ * INSERT is denied. UPDATE/DELETE match no rows under RLS (empty result, no error).
  */
 describe('RLS: anonymous user – lesson_type_options', () => {
-	it('anon cannot select lesson_type_options', async () => {
+	it('anon can select lesson_type_options for active lesson types', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(unwrapError(await db.from('lesson_type_options').select('*')));
+		const data = unwrap(await db.from('lesson_type_options').select('id'));
+		expect(data).toHaveLength(LESSON_TYPE_OPTIONS.TOTAL);
 	});
 
 	it('anon cannot insert lesson_type_options', async () => {
@@ -37,19 +40,21 @@ describe('RLS: anonymous user – lesson_type_options', () => {
 		expectInsufficientPrivilege(unwrapError(await db.from('lesson_type_options').insert(row).select()));
 	});
 
-	it('anon cannot update lesson_type_options', async () => {
+	it('anon update affects no lesson_type_options rows', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(
-			unwrapError(
-				await db.from('lesson_type_options').update({ price_per_lesson: 99 }).eq('id', fakeId).select(),
-			),
+		const data = unwrap(
+			await db
+				.from('lesson_type_options')
+				.update({ price_per_lesson: 99 })
+				.neq('id', fakeId)
+				.select(),
 		);
+		expect(data).toHaveLength(0);
 	});
 
-	it('anon cannot delete lesson_type_options', async () => {
+	it('anon delete affects no lesson_type_options rows', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(
-			unwrapError(await db.from('lesson_type_options').delete().eq('id', fakeId).select()),
-		);
+		const data = unwrap(await db.from('lesson_type_options').delete().neq('id', fakeId).select());
+		expect(data).toHaveLength(0);
 	});
 });

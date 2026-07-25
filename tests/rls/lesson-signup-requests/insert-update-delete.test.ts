@@ -24,13 +24,16 @@ afterAll(async () => {
  *   INSERT: any role (incl. anon) iff status='pending' and processing fields null
  *   UPDATE: privileged only (staff/admin/site_admin)
  *   DELETE: privileged only (staff/admin/site_admin)
+ *
+ * INSERT...RETURNING also requires SELECT on the new row. Non-privileged users only
+ * see rows matching their profile email, so tests insert with that email.
  */
 
-function newPendingRequest(): LessonSignupRequestInsert {
+function newPendingRequest(email: string): LessonSignupRequestInsert {
 	return {
 		first_name: 'CRUD',
 		last_name: 'Test',
-		email: `crud-${Date.now()}-${Math.random().toString(36).slice(2)}@popschoolharderwijk.nl`,
+		email,
 		lesson_type_id: lessonTypeId,
 		status: 'pending',
 	};
@@ -38,7 +41,7 @@ function newPendingRequest(): LessonSignupRequestInsert {
 
 async function insertAs(user: TestUser) {
 	const db = await createClientAs(user);
-	const [row] = unwrap(await db.from('lesson_signup_requests').insert(newPendingRequest()).select('id'));
+	const [row] = unwrap(await db.from('lesson_signup_requests').insert(newPendingRequest(user)).select('id'));
 	return {
 		id: row.id,
 		cleanup: async () => {
@@ -65,7 +68,10 @@ describe('RLS: lesson_signup_requests INSERT - allowed for any authenticated use
 
 	it('non-pending status is rejected for non-privileged users', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_009);
-		const payload: LessonSignupRequestInsert = { ...newPendingRequest(), status: 'approved' };
+		const payload: LessonSignupRequestInsert = {
+			...newPendingRequest(TestUsers.STUDENT_009),
+			status: 'approved',
+		};
 		expectInsufficientPrivilege(unwrapError(await db.from('lesson_signup_requests').insert(payload).select()));
 	});
 });

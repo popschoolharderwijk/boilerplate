@@ -55,7 +55,7 @@ afterAll(async () => {
  *
  * → site_admin / admin / staff: see all
  * → teachers / students / plain users: only requests whose email equals their own profile email
- * → anon: no SELECT (only INSERT for the public signup form)
+ * → anon: SELECT allowed at table level but RLS yields no rows (INSERT-only public form)
  */
 describe('RLS: lesson_signup_requests SELECT - privileged roles see everything', () => {
 	async function expectSeesAll(user: TestUser) {
@@ -123,23 +123,28 @@ describe('RLS: lesson_signup_requests SELECT - email-matched access', () => {
 });
 
 describe('RLS: lesson_signup_requests anon access', () => {
-	it('anon cannot SELECT lesson_signup_requests', async () => {
+	it('anon select on lesson_signup_requests returns no rows', async () => {
 		const db = createClientAnon();
-		expectInsufficientPrivilege(unwrapError(await db.from('lesson_signup_requests').select('*')));
+		const data = unwrap(await db.from('lesson_signup_requests').select('*'));
+		expect(data).toHaveLength(0);
 	});
 
 	it('anon CAN INSERT a pending request via the public signup form', async () => {
 		const db = createClientAnon();
+		const email = `anon-${Date.now()}@popschoolharderwijk.nl`;
 		const payload: LessonSignupRequestInsert = {
 			first_name: 'Anon',
 			last_name: 'Public',
-			email: `anon-${Date.now()}@popschoolharderwijk.nl`,
+			email,
 			lesson_type_id: lessonTypeId,
 			status: 'pending',
 		};
-		const [row] = unwrap(await db.from('lesson_signup_requests').insert(payload).select('id'));
-		// Cleanup outside RLS.
-		unwrap(await dbNoRLS.from('lesson_signup_requests').delete().eq('id', row.id));
+		// No .select(): anon has no SELECT policy, so INSERT...RETURNING would fail RLS.
+		const { error } = await db.from('lesson_signup_requests').insert(payload);
+		expect(error).toBeNull();
+		const found = unwrap(await dbNoRLS.from('lesson_signup_requests').select('id').eq('email', email));
+		expect(found).toHaveLength(1);
+		unwrap(await dbNoRLS.from('lesson_signup_requests').delete().eq('id', found[0].id));
 	});
 
 	it('anon CANNOT INSERT a non-pending request (WITH CHECK violated)', async () => {

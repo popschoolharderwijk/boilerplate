@@ -9,9 +9,17 @@
  * Full grid (e.g. guitar lesson type): 5 durations × 3 frequencies = 15 rows.
  * Saxophone lesson type (DB name `Saxofoonles`): 30 and 45 min only = 6 rows.
  */
+export const LESSON_TYPES = {
+	/** All lesson types in bootstrap.sql (all seeded active). */
+	TOTAL: 8,
+	ACTIVE: 8,
+} as const;
+
 export const LESSON_TYPE_OPTIONS = {
 	FULL_GRID_ROW_COUNT: 15,
 	SAXOPHONE_LESSON_ROW_COUNT: 6,
+	/** All option rows across lesson types in bootstrap.sql. */
+	TOTAL: 99,
 } as const;
 
 /**
