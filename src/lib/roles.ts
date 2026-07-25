@@ -8,13 +8,6 @@ export type AppRole = Enums<'app_role'>;
 /** All available roles in the system */
 export const allRoles: AppRole[] = ['site_admin', 'admin', 'staff'];
 
-/** Role priority for sorting (higher number = higher priority) */
-export const rolePriority: Record<AppRole, number> = {
-	site_admin: 3,
-	admin: 2,
-	staff: 1,
-};
-
 /** Badge variant type */
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DAY_NAMES_DISPLAY, getDayNameFromDbIndex } from '@/lib/date/day-index';
+import { getDayNameFromDbIndex } from '@/lib/date/day-index';
 import { getDisplayName } from '@/lib/display-name';
 import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,9 @@ interface LessonAgreementItemProps {
 	agreement: LessonAgreement;
 	className?: string;
 	readOnly?: boolean;
+	/** Optional: required to show billing preview in the detail dialog. */
+	studentUserId?: string;
+	lessonTypeId?: string;
 }
 
 function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: string): string {
@@ -24,7 +27,13 @@ function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: stri
 	return `${agreement.lesson_type.name}\n${teacherName}\n${dayName} om ${time}`;
 }
 
-export function LessonAgreementItem({ agreement, className, readOnly = false }: LessonAgreementItemProps) {
+export function LessonAgreementItem({
+	agreement,
+	className,
+	readOnly = false,
+	studentUserId,
+	lessonTypeId,
+}: LessonAgreementItemProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 
 	const teacherName = getDisplayName(agreement.teacher);
@@ -42,35 +51,8 @@ export function LessonAgreementItem({ agreement, className, readOnly = false }: 
 				<LessonTypeBadge lessonType={agreement.lesson_type} showName={false} showTooltip={false} />
 			</div>
 
-			{/* Teacher Name with Day indicators below */}
-			<div className="flex flex-col gap-1 flex-1 min-w-0">
-				<span className="font-medium truncate text-sm">{teacherName}</span>
-				{/* Day indicators: 7 squares for each day of the week (Monday first) */}
-				<div className="flex gap-1">
-					{DAY_NAMES_DISPLAY.map((dayName, displayIndex) => {
-						// Convert display index (0=Monday) to database day_of_week (0=Sunday)
-						// displayIndex 0 (Monday) = day_of_week 1
-						// displayIndex 6 (Sunday) = day_of_week 0
-						const dayOfWeek = displayIndex === 6 ? 0 : displayIndex + 1;
-						const hasLesson = agreement.day_of_week === dayOfWeek;
-						const isWeekend = displayIndex >= 5; // Saturday (5) and Sunday (6)
-						return (
-							<div
-								key={dayName}
-								className={cn(
-									'h-2.5 w-2.5 rounded-sm border',
-									hasLesson
-										? 'bg-primary border-primary/80'
-										: isWeekend
-											? 'bg-muted/60 border-muted-foreground/60'
-											: 'bg-muted/70 border-muted-foreground/50',
-								)}
-								title={dayName}
-							/>
-						);
-					})}
-				</div>
-			</div>
+			{/* Teacher Name */}
+			<span className="font-medium truncate text-sm flex-1 min-w-0">{teacherName}</span>
 		</>
 	);
 
@@ -117,7 +99,13 @@ export function LessonAgreementItem({ agreement, className, readOnly = false }: 
 				</Tooltip>
 			</TooltipProvider>
 
-			<LessonAgreementDialog open={dialogOpen} onOpenChange={handleOpenChange} agreement={agreement} />
+			<LessonAgreementDialog
+				open={dialogOpen}
+				onOpenChange={handleOpenChange}
+				agreement={agreement}
+				studentUserId={studentUserId}
+				lessonTypeId={lessonTypeId}
+			/>
 		</>
 	);
 }

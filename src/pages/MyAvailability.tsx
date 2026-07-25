@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { LuPlus, LuTrash2 } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AvailabilityDayGrid } from '@/components/teachers/AvailabilityDayGrid';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -18,20 +18,53 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import { useTeacherAvailability } from '@/hooks/useTeacherAvailability';
 import { DEFAULT_END_TIME, DEFAULT_START_TIME } from '@/lib/availability';
 import { DAY_NAMES } from '@/lib/date/day-index';
+import {
+	groupAvailabilityByDay,
+	resolveMyAvailabilityPageGate,
+	validateAvailabilityTimeRange,
+} from '@/lib/teachers/myAvailabilityHelpers';
+import {
+	deleteTeacherAvailability,
+	insertTeacherAvailability,
+	type TeacherAvailability,
+} from '@/lib/teachers/teacherAvailabilityApi';
 import { formatTime } from '@/lib/time/time-format';
-
-type Availability = Tables<'teacher_availability'>;
 
 const dayNames = DAY_NAMES;
 
+function MyAvailabilitySlotRow({
+	avail,
+	deletingId,
+	onDelete,
+}: {
+	avail: TeacherAvailability;
+	deletingId: string | null;
+	onDelete: (id: string) => void;
+}) {
+	return (
+		<div key={avail.id} className="flex items-center justify-between rounded-md border bg-muted/50 p-2 text-sm">
+			<div className="font-medium">
+				{formatTime(avail.start_time)} - {formatTime(avail.end_time)}
+			</div>
+			<Button
+				variant="ghost"
+				size="icon"
+				className="h-6 w-6 text-destructive hover:text-destructive"
+				onClick={() => onDelete(avail.id)}
+				disabled={deletingId === avail.id}
+			>
+				{deletingId === avail.id ? <LoadingSpinner size="sm" /> : <LuTrash2 className="h-3 w-3" />}
+			</Button>
+		</div>
+	);
+}
+
 export default function MyAvailability() {
 	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
-	const [availability, setAvailability] = useState<Availability[]>([]);
-	const [loading, setLoading] = useState(true);
+	const { availability, loading, loadAvailability } = useTeacherAvailability(teacherUserId, isTeacher);
 	const [addDialogOpen, setAddDialogOpen] = useState(false);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [form, setForm] = useState({
@@ -40,64 +73,24 @@ export default function MyAvailability() {
 		end_time: DEFAULT_END_TIME,
 	});
 
-	const loadAvailability = useCallback(async () => {
-		if (!isTeacher || !teacherUserId) return;
-
-		setLoading(true);
-
-		const { data, error } = await supabase
-			.from('teacher_availability')
-			.select('*')
-			.eq('teacher_user_id', teacherUserId)
-			.order('day_of_week', { ascending: true })
-			.order('start_time', { ascending: true });
-
-		if (error) {
-			console.error('Error loading availability:', error);
-			toast.error('Fout bij laden beschikbaarheid');
-			setLoading(false);
-			return;
-		}
-
-		setAvailability((data as Availability[]) ?? []);
-		setLoading(false);
-	}, [isTeacher, teacherUserId]);
-
-	useEffect(() => {
-		if (!authLoading && isTeacher) {
-			loadAvailability();
-		}
-	}, [authLoading, isTeacher, loadAvailability]);
-
-	// Redirect if not a teacher
-	if (!authLoading && !isTeacher) {
-		return <Navigate to="/" replace />;
-	}
+	const pageGate = resolveMyAvailabilityPageGate(authLoading, isTeacher);
 
 	const handleAdd = async () => {
 		if (!teacherUserId) return;
 
-		if (form.start_time >= form.end_time) {
+		if (!validateAvailabilityTimeRange(form.start_time, form.end_time)) {
 			toast.error('Eindtijd moet na starttijd zijn');
 			return;
 		}
 
-		const { error } = await supabase
-			.from('teacher_availability')
-			.insert({
-				teacher_user_id: teacherUserId,
-				day_of_week: form.day_of_week,
-				start_time: form.start_time,
-				end_time: form.end_time,
-			})
-			.select()
-			.single();
+		const { error } = await insertTeacherAvailability({
+			teacher_user_id: teacherUserId,
+			day_of_week: form.day_of_week,
+			start_time: form.start_time,
+			end_time: form.end_time,
+		});
 
 		if (error) {
-			console.error('Error adding availability:', error);
-			toast.error('Fout bij toevoegen beschikbaarheid', {
-				description: error.message,
-			});
 			return;
 		}
 
@@ -110,13 +103,9 @@ export default function MyAvailability() {
 	const handleDelete = async (id: string) => {
 		setDeletingId(id);
 
-		const { error } = await supabase.from('teacher_availability').delete().eq('id', id);
+		const { error } = await deleteTeacherAvailability(id);
 
 		if (error) {
-			console.error('Error deleting availability:', error);
-			toast.error('Fout bij verwijderen beschikbaarheid', {
-				description: error.message,
-			});
 			setDeletingId(null);
 			return;
 		}
@@ -126,17 +115,14 @@ export default function MyAvailability() {
 		loadAvailability();
 	};
 
-	// Group availability by day
-	const availabilityByDay: Record<number, Availability[]> = {};
-	for (const avail of availability) {
-		if (!availabilityByDay[avail.day_of_week]) {
-			availabilityByDay[avail.day_of_week] = [];
-		}
-		availabilityByDay[avail.day_of_week].push(avail);
+	const availabilityByDay = groupAvailabilityByDay(availability);
+
+	if (pageGate === 'auth-loading' || loading) {
+		return <PageSkeleton variant="header-and-cards" />;
 	}
 
-	if (authLoading || loading) {
-		return <PageSkeleton variant="header-and-cards" />;
+	if (pageGate === 'denied') {
+		return <Navigate to="/" replace />;
 	}
 
 	return (
@@ -154,56 +140,14 @@ export default function MyAvailability() {
 				</Button>
 			</div>
 
-			{/* Availability Calendar */}
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{dayNames.map((dayName, dayIndex) => {
-					const dayAvailability = availabilityByDay[dayIndex] || [];
-					return (
-						<Card key={dayName}>
-							<CardHeader>
-								<CardTitle>{dayName}</CardTitle>
-								<CardDescription>
-									{dayAvailability.length} beschikbaarheidsblok
-									{dayAvailability.length !== 1 ? 'ken' : ''}
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								{dayAvailability.length === 0 ? (
-									<p className="text-sm text-muted-foreground">Geen beschikbaarheid</p>
-								) : (
-									<div className="space-y-2">
-										{dayAvailability.map((avail) => (
-											<div
-												key={avail.id}
-												className="flex items-center justify-between rounded-md border bg-muted/50 p-2 text-sm"
-											>
-												<div className="font-medium">
-													{formatTime(avail.start_time)} - {formatTime(avail.end_time)}
-												</div>
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-6 w-6 text-destructive hover:text-destructive"
-													onClick={() => handleDelete(avail.id)}
-													disabled={deletingId === avail.id}
-												>
-													{deletingId === avail.id ? (
-														<LoadingSpinner size="sm" />
-													) : (
-														<LuTrash2 className="h-3 w-3" />
-													)}
-												</Button>
-											</div>
-										))}
-									</div>
-								)}
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
+			<AvailabilityDayGrid
+				dayNames={dayNames}
+				availabilityByDay={availabilityByDay}
+				renderSlot={(avail) => (
+					<MyAvailabilitySlotRow avail={avail} deletingId={deletingId} onDelete={handleDelete} />
+				)}
+			/>
 
-			{/* Add Availability Dialog */}
 			<Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
 				<DialogContent>
 					<DialogHeader>

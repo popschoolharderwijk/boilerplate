@@ -4,26 +4,47 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemedToaster } from './components/ThemedToaster';
 import { ThemeProvider } from './components/ThemeProvider';
+import Account from './pages/Account';
+import AccountingReport from './pages/AccountingReport';
+import AccountingSettingsPage from './pages/AccountingSettingsPage';
 import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
+import Announcements from './pages/Announcements';
 import AuthCallback from './pages/AuthCallback';
+import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
+import EmailTemplates from './pages/EmailTemplates';
+import Incasso from './pages/Incasso';
+import IncassoBatchDetail from './pages/IncassoBatchDetail';
+import IncassoStart from './pages/IncassoStart';
+import Invoices from './pages/Invoices';
+import LegacyImport from './pages/LegacyImport';
+import LessonGroups from './pages/LessonGroups';
+import LessonGroupWizard from './pages/LessonGroupWizard';
 import LessonTypeInfo from './pages/LessonTypeInfo';
 import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
+import Mandaten from './pages/Mandaten';
 import MyAvailability from './pages/MyAvailability';
+import MyInvoices from './pages/MyInvoices';
 import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
+import MyTrial from './pages/MyTrial';
+import NoLessonPeriods from './pages/NoLessonPeriods';
 import NotFound from './pages/NotFound';
 import Projects from './pages/Projects';
+import PublicSignup from './pages/PublicSignup';
 import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+import SignupRequests from './pages/SignupRequests';
+import StudentDetail from './pages/StudentDetail';
 import Students from './pages/Students';
+
 import TeacherAvailability from './pages/TeacherAvailability';
 import TeacherInfo from './pages/TeacherInfo';
 import Teachers from './pages/Teachers';
+import TrialLessons from './pages/TrialLessons';
 import UserManual from './pages/UserManual';
 import Users from './pages/Users';
 
@@ -39,6 +60,9 @@ const App = () => (
 				<Routes>
 					<Route path="/login" element={<Login />} />
 					<Route path="/auth/callback" element={<AuthCallback />} />
+					<Route path="/auth/confirm" element={<AuthConfirm />} />
+					<Route path="/aanmelden" element={<PublicSignup />} />
+					<Route path="/incasso/start" element={<IncassoStart />} />
 
 					{/* Protected dashboard routes */}
 					<Route
@@ -55,9 +79,21 @@ const App = () => (
 						<Route path="/lesson-types/new" element={<LessonTypeInfo />} />
 						<Route path="/lesson-types/:id" element={<LessonTypeInfo />} />
 						<Route path="/agreements" element={<Agreements />} />
+						<Route path="/lesson-groups" element={<LessonGroups />} />
+						<Route path="/lesson-groups/new" element={<LessonGroupWizard />} />
+						<Route path="/lesson-groups/:id" element={<LessonGroupWizard />} />
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
-						<Route path="/settings" element={<Settings />} />
+						<Route path="/aanmeldingen" element={<SignupRequests />} />
+						<Route path="/trial-lessons" element={<TrialLessons />} />
+						<Route path="/my-trial" element={<MyTrial />} />
+
+						<Route path="/lesvrije-periodes" element={<NoLessonPeriods />} />
+						<Route path="/email-templates" element={<EmailTemplates />} />
+						<Route path="/account" element={<Account defaultTab="profile" />} />
+						<Route path="/account/profile" element={<Account defaultTab="profile" />} />
+						<Route path="/account/appearance" element={<Account defaultTab="appearance" />} />
+						<Route path="/account/danger" element={<Account defaultTab="danger" />} />
 						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />
 						<Route path="/teachers/availability" element={<TeacherAvailability />} />
@@ -68,7 +104,17 @@ const App = () => (
 						<Route path="/students" element={<Students />} />
 						<Route path="/students/my-students" element={<MyStudents />} />
 						<Route path="/students/my-profile" element={<MyStudentProfile />} />
+						<Route path="/students/:userId" element={<StudentDetail />} />
 						<Route path="/reports" element={<Reports />} />
+						<Route path="/boekhouding" element={<AccountingReport />} />
+						<Route path="/boekhouding/instellingen" element={<AccountingSettingsPage />} />
+						<Route path="/incasso" element={<Incasso />} />
+						<Route path="/incasso/batches/:id" element={<IncassoBatchDetail />} />
+						<Route path="/mandaten" element={<Mandaten />} />
+						<Route path="/facturen" element={<Invoices />} />
+						<Route path="/mijn-facturen" element={<MyInvoices />} />
+						<Route path="/data-import" element={<LegacyImport />} />
+						<Route path="/announcements" element={<Announcements />} />
 						<Route path="/manual" element={<UserManual />} />
 					</Route>
 

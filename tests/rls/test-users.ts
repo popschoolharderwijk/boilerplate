@@ -1,6 +1,6 @@
 /**
  * Test user emails for RLS testing.
- * These match the users seeded in supabase/seed.sql
+ * These match the users seeded in supabase/seeds/test.sql
  */
 export const TestUsers = {
 	// Site Admin

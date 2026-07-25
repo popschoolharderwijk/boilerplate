@@ -4,10 +4,8 @@
  * Do not add generated-type overrides here; this file only Omit's from generated types.
  */
 
-import type { Database, TablesInsert, TablesUpdate } from './types';
+import type { Database, TablesInsert } from './types';
 
 type AuditFields = 'created_by' | 'updated_by' | 'created_at' | 'updated_at';
 
 export type Insert<T extends keyof Database['public']['Tables']> = Omit<TablesInsert<T>, AuditFields>;
-
-export type Update<T extends keyof Database['public']['Tables']> = Omit<TablesUpdate<T>, AuditFields>;

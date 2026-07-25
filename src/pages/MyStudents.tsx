@@ -1,165 +1,125 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import { MyStudentsAgreementsCell, MyStudentsLessonTypesCell } from '@/components/students/MyStudentsTableParts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
+import { useServerPaginatedListState } from '@/hooks/useServerPaginatedListState';
 import { supabase } from '@/integrations/supabase/client';
 import {
-	flattenStudentWithAgreements,
-	type PaginatedStudentsResponseRaw,
-	type StudentWithAgreements,
-} from '@/types/students';
+	applyMyStudentsLoadOutcome,
+	buildMyStudentsLoadParams,
+	mapMyStudentsPaginatedResponse,
+	myStudentDisplayName,
+	myStudentInitials,
+	shouldRedirectMyStudents,
+	shouldShowMyStudentsSkeleton,
+	shouldSkipMyStudentsLoad,
+} from '@/lib/students/myStudentsPageHelpers';
+import type { StudentWithAgreements } from '@/types/students';
 
 export default function MyStudents() {
 	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalCount, setTotalCount] = useState(0);
+	const {
+		loading,
+		setLoading,
+		totalCount,
+		setTotalCount,
+		searchQuery,
+		debouncedSearchQuery,
+		handleSearchChange,
+		currentPage,
+		rowsPerPage,
+		handlePageChange,
+		handleRowsPerPageChange,
+	} = useServerPaginatedListState({
+		storageKey: 'my-students',
+		initialSortColumn: 'student',
+		initialSortDirection: 'asc',
+	});
 
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
-	const [rowsPerPage, setRowsPerPage] = useState(20);
+	useEffect(() => {
+		if (shouldSkipMyStudentsLoad(authLoading, isTeacher, teacherUserId)) return;
 
-	// Filter state
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-
-	const loadStudents = useCallback(async () => {
-		if (!isTeacher || !teacherUserId) return;
-
+		let cancelled = false;
 		setLoading(true);
+		const loadParams = buildMyStudentsLoadParams(currentPage, rowsPerPage, debouncedSearchQuery);
 
-		try {
-			const offset = (currentPage - 1) * rowsPerPage;
-
-			const { data, error } = await supabase.rpc('get_students_paginated', {
-				p_limit: rowsPerPage,
-				p_offset: offset,
-				p_search: debouncedSearchQuery || null,
+		void supabase
+			.rpc('get_students_paginated', {
+				p_limit: loadParams.limit,
+				p_offset: loadParams.offset,
+				p_search: loadParams.search,
 				p_status: 'all',
 				p_lesson_type_id: null,
 				p_sort_column: 'name',
 				p_sort_direction: 'asc',
+			})
+			.then(({ data, error }) => {
+				if (cancelled) return;
+				if (error) {
+					console.error('Error loading students:', error);
+					toast.error('Fout bij laden leerlingen');
+					setLoading(false);
+					return;
+				}
+				applyMyStudentsLoadOutcome(mapMyStudentsPaginatedResponse(data), setStudents, setTotalCount);
+				setLoading(false);
 			});
 
-			if (error) {
-				console.error('Error loading students:', error);
-				toast.error('Fout bij laden leerlingen');
-				setLoading(false);
-				return;
-			}
-
-			const result = data as unknown as PaginatedStudentsResponseRaw;
-			setStudents((result.data ?? []).map(flattenStudentWithAgreements));
-			setTotalCount(result.total_count ?? 0);
-			setLoading(false);
-		} catch (error) {
-			console.error('Error loading students:', error);
-			toast.error('Fout bij laden leerlingen');
-			setLoading(false);
-		}
-	}, [isTeacher, teacherUserId, currentPage, rowsPerPage, debouncedSearchQuery]);
-
-	// Load students when dependencies change
-	useEffect(() => {
-		if (!authLoading && isTeacher) {
-			loadStudents();
-		}
-	}, [authLoading, isTeacher, loadStudents]);
-
-	// Reset to page 1 when search changes - use a ref to track previous value
-	const prevSearchRef = React.useRef(debouncedSearchQuery);
-	useEffect(() => {
-		if (prevSearchRef.current !== debouncedSearchQuery) {
-			setCurrentPage(1);
-			prevSearchRef.current = debouncedSearchQuery;
-		}
-	}, [debouncedSearchQuery]);
-
-	// Handle search query change (debounced)
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
-
-	// Helper functions
-	const getUserInitials = useCallback((s: StudentWithAgreements): string => {
-		if (s.first_name && s.last_name) {
-			return `${s.first_name[0]}${s.last_name[0]}`.toUpperCase();
-		}
-		if (s.first_name) {
-			return s.first_name.slice(0, 2).toUpperCase();
-		}
-		return (s.email ?? '??').slice(0, 2).toUpperCase();
-	}, []);
-
-	const getDisplayName = useCallback((s: StudentWithAgreements): string => {
-		if (s.first_name && s.last_name) {
-			return `${s.first_name} ${s.last_name}`;
-		}
-		if (s.first_name) {
-			return s.first_name;
-		}
-		return s.email ?? 'Onbekend';
-	}, []);
-
-	// Extract lesson types from agreements
-	const getLessonTypes = useCallback((s: StudentWithAgreements) => {
-		const types = new Map<string, { name: string; icon: string | null; color: string | null }>();
-		s.agreements.forEach((agreement) => {
-			if (agreement.lesson_type) {
-				types.set(agreement.lesson_type.id, {
-					name: agreement.lesson_type.name,
-					icon: agreement.lesson_type.icon,
-					color: agreement.lesson_type.color,
-				});
-			}
-		});
-		return Array.from(types.values());
-	}, []);
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		authLoading,
+		isTeacher,
+		teacherUserId,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		setLoading,
+		setTotalCount,
+	]);
 
 	const columns: DataTableColumn<StudentWithAgreements>[] = useMemo(
 		() => [
 			{
 				key: 'student',
 				label: 'Leerling',
-				sortable: false, // Server-side sorting
-				className: 'w-48',
-				render: (s) => (
+				sortable: false,
+				className: 'w-56',
+				render: (student) => (
 					<div className="flex items-center gap-3">
 						<Avatar className="h-9 w-9 flex-shrink-0">
-							<AvatarImage src={s.avatar_url ?? undefined} alt={getDisplayName(s)} />
+							<AvatarImage src={student.avatar_url ?? undefined} alt={myStudentDisplayName(student)} />
 							<AvatarFallback className="bg-primary/10 text-primary text-sm">
-								{getUserInitials(s)}
+								{myStudentInitials(student)}
 							</AvatarFallback>
 						</Avatar>
-						<div className="min-w-0 flex-1">
-							<p className="font-medium break-words">{getDisplayName(s)}</p>
-							<p className="text-xs text-muted-foreground break-words">{s.email}</p>
-						</div>
+						<TooltipProvider delayDuration={200}>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<div className="min-w-0 flex-1 overflow-hidden">
+										<Link
+											to={`/students/${student.user_id}`}
+											className="block font-medium truncate hover:text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
+										>
+											{myStudentDisplayName(student)}
+										</Link>
+										<p className="text-xs text-muted-foreground truncate">{student.email}</p>
+									</div>
+								</TooltipTrigger>
+								<TooltipContent side="top" align="start">
+									<p className="font-medium">{myStudentDisplayName(student)}</p>
+									<p className="text-xs text-muted-foreground">{student.email}</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
 					</div>
 				),
 			},
@@ -167,61 +127,31 @@ export default function MyStudents() {
 				key: 'phone_number',
 				label: 'Telefoon',
 				sortable: false,
-				render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
+				render: (student) => <span className="text-muted-foreground">{student.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'lesson_types',
 				label: 'Lessoorten',
 				sortable: false,
-				render: (s) => {
-					const lessonTypes = getLessonTypes(s);
-					if (lessonTypes.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
-					return (
-						<div className="flex flex-wrap gap-1">
-							{lessonTypes.map((lt) => (
-								<Badge key={lt.name} variant="secondary" className="text-xs">
-									{lt.name}
-								</Badge>
-							))}
-						</div>
-					);
-				},
+				render: (student) => <MyStudentsLessonTypesCell student={student} />,
 			},
 			{
 				key: 'agreements',
 				label: 'Lesovereenkomsten',
 				sortable: false,
 				className: 'min-w-96',
-				render: (s) => {
-					if (s.agreements.length === 0) {
-						return <span className="text-muted-foreground text-sm">-</span>;
-					}
-					return (
-						<div className="flex flex-wrap gap-2">
-							{s.agreements.map((agreement) => (
-								<LessonAgreementItem
-									key={agreement.id}
-									agreement={agreement}
-									className="flex-shrink-0"
-								/>
-							))}
-						</div>
-					);
-				},
+				render: (student) => <MyStudentsAgreementsCell student={student} />,
 			},
 		],
-		[getDisplayName, getUserInitials, getLessonTypes],
+		[],
 	);
 
-	// Redirect if not a teacher
-	if (!authLoading && !isTeacher) {
+	if (shouldRedirectMyStudents(authLoading, isTeacher)) {
 		return <Navigate to="/" replace />;
 	}
 
-	if (authLoading || loading) {
+	if (shouldShowMyStudentsSkeleton(authLoading, loading)) {
 		return <PageSkeleton variant="header-and-cards" />;
 	}
 
@@ -235,7 +165,7 @@ export default function MyStudents() {
 				searchQuery={searchQuery}
 				onSearchChange={handleSearchChange}
 				loading={loading}
-				getRowKey={(s) => s.user_id}
+				getRowKey={(student) => student.user_id}
 				emptyMessage="Geen leerlingen gevonden"
 				serverPagination={{
 					totalCount,

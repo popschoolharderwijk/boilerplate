@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.lesson_agreements (
   -- Snapshot of chosen option at creation time (duration/frequency/price; "a deal is a deal")
   duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0),
   frequency public.lesson_frequency NOT NULL,
-  price_per_lesson NUMERIC(10,2) NOT NULL CHECK (price_per_lesson > 0),
+  price_per_lesson NUMERIC(10,2) NOT NULL CHECK (price_per_lesson >= 0),
 
   -- Scheduling
   day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
@@ -110,6 +110,7 @@ $$;
 ALTER FUNCTION public.check_teacher_not_own_student() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.check_teacher_not_own_student() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.check_teacher_not_own_student() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.check_teacher_not_own_student() FROM authenticated;
 
 -- Trigger to enforce the constraint on INSERT and UPDATE
 CREATE TRIGGER check_teacher_not_own_student_trigger
@@ -243,6 +244,7 @@ $$;
 ALTER FUNCTION public.check_teacher_lesson_type_has_no_agreements() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.check_teacher_lesson_type_has_no_agreements() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.check_teacher_lesson_type_has_no_agreements() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.check_teacher_lesson_type_has_no_agreements() FROM authenticated;
 
 -- Trigger to enforce the constraint on DELETE
 CREATE TRIGGER check_teacher_lesson_type_has_no_agreements_trigger
@@ -348,10 +350,11 @@ BEGIN
 END;
 $$;
 
--- Revoke public access, grant only to authenticated users
+-- Revoke public access — trigger-only; service_role for ops/tests
 REVOKE ALL ON FUNCTION public.ensure_student_exists(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_student_exists(UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.ensure_student_exists(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.ensure_student_exists(UUID) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.ensure_student_exists(UUID) TO service_role;
 ALTER FUNCTION public.ensure_student_exists(UUID) OWNER TO postgres;
 
 -- Trigger function to ensure student exists before inserting lesson agreement
@@ -427,10 +430,11 @@ BEGIN
 END;
 $$;
 
--- Revoke public access, grant only to authenticated users
+-- Revoke public access — trigger-only; service_role for ops/tests
 REVOKE ALL ON FUNCTION public.cleanup_student_if_no_agreements(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cleanup_student_if_no_agreements(UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.cleanup_student_if_no_agreements(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.cleanup_student_if_no_agreements(UUID) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.cleanup_student_if_no_agreements(UUID) TO service_role;
 ALTER FUNCTION public.cleanup_student_if_no_agreements(UUID) OWNER TO postgres;
 
 -- Helper function to get student status (active/inactive) based on lesson agreements

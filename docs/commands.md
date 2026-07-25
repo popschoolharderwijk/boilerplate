@@ -77,18 +77,7 @@ supabase config push --linked
 supabase gen types typescript --linked > src/integrations/supabase/types.ts
 ```
 
-> 💡 **Workflow**: Er zijn geen lokale Supabase-databases. **Development** (Lovable, `bun dev`, `reset-db:dev`) gebruikt **mcp-dev** (`zdvscmogkfyddnnxzkdu`). **CI bij een PR** gebruikt altijd **mcp-test** (link via secret `SUPABASE_PROJECT_REF`, credentials uit secrets). Lokaal testen (`bun test rls`): zet in `.env.test` de credentials van mcp-test of mcp-dev. Zie [secrets.md](./secrets.md) en [architecture.md](./architecture.md).
-
----
-
-## Storage Buckets
-
-```bash
-# Maak avatars storage bucket aan (vereist .env met SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY)
-bun run create-storage-bucket
-```
-
-> ⚠️ Storage buckets kunnen niet via SQL migraties worden aangemaakt. Run dit script **voor** je de storage RLS migratie toepast.
+> 💡 **Workflow**: Er zijn geen lokale Supabase-databases. **Development** (Lovable, `bun dev`, `db:reset`) gebruikt **mcp-dev** (`zdvscmogkfyddnnxzkdu`). **CI bij een PR** gebruikt altijd **mcp-test** (link via secret `SUPABASE_PROJECT_REF`, credentials uit secrets). Lokaal testen (`bun test rls`): zet in `.env.test` de credentials van mcp-test of mcp-dev. Zie [secrets.md](./secrets.md) en [architecture.md](./architecture.md).
 
 ---
 
@@ -128,7 +117,7 @@ De Dev Login knop heeft een dropdown waarmee je kunt kiezen uit verschillende ro
 - **Student** (`student-001@test.nl`)
 - **User (geen rol)** (`user-001@test.nl`)
 
-Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev).
+Deze users komen uit de test seed (`supabase/seeds/test.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev) na `bun run db:reset`.
 
 ### Configuratie
 
@@ -138,9 +127,9 @@ Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in d
 VITE_DEV_LOGIN_PASSWORD=your-custom-password
 ```
 
-Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De seed users in de remote dev instance gebruiken standaard het wachtwoord `password`.
+Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De test-seed users in `supabase/seeds/test.sql` gebruiken standaard het wachtwoord `password`.
 
-> 💡 **Let op**: De Dev Login knop gebruikt hardcoded emails uit de seed data (bijv. `site-admin@test.nl`). Deze emails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run create-user` met `DEV_LOGIN_EMAIL`.
+> 💡 **Let op**: De Dev Login knop gebruikt hardcoded e-mails uit `supabase/seeds/test.sql` (bijv. `site-admin@test.nl`). Deze e-mails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run create-user` met `DEV_LOGIN_EMAIL`.
 
 ### Beveiliging
 

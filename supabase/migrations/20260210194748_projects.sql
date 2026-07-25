@@ -4,7 +4,13 @@
 -- =============================================================================
 
 -- Enum for agenda_events.source_type (used by agenda_events table in next migration)
-CREATE TYPE public.agenda_event_source_type AS ENUM ('manual', 'lesson_agreement', 'project');
+CREATE TYPE public.agenda_event_source_type AS ENUM (
+  'manual',
+  'lesson_agreement',
+  'project',
+  'lesson_group',
+  'trial_lesson'
+);
 
 -- 1. project_domains
 CREATE TABLE public.project_domains (

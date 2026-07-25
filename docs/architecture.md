@@ -37,16 +37,23 @@ Agenda: `agenda_events` kan gekoppeld zijn aan een lesovereenkomst (`source_type
 |-------|-------------|
 | `profiles` | Gebruikersprofiel (naam, email, telefoon, avatar). Automatisch aangemaakt via trigger bij registratie. |
 | `user_roles` | Expliciete rollen (`site_admin`, `admin`, `staff`). Eén rol per gebruiker. |
-| `students` | Leerling-registratie. Koppelt een `auth.users` aan een student-record. **Automatisch beheerd**: wordt aangemaakt wanneer de eerste lesovereenkomst wordt ingevoegd en automatisch verwijderd wanneer alle lesovereenkomsten zijn verwijderd. Kan niet handmatig worden aangemaakt of verwijderd. |
+| `students` | Leerling-registratie. **Automatisch beheerd** via triggers op `lesson_agreements`. Bevat o.a. `date_of_birth` voor BTW-leeftijdslogica. |
 | `teachers` | Docent-registratie. Koppelt een `auth.users` aan een teacher-record. |
-| `lesson_types` | Lestypes (bijv. "Gitaar", "Piano"). Referentiedata, zichtbaar voor alle ingelogde gebruikers. |
-| `lesson_agreements` | Lesovereenkomsten tussen student en docent. Bevat dag, tijd, start/einddatum, actief-status en notities. |
-| `project_domains` | Categorieën voor projecten (bijv. "Muziek", "Dans"). SELECT voor alle ingelogden; INSERT/UPDATE/DELETE alleen admin/site_admin. |
-| `project_labels` | Subcategorieën binnen een domein (bijv. "Gitaar", "Piano"). Beheer alleen admin/site_admin. |
-| `projects` | Projecten met label, eigenaar, kostenplaats. SELECT voor alle ingelogden; INSERT/UPDATE/DELETE alleen admin/site_admin. |
-| `agenda_events` | Agenda-items (handmatig, les of project). Bevat source_type/source_id, start/eind, recurring. |
+| `lesson_types` | Lestypes (Gitaar, Piano, …). Referentiedata, zichtbaar voor alle ingelogde gebruikers. |
+| `lesson_type_options` | Frequenties + tarieven per lestype, met aparte velden `price_per_lesson_under_21_cents` en `price_per_lesson_adult_cents`. |
+| `lesson_agreements` | Lesovereenkomsten tussen student en docent. Dag/tijd, start/einddatum, actief-status, notities, `stripe_schedule_id`. |
+| `no_lesson_periods` | Schoolvakanties / lesvrije periodes. Triggert de **verschuif-logica** in `calculateYearlyAmount` en `eventGenerators`. |
+| `project_domains` / `project_labels` / `projects` | Hierarchische projectstructuur met kostenplaats. Beheer alleen admin/site_admin. |
+| `agenda_events` | Agenda-items (handmatig, les of project). Bevat `source_type` / `source_id`, start/eind, recurring. |
 | `agenda_participants` | Koppelt deelnemers (auth.users) aan agenda_events. |
-| `agenda_event_deviations` | Afwijkingen op recurring events (verplaatsen, afzeggen). |
+| `agenda_event_deviations` | Afwijkingen op recurring events (verplaatsen, afzeggen, incl. `cancellation_type`). |
+| `email_templates` | App-level transactionele mailtemplates (`event_key`, `subject`, `body_html`, `is_enabled`). Beheerd via Settings UI. |
+| `stripe_customers` | 1:1 mapping `auth.users.id` ↔ `stripe_customer_id`. |
+| `subscriptions` | Spiegel van Stripe Subscription per `lesson_agreement_id` (status, periode, payment method, `stripe_schedule_id`). |
+| `subscription_invoices` | Spiegel van Stripe Invoices (bedrag, status, hosted URL, periode). |
+| `incasso_invitations` | Audit van verzonden SEPA-onboarding magic links. |
+| `accounting_settings` | Per-organisatie BTW-/grootboek instellingen (`account_btw_21`, `btw_code_21`, `btw_code_exempt`, …). |
+| `announcements` | Nieuwsberichten voor het dashboard (`title`, `body`, `audience[]`, `published_at`, `is_active`). Publiek leesbaar zodra actief én gepubliceerd; alleen staff/admin/site_admin kan beheren. Optionele afbeeldingen in storage-bucket `announcement-images` (publiek, max 5 MB, alleen privileged kan uploaden). |
 
 ### Views
 
@@ -148,13 +155,15 @@ De applicatie gebruikt een role-based access control (RBAC) systeem met de volge
 | `is_staff()` | Check of de ingelogde gebruiker staff is | `SECURITY INVOKER` |
 | `is_privileged()` | Staff, admin of site_admin voor de ingelogde gebruiker (één query) | `SECURITY INVOKER` |
 | `_has_role(uuid, app_role)` | Intern; alleen vanuit andere `SECURITY DEFINER` functies; **geen** `GRANT` aan `authenticated` | `SECURITY DEFINER` |
-| `is_student(uuid)` | Check of gebruiker een student-record heeft | `SECURITY DEFINER` |
-| `is_teacher(uuid)` | Check of gebruiker een teacher-record heeft | `SECURITY DEFINER` |
-| `get_teacher_user_id(uuid)` | Haal teacher user_id op basis van user_id | `SECURITY DEFINER` |
-| `can_delete_user(uuid)` | Mag **huidige sessie** het gegeven `user_id` verwijderen? (geen spoofbare requester) | `SECURITY DEFINER` |
-| `is_valid_phone_number(text)` | `IMMUTABLE`: `NULL` ok, anders NL-mobiel `06` + 8 cijfers; gebruikt door CHECK op o.a. `profiles.phone_number` | — |
+| `is_student(uuid)` / `is_teacher(uuid)` | Check op student/teacher-record | `SECURITY DEFINER` |
+| `get_teacher_user_id(uuid)` | Resolve teacher user_id op basis van user_id | `SECURITY DEFINER` |
+| `can_delete_user(uuid)` | Mag huidige sessie het gegeven `user_id` verwijderen? | `SECURITY DEFINER` |
+| `can_manage_agenda_event(ev_id)` | Mag huidige sessie een specifiek agenda-event beheren? | `SECURITY DEFINER` |
+| `is_project_teacher(uuid)` / `is_project_participant(uuid)` | RLS-helpers voor projects | `SECURITY DEFINER` |
+| `get_hours_report(start_date, end_date, user_id)` | Rapportagefunctie voor uren + financiële uitsplitsing per docent/leerling, incl. BTW-bepaling via `accounting_settings` en lesdatum-leeftijd. | `SECURITY INVOKER` |
+| `is_valid_phone_number(text)` | `IMMUTABLE`: NL-mobiel `06` + 8 cijfers; gebruikt door CHECK op o.a. `profiles.phone_number` | — |
 
-> Publieke role-checks (`is_admin()`, `is_privileged()`, …) zijn **`SECURITY INVOKER`** met één `EXISTS` op `user_roles` (één round-trip; `is_privileged` gebruikt `role IN (...)`). `can_manage_agenda_event(ev_id)` is **`SECURITY DEFINER`** (leest `agenda_events` onder RLS-bypass) en gebruikt **`current_user_id()`** + **`is_privileged()`** — geen door te geven `uid`. Alleen `can_delete_user` gebruikt nog `_has_role(...)` intern. `_has_role` zelf is niet voor clients. `profiles.email` is `UNIQUE` en volgt `auth.users.email`. Telefoonregels staan centraal in **`is_valid_phone_number`** (past je daar de regex aan, dan geldt dat voor alle gekoppelde kolommen).
+> Publieke role-checks (`is_admin()`, `is_privileged()`, …) zijn **`SECURITY INVOKER`** met één `EXISTS` op `user_roles`. `can_manage_agenda_event` is **`SECURITY DEFINER`** en gebruikt **`current_user_id()`** + **`is_privileged()`**. `_has_role` is niet voor clients. `profiles.email` is `UNIQUE` en volgt `auth.users.email`. Telefoonregels staan centraal in **`is_valid_phone_number`**.
 
 ---
 
@@ -217,7 +226,7 @@ Dit project gebruikt drie aparte Supabase omgevingen:
 | Omgeving | Project ID | Gebruik |
 |----------|------------|---------|
 | **mcp-test** | `jserlqacarlgtdzrblic` | Testproject: `bun dev:test` en **CI/PR-checks** (workflow linkt via `SUPABASE_PROJECT_REF`) |
-| **mcp-dev** | `zdvscmogkfyddnnxzkdu` | Development: Lovable / `bun dev`, en lokaal `reset-db:dev` |
+| **mcp-dev** | `zdvscmogkfyddnnxzkdu` | Development: Lovable / `bun dev`, en lokaal `db:reset` |
 | **Production** | `bnagepkxryauifzyoxgo` | Productie deployment (`bun prod`) |
 
 ### Hoe dit werkt

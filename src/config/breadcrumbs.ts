@@ -43,7 +43,27 @@ const ROUTE_BREADCRUMBS: RouteBreadcrumb[] = [
 		pattern: /^\/agreements\/[^/]+$/,
 		items: [{ label: NAV_LABELS.agreements, href: '/agreements' }],
 	},
-	{ pattern: '/settings', items: [{ label: NAV_LABELS.settings, href: '/settings' }] },
+	{
+		pattern: '/account/profile',
+		items: [{ label: NAV_LABELS.accountProfile, href: '/account/profile' }],
+	},
+	{
+		pattern: '/account/appearance',
+		items: [{ label: NAV_LABELS.accountAppearance, href: '/account/appearance' }],
+	},
+	{
+		pattern: '/account/danger',
+		items: [{ label: NAV_LABELS.accountDanger, href: '/account/danger' }],
+	},
+	{ pattern: '/boekhouding', items: [{ label: NAV_LABELS.accounting, href: '/boekhouding' }] },
+	{
+		pattern: '/boekhouding/instellingen',
+		items: [
+			{ label: NAV_LABELS.accounting, href: '/boekhouding' },
+			{ label: 'Instellingen', href: '/boekhouding/instellingen' },
+		],
+	},
+	{ pattern: '/data-import', items: [{ label: NAV_LABELS.dataImport, href: '/data-import' }] },
 	{ pattern: '/teachers', items: [{ label: NAV_LABELS.teachers, href: '/teachers' }] },
 	{
 		pattern: '/teachers/availability',

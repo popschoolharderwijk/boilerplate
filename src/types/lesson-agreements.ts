@@ -4,7 +4,6 @@
  */
 
 import type { Enums, Tables } from '@/integrations/supabase/types';
-import type { AgendaEventDeviationWithEvent } from '@/types/agenda-events';
 import type { User } from '@/types/users';
 
 // Base types from Supabase
@@ -39,10 +38,16 @@ type LessonAgreementBaseFields = Pick<
 
 /** Agreement fields for table display (base + created_at, notes, teacher_user_id) */
 type LessonAgreementTableFields = LessonAgreementBaseFields &
-	Pick<LessonAgreementRow, 'created_at' | 'notes'> & { teacher_user_id: string };
+	Pick<LessonAgreementRow, 'created_at' | 'notes' | 'payment_method' | 'sepa_mandate_id'> & {
+		teacher_user_id: string;
+		duo_pair_id?: string | null;
+	};
 
 /** Form state for lesson type create/edit (nullable DB fields as string) */
-export type LessonTypeFormState = Pick<LessonTypeRow, 'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_active'> & {
+export type LessonTypeFormState = Pick<
+	LessonTypeRow,
+	'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_duo_lesson' | 'is_active'
+> & {
 	description: string;
 	cost_center: string;
 };
@@ -52,7 +57,12 @@ export type LessonTypeOptionFormRow = {
 	id?: string;
 	duration_minutes: string;
 	frequency: LessonFrequency;
+	/** Snapshot price (legacy column, kept for backwards compat). */
 	price_per_lesson: string;
+	/** Per-lesson price for students under 21 (in euros, as string for input). */
+	price_per_lesson_under_21: string;
+	/** Per-lesson price for students aged 21 and over (in euros, as string for input). */
+	price_per_lesson_adult: string;
 };
 
 /** Lesson type option row (duration/frequency/price) for selects; from Supabase lesson_type_options */
@@ -137,6 +147,12 @@ export type LessonAgreementWithStudent = LessonAgreementBaseFields & {
 	lesson_types: LessonTypeJoined;
 };
 
+/** Lesson agreement enriched for agenda calendar (student + teacher profiles). */
+export type AgendaLessonAgreement = LessonAgreementWithStudent & {
+	teacherUserId?: string;
+	teacherProfile?: Pick<User, 'first_name' | 'last_name' | 'email'> | null;
+};
+
 /**
  * Lesson agreement from student's perspective (includes teacher profile)
  * Duration/frequency/price come from agreement snapshot.
@@ -166,13 +182,4 @@ export type AgreementTableRow = LessonAgreementTableFields & {
 	student: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	teacher: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	lesson_type: LessonTypeDisplayFields;
-};
-
-/**
- * Lesson appointment deviation with its agenda event (replaces old deviation + lesson_agreement).
- * Use agenda_event for start_time, start_date, recurring_frequency; day_of_week from start_date.
- * When source_type is lesson_agreement, lesson_agreement can be loaded via event.source_id for student/lesson type display.
- */
-export type LessonAppointmentDeviationWithAgreement = AgendaEventDeviationWithEvent & {
-	lesson_agreement?: LessonAgreementWithStudent;
 };

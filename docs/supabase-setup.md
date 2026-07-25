@@ -17,34 +17,7 @@ Stappenplan om een lege Supabase server werkend te krijgen met deze applicatie.
 
 ---
 
-## Stap 2: Storage Buckets Aanmaken
-
-Storage buckets kunnen **niet** via SQL migraties worden aangemaakt, dus moeten apart geconfigureerd worden **voordat** je de migraties toepast.
-
-**Optie A: Via script (aanbevolen)**
-
-```bash
-bun run create-storage-bucket
-```
-
-Dit script:
-- Maakt de `avatars` bucket aan
-- Configureert als public bucket
-- Stelt max bestandsgrootte in (5MB)
-- Beperkt tot image types (jpeg, png, gif, webp)
-
-**Optie B: Via Dashboard**
-
-1. **Dashboard** → **Storage** → **New bucket**
-2. Configureer:
-   - **Name**: `avatars`
-   - **Public bucket**: ✅ Enabled
-   - **Allowed MIME types**: `image/jpeg, image/png, image/gif, image/webp`
-   - **File size limit**: `5MB`
-
----
-
-## Stap 3: Migraties Toepassen
+## Stap 2: Migraties Toepassen
 
 ```bash
 # Link aan het nieuwe project
@@ -54,23 +27,11 @@ supabase link --project-ref <project-id>
 supabase db push
 ```
 
-Dit past toe:
-- `20260116145900_baseline.sql` - Basis tabellen (profiles, user_roles), RLS policies en role management
-- `20260116160000_add_security_introspection.sql` - Security helper functies voor testing
-- `20260117000000_create_avatars_storage.sql` - Storage bucket RLS policies
-- `20260206000000_lesson_types.sql` - Lestypes tabel met RLS policies
-- `20260207000000_students.sql` - Students tabel, helper functions (`is_student`)
-- `20260207000001_teachers.sql` - Teachers tabel, helper functions (`is_teacher`, `get_teacher_user_id`)
-- `20260207000002_lesson_agreements.sql` - Lesovereenkomsten tabel met RLS policies
-- `20260210000000_shared_pagination_views.sql` - Gedeelde paginatie-views
-- `20260210000001_students_paginated_function.sql` t/m `20260210000004_users_paginated_function.sql` - Paginated functies
-- `20260211000000_agenda_events.sql` - Agenda (agenda_events, agenda_participants, deviations)
-- `20260226155756_reports.sql` - Reports tabel met RLS policies
-- `20260311194748_projects.sql` - Projecten (project_domains, project_labels, projects) met RLS
+Migraties staan in `supabase/migrations/` als domain-bestanden (bijv. `_lesson_groups`, `_projects`, `_sepa_incasso`). Storage buckets (`avatars`, `announcement-images`, `sepa-batches`, invoices, …) worden in die migraties via `INSERT INTO storage.buckets` aangemaakt. Iteratieve GRANT/DROP-patches zijn samengevoegd in die domain-migraties. Na schema-wijzigingen: `bun run db:reset`.
 
 ---
 
-## Stap 4: Authentication Configureren
+## Stap 3: Authentication Configureren
 
 ### Providers inschakelen
 
@@ -119,7 +80,7 @@ supabase config push
 
 ---
 
-## Stap 5: Email Templates & SMTP
+## Stap 4: Email Templates & SMTP
 
 Zie [email-templates.md](email-templates.md) voor:
 - Magic Link template instellen
@@ -127,7 +88,7 @@ Zie [email-templates.md](email-templates.md) voor:
 
 ---
 
-## Stap 6: API Keys Ophalen
+## Stap 5: API Keys Ophalen
 
 **Dashboard** → **Project Settings** → **API**
 
@@ -138,7 +99,7 @@ Noteer:
 
 ---
 
-## Stap 7: Environment Files Aanmaken
+## Stap 6: Environment Files Aanmaken
 
 ### Voor development (.env.development)
 
@@ -167,7 +128,7 @@ RESEND_API_KEY=<resend-api-key>
 
 ---
 
-## Stap 8: Secrets Configureren
+## Stap 7: Secrets Configureren
 
 Zie [secrets.md](secrets.md) voor:
 - GitHub Secrets (voor CI/CD)
@@ -175,7 +136,7 @@ Zie [secrets.md](secrets.md) voor:
 
 ---
 
-## Stap 9: Config.toml Bijwerken
+## Stap 8: Config.toml Bijwerken
 
 Update `supabase/config.toml` met de nieuwe project ID en auth settings:
 
@@ -184,7 +145,8 @@ Update `supabase/config.toml` met de nieuwe project ID en auth settings:
 project_id = "<nieuwe-project-id>"
 
 [remotes.nieuw.db.seed]
-enabled = true  # of false voor production
+enabled = true  # false voor production
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]  # prod: alleen bootstrap.sql
 
 [remotes.nieuw.auth]
 site_url = "https://jouw-domein.nl"
@@ -206,8 +168,7 @@ supabase config push
 ## Checklist
 
 - [ ] Project aangemaakt
-- [ ] Storage bucket `avatars` aangemaakt (`bun run create-storage-bucket`)
-- [ ] Migraties toegepast (`supabase db push`)
+- [ ] Migraties toegepast (`supabase db push` / `db reset`) — storage buckets via migraties
 - [ ] Email provider ingeschakeld (Dashboard)
 - [ ] `config.toml` bijgewerkt met project ID
 - [ ] Auth settings geconfigureerd in `config.toml`:

@@ -1,5 +1,5 @@
 /**
- * Test project IDs and related constants from supabase/seed.sql.
+ * Test project IDs and related constants from supabase/seeds/test.sql.
  * Use these instead of hardcoding UUIDs in tests.
  * (Seed display names remain Dutch in the DB/frontend.)
  */

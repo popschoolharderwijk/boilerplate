@@ -22,7 +22,7 @@ interface ProjectButtonProps {
 	options: ProjectOption[];
 	onChange: (projectId: string | null) => void;
 	disabled?: boolean;
-	/** Alleen tonen, niet bewerkbaar (geen dropdown, geen X) */
+	/** Display only, not editable (no dropdown, no X) */
 	readOnly?: boolean;
 	className?: string;
 }

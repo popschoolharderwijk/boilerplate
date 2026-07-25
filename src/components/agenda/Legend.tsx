@@ -1,4 +1,4 @@
-import { LuBan, LuMusic, LuRepeat, LuTriangleAlert } from 'react-icons/lu';
+import { LuBan, LuMusic, LuRepeat, LuTriangleAlert, LuUsers } from 'react-icons/lu';
 
 interface LegendProps {
 	show: boolean;
@@ -12,6 +12,10 @@ export function Legend({ show }: LegendProps) {
 			<div className="flex items-center gap-2">
 				<LuMusic className="h-4 w-4 shrink-0" />
 				<span>Les</span>
+			</div>
+			<div className="flex items-center gap-2">
+				<LuUsers className="h-4 w-4 shrink-0" />
+				<span>Groepsles</span>
 			</div>
 			<div className="flex items-center gap-2">
 				<LuRepeat className="h-4 w-4 shrink-0" />

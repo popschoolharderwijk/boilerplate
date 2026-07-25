@@ -46,12 +46,6 @@ export type StudentWithAgreementsRaw = StudentRow & {
 	agreements: StudentAgreementRaw[];
 };
 
-/** Flatten nested profile into Student. */
-export function flattenStudent(t: StudentRow & { profile: User }): Student {
-	const { profile, ...rest } = t;
-	return { ...rest, ...profile };
-}
-
 /** Transform raw agreement to LessonAgreementWithTeacher (lift duration/frequency/price from lesson_type). */
 function transformAgreement(a: StudentAgreementRaw): LessonAgreementWithTeacher {
 	const { lesson_type, ...rest } = a;
@@ -63,8 +57,8 @@ function transformAgreement(a: StudentAgreementRaw): LessonAgreementWithTeacher 
 		lesson_type: {
 			id: lesson_type.id,
 			name: lesson_type.name,
-			icon: lesson_type.icon,
-			color: lesson_type.color,
+			icon: lesson_type.icon ?? '',
+			color: lesson_type.color ?? '',
 		},
 	};
 }

@@ -39,7 +39,7 @@ describe('agenda_events SELECT RLS', () => {
 		const studentDb = await createClientAs(TestUsers.STUDENT_001);
 		const studentUserId = fixtures.requireUserId(TestUsers.STUDENT_001);
 
-		// student-001 participates in "Lesoverleg" event per seed.sql
+		// student-001 participates in "Lesoverleg" event per seeds/test.sql
 		const { data: participantEvents } = await dbNoRLS
 			.from('agenda_participants')
 			.select('event_id')
@@ -61,7 +61,7 @@ describe('agenda_events SELECT RLS', () => {
 		const studentDb = await createClientAs(TestUsers.STUDENT_012);
 		const studentUserId = fixtures.requireUserId(TestUsers.STUDENT_012);
 
-		// student-012 participates in "Wekelijks overleg" + 2 lesson_agreements per seed.sql
+		// student-012 participates in "Wekelijks overleg" + 2 lesson_agreements per seeds/test.sql
 		const { data: participantEvents } = await dbNoRLS
 			.from('agenda_participants')
 			.select('event_id')

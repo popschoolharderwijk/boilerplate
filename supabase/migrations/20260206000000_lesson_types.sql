@@ -88,6 +88,11 @@ CREATE POLICY lesson_types_select_all
 ON public.lesson_types FOR SELECT TO authenticated
 USING (true);
 
+-- Anonymous users can view active lesson types (public signup at /aanmelden)
+CREATE POLICY lesson_types_select_active_public
+ON public.lesson_types FOR SELECT TO anon
+USING (is_active = true);
+
 -- Admins and site_admins can insert lesson types
 CREATE POLICY lesson_types_insert_admin
 ON public.lesson_types FOR INSERT TO authenticated
@@ -115,6 +120,16 @@ ALTER TABLE public.lesson_type_options FORCE ROW LEVEL SECURITY;
 CREATE POLICY lesson_type_options_select_all
 ON public.lesson_type_options FOR SELECT TO authenticated
 USING (true);
+
+-- Anonymous users can view options for active lesson types (public signup at /aanmelden)
+CREATE POLICY lesson_type_options_select_active_public
+ON public.lesson_type_options FOR SELECT TO anon
+USING (
+  EXISTS (
+    SELECT 1 FROM public.lesson_types lt
+    WHERE lt.id = lesson_type_id AND lt.is_active = true
+  )
+);
 
 -- Admins and site_admins can insert/update/delete lesson type options
 CREATE POLICY lesson_type_options_insert_admin
@@ -165,6 +180,7 @@ ALTER FUNCTION public.check_lesson_type_has_no_agreements() OWNER TO postgres;
 -- No EXECUTE for authenticated: trigger runs as SECURITY DEFINER owner
 REVOKE ALL ON FUNCTION public.check_lesson_type_has_no_agreements() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.check_lesson_type_has_no_agreements() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.check_lesson_type_has_no_agreements() FROM authenticated;
 
 -- Trigger to enforce the constraint on DELETE
 CREATE TRIGGER check_lesson_type_has_no_agreements_trigger
@@ -179,11 +195,12 @@ EXECUTE FUNCTION public.check_lesson_type_has_no_agreements();
 -- GRANT gives table-level permissions, but RLS policies (above) are what
 -- actually control access. GRANT is required for RLS to work, but RLS is the
 -- security boundary. Without matching RLS policies, GRANT alone does NOT grant access.
+GRANT SELECT ON public.lesson_types TO anon;
+GRANT SELECT ON public.lesson_type_options TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_types TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_type_options TO authenticated;
-
-REVOKE ALL ON TABLE public.lesson_types FROM anon;
-REVOKE ALL ON TABLE public.lesson_type_options FROM anon;
+GRANT ALL ON public.lesson_types TO service_role;
+GRANT ALL ON public.lesson_type_options TO service_role;
 
 -- =============================================================================
 -- END OF LESSON TYPES MIGRATION

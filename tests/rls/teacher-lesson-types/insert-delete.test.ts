@@ -11,8 +11,8 @@ const dbNoRLS = createClientBypassRLS();
 const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 const guitarLessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
-// Alice already has Gitaar, Drums, and Zang in seed.sql
-// Bob already has Bas and Keyboard in seed.sql
+// Alice already has Gitaar, Drums, and Zang in seeds/test.sql
+// Bob already has Bas and Keyboard in seeds/test.sql
 // Use Sax for tests - Alice doesn't have it
 const saxLessonTypeId = fixtures.requireLessonTypeId('Saxofoonles');
 // Use Drums for Bob - Bob doesn't have it

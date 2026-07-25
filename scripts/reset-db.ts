@@ -14,7 +14,7 @@ console.log('Linking Supabase project...');
 await $`supabase link --project-ref zdvscmogkfyddnnxzkdu`;
 
 console.log('Resetting database...');
-await $`supabase db reset --linked --yes`;
+await $`supabase db reset --linked`;
 
 console.log('Generating TypeScript types...');
 await $`supabase gen types typescript --linked > src/integrations/supabase/types.ts`;

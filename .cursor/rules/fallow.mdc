@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+---
+
+# Fallow CLI (Windows / PowerShell)
+
+Run fallow commands plainly. No shell workarounds.
+
+## NEVER do this
+
+* ❌ `$env:FALLOW_AGENT_SOURCE=...` or any other PowerShell env-var assignment for fallow
+* ❌ `$LASTEXITCODE`, `exit 0`, `if ($LASTEXITCODE -eq 1)`, or other exit-code manipulation after fallow
+* ❌ Bash-only patterns on Windows: `2>/dev/null`, `2>$null`, `|| true`, `; if ($LASTEXITCODE ...)`
+
+Exit code **1** from fallow means **issues found** — that is a normal result, not a command failure. Do not try to mask it.
+
+## Fix findings properly
+
+When fallow reports dead code, duplication, or complexity: **fix the underlying problem**. Do not silence the signal.
+
+## NEVER do this (findings)
+
+* ❌ `// fallow-ignore-next-line`, `// fallow-ignore-file`, or any other `fallow-ignore` suppression to hide an issue
+* ❌ Prefixing identifiers with `_` (e.g. `_unused`, `_variable`) or similar hacks to dodge unused-export/unused-variable findings
+* ❌ Leaving duplicated code in place and annotating it instead of extracting a shared helper or consolidating logic
+
+## NEVER do this (thresholds / config)
+
+* ❌ Editing `.fallowrc.json` (or any other fallow config) to relax thresholds, raise limits, turn rules off, or add overrides — just to make checks pass
+* ❌ Proposing or applying config changes (complexity caps, duplication thresholds, `ignorePatterns`, `health.ignore`, per-file rule overrides, etc.) without the user explicitly asking for that
+* Threshold and policy changes are **project decisions for the user**, not a workaround when fallow reports issues. Fix the code instead; if a threshold truly needs changing, explain why and let the user decide.
+
+## Always do this instead (findings)
+
+* Remove truly unused exports, files, and dependencies
+* Extract shared helpers for duplicated code (e.g. shared modules, hooks, utilities)
+* Refactor complex functions when complexity is the issue
+* If an export is intentionally public API, justify it structurally (e.g. re-export from a barrel, document as public entry) — not via ignore comments
+
+## Always do this instead (CLI)
+
+* Run from project root with **`bunx fallow <command>`** (or `bun run fallow <command>` if scripted)
+* Use JSON output when parsing results: `bunx fallow dead-code --format json --quiet`
+* Before `fix`, always dry-run first: `bunx fallow fix --dry-run --format json --quiet`
+* Apply fixes only after review: `bunx fallow fix --yes --format json --quiet`
+

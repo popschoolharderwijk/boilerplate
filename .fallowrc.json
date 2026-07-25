@@ -1,0 +1,16 @@
+{
+	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+	"ignorePatterns": ["tests/**", "src/integrations/supabase/types.ts"],
+	"health": {
+		"ignore": ["src/components/ui/**"]
+	},
+	"overrides": [
+		{
+			"files": ["src/components/ui/**"],
+			"rules": {
+				"unused-exports": "off",
+				"unused-types": "off"
+			}
+		}
+	]
+}

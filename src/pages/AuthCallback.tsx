@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { runAuthCallback } from '@/lib/auth/authCallbackHelpers';
+import { readMagicLinkUrlError } from '@/lib/auth/magicLink';
 
 export default function AuthCallback() {
 	const navigate = useNavigate();
@@ -8,16 +10,23 @@ export default function AuthCallback() {
 
 	useEffect(() => {
 		const handleCallback = async () => {
-			const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+			const outcome = await runAuthCallback({
+				readHashError: readMagicLinkUrlError,
+				getLocationHref: () => window.location.href,
+				getLocationHash: () => window.location.hash,
+				verifyOtp: (tokenHash) => supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' }),
+				exchangeCodeForSession: (href) => supabase.auth.exchangeCodeForSession(href),
+			});
 
-			if (error) {
-				setError(error.message);
-			} else {
-				navigate('/', { replace: true });
+			if (outcome.kind === 'error') {
+				setError(outcome.message);
+				return;
 			}
+
+			navigate('/', { replace: true });
 		};
 
-		handleCallback();
+		void handleCallback();
 	}, [navigate]);
 
 	if (error) {

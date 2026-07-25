@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -17,328 +16,196 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
+import {
+	createInitialTeacherFormState,
+	loadTeacherFormUserData,
+	useTeacherFormDialogData,
+} from '@/hooks/useTeacherFormDialogData';
+import { EMPTY_TEACHER_FORM, type TeacherFormState } from '@/lib/teachers/teacherFormDialogHelpers';
+import {
+	resolveTeacherFormDialogCopy,
+	resolveTeacherFormSubmitDisabled,
+	resolveTeacherFormSubmitLabel,
+} from '@/lib/teachers/teacherFormDialogShellHelpers';
+import { executeTeacherFormDialogSubmit } from '@/lib/teachers/teacherFormDialogSubmit';
 import type { Teacher } from '@/types/teachers';
 
 interface TeacherFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSuccess: (teacherUserId?: string) => void;
-	/** Teacher data for edit mode. If undefined, dialog is in create mode. */
 	teacher?: Teacher;
 }
 
-interface FormState {
-	email: string;
-	first_name: string;
-	last_name: string;
-	phone_number: string;
-	bio: string;
-	lesson_type_ids: string[];
+function TeacherEditFields({
+	form,
+	setForm,
+	isEditMode,
+}: {
+	form: TeacherFormState;
+	setForm: (form: TeacherFormState) => void;
+	isEditMode: boolean;
+}) {
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-1.5">
+					<Label htmlFor="teacher-first-name" className="text-sm">
+						Voornaam
+					</Label>
+					<Input
+						id="teacher-first-name"
+						value={form.first_name}
+						onChange={(event) => setForm({ ...form, first_name: event.target.value })}
+						className="h-9"
+						autoFocus
+					/>
+				</div>
+				<div className="space-y-1.5">
+					<Label htmlFor="teacher-last-name" className="text-sm">
+						Achternaam
+					</Label>
+					<Input
+						id="teacher-last-name"
+						value={form.last_name}
+						onChange={(event) => setForm({ ...form, last_name: event.target.value })}
+						className="h-9"
+					/>
+				</div>
+			</div>
+			<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-1.5">
+					<Label htmlFor="teacher-email" className="text-sm">
+						Email *
+					</Label>
+					<Input
+						id="teacher-email"
+						type="email"
+						value={form.email}
+						onChange={(event) => setForm({ ...form, email: event.target.value })}
+						placeholder="docent@voorbeeld.nl"
+						disabled={isEditMode}
+						className="h-9"
+					/>
+					{isEditMode && <p className="text-xs text-muted-foreground">Email kan niet worden gewijzigd.</p>}
+				</div>
+				<div className="space-y-1.5">
+					<PhoneInput
+						id="teacher-phone-number"
+						label="Telefoonnummer"
+						value={form.phone_number}
+						onChange={(value) => setForm({ ...form, phone_number: value })}
+					/>
+				</div>
+			</div>
+		</>
+	);
 }
 
-const emptyForm: FormState = {
-	email: '',
-	first_name: '',
-	last_name: '',
-	phone_number: '',
-	bio: '',
-	lesson_type_ids: [],
-};
+function TeacherLessonTypeSelector({
+	loadingLessonTypes,
+	lessonTypes,
+	selectedIds,
+	onChange,
+}: {
+	loadingLessonTypes: boolean;
+	lessonTypes: LessonTypeOption[];
+	selectedIds: string[];
+	onChange: (selectedIds: string[]) => void;
+}) {
+	if (loadingLessonTypes) {
+		return (
+			<div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+				<LoadingSpinner size="md" label="Lessoorten laden..." />
+			</div>
+		);
+	}
+	if (lessonTypes.length === 0) {
+		return <p className="text-sm text-muted-foreground py-2">Geen actieve lessoorten beschikbaar.</p>;
+	}
+	return (
+		<LessonTypeSelector
+			value={selectedIds}
+			onChange={onChange}
+			options={lessonTypes}
+			placeholder="Selecteer lessoorten..."
+			searchPlaceholder="Zoek lessoort..."
+		/>
+	);
+}
 
 export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: TeacherFormDialogProps) {
-	const isEditMode = !!teacher;
-	const [form, setForm] = useState<FormState>(emptyForm);
-	const [lessonTypes, setLessonTypes] = useState<LessonTypeOption[]>([]);
-	const [loadingLessonTypes, setLoadingLessonTypes] = useState(false);
+	const isEditMode = Boolean(teacher);
+	const [form, setForm] = useState<TeacherFormState>(EMPTY_TEACHER_FORM);
 	const [saving, setSaving] = useState(false);
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-	const [teacherUserIds, setTeacherUserIds] = useState<string[]>([]);
+	const { lessonTypes, loadingLessonTypes, teacherUserIds } = useTeacherFormDialogData(open, teacher, setForm);
 
-	// Load lesson types
 	useEffect(() => {
-		if (open) {
-			setLoadingLessonTypes(true);
-			supabase
-				.from('lesson_types')
-				.select('id, name, icon, color')
-				.eq('is_active', true)
-				.order('name', { ascending: true })
-				.then(({ data, error }) => {
-					if (error) {
-						console.error('Error loading lesson types:', error);
-						toast.error('Fout bij laden lessoorten');
-					} else {
-						setLessonTypes(data ?? []);
-					}
-					setLoadingLessonTypes(false);
-				});
-		}
-	}, [open]);
-
-	// Load teacher lesson types for edit mode
-	useEffect(() => {
-		if (open && teacher) {
-			supabase
-				.from('teacher_lesson_types')
-				.select('lesson_type_id')
-				.eq('teacher_user_id', teacher.user_id)
-				.then(({ data, error }) => {
-					if (error) {
-						console.error('Error loading teacher lesson types:', error);
-					} else {
-						const lessonTypeIds = (data ?? []).map((item) => item.lesson_type_id);
-						setForm((prev) => ({ ...prev, lesson_type_ids: lessonTypeIds }));
-					}
-				});
-		}
+		if (!open) return;
+		setForm(createInitialTeacherFormState(open, teacher));
+		setSelectedUserId(null);
 	}, [open, teacher]);
-
-	// Initialize form when dialog opens or teacher changes
-	useEffect(() => {
-		if (open) {
-			if (teacher) {
-				setForm({
-					email: teacher.email ?? '',
-					first_name: teacher.first_name ?? '',
-					last_name: teacher.last_name ?? '',
-					phone_number: teacher.phone_number ?? '',
-					bio: teacher.bio ?? '',
-					lesson_type_ids: [],
-				});
-				setSelectedUserId(null);
-			} else {
-				setForm(emptyForm);
-				setSelectedUserId(null);
-			}
-		}
-	}, [open, teacher]);
-
-	// Load teacher user IDs for exclude list when adding new teacher
-	useEffect(() => {
-		if (!open || teacher) return;
-		supabase
-			.from('teachers')
-			.select('user_id')
-			.then(({ data }) => setTeacherUserIds((data ?? []).map((r) => r.user_id)));
-	}, [open, teacher]);
-
-	// Load user data when existing user is selected (only for email, not for form fields)
-	const loadUserData = async (userId: string) => {
-		const { data: profile, error } = await supabase
-			.from('profiles')
-			.select('email, first_name, last_name, phone_number')
-			.eq('user_id', userId)
-			.single();
-
-		if (error) {
-			console.error('Error loading user data:', error);
-			toast.error('Fout bij laden gebruikersgegevens');
-			return;
-		}
-
-		if (profile) {
-			// Only set email for validation, keep other fields empty for existing users
-			setForm({
-				email: profile.email,
-				first_name: '',
-				last_name: '',
-				phone_number: '',
-				bio: '',
-				lesson_type_ids: [],
-			});
-		}
-	};
 
 	const handleOpenChange = (newOpen: boolean) => {
-		if (!saving) {
-			if (!newOpen) {
-				setForm(emptyForm);
-				setSelectedUserId(null);
-			}
-			onOpenChange(newOpen);
+		if (saving) return;
+		if (!newOpen) {
+			setForm(EMPTY_TEACHER_FORM);
+			setSelectedUserId(null);
 		}
+		onOpenChange(newOpen);
 	};
 
 	const handleSubmit = async () => {
-		if (!isEditMode && !selectedUserId) {
-			toast.error('Selecteer een bestaande gebruiker of maak een nieuwe aan');
-			return;
-		}
-
 		setSaving(true);
-
 		try {
-			if (isEditMode) {
-				await handleEdit();
-			} else {
-				await handleCreate();
+			const outcome = await executeTeacherFormDialogSubmit({
+				isEditMode,
+				teacher,
+				selectedUserId,
+				form,
+			});
+
+			if (outcome.kind === 'validation-failed' || outcome.kind === 'action-failed') {
+				return;
 			}
+
+			if (outcome.kind === 'create-success') {
+				onSuccess(outcome.userId);
+			} else {
+				onSuccess();
+			}
+
+			setForm(EMPTY_TEACHER_FORM);
+			setSelectedUserId(null);
+			onOpenChange(false);
 		} finally {
 			setSaving(false);
 		}
 	};
 
-	const handleCreate = async () => {
-		if (!selectedUserId) return;
-		const userId = selectedUserId;
-
-		// Create teacher record
-		const { data: teacherData, error: teacherError } = await supabase
-			.from('teachers')
-			.insert({
-				user_id: userId,
-				bio: form.bio || null,
-				is_active: true,
-			})
-			.select('user_id')
-			.single();
-
-		if (teacherError || !teacherData) {
-			toast.error('Fout bij aanmaken docent', {
-				description: teacherError?.message || 'Onbekende fout',
-			});
-			return;
-		}
-
-		// Link lesson types
-		if (form.lesson_type_ids.length > 0) {
-			const lessonTypeLinks = form.lesson_type_ids.map((lesson_type_id) => ({
-				teacher_user_id: teacherData.user_id,
-				lesson_type_id,
-			}));
-
-			const { error: linkError } = await supabase.from('teacher_lesson_types').insert(lessonTypeLinks);
-
-			if (linkError) {
-				console.error('Error linking lesson types:', linkError);
-				toast.warning('Docent aangemaakt', {
-					description: 'Docent is aangemaakt, maar lessoorten konden niet worden gekoppeld.',
-				});
-			}
-		}
-
-		toast.success('Docent aangemaakt');
-
-		setForm(emptyForm);
-		setSelectedUserId(null);
-		onOpenChange(false);
-		onSuccess(teacherData.user_id);
-	};
-
-	const handleEdit = async () => {
-		if (!teacher) return;
-
-		// Update teacher bio
-		const { error: teacherError } = await supabase
-			.from('teachers')
-			.update({
-				bio: form.bio || null,
-			})
-			.eq('user_id', teacher.user_id);
-
-		if (teacherError) {
-			toast.error('Fout bij bijwerken docent', {
-				description: teacherError.message,
-			});
-			return;
-		}
-
-		// Update profile (first_name, last_name, phone_number)
-		const { error: profileError } = await supabase
-			.from('profiles')
-			.update({
-				first_name: form.first_name || null,
-				last_name: form.last_name || null,
-				phone_number: form.phone_number || null,
-			})
-			.eq('user_id', teacher.user_id);
-
-		if (profileError) {
-			toast.error('Fout bij bijwerken profiel', {
-				description: profileError.message,
-			});
-			return;
-		}
-
-		// Update lesson types
-		// First, get current lesson types
-		const { data: currentLinks } = await supabase
-			.from('teacher_lesson_types')
-			.select('lesson_type_id')
-			.eq('teacher_user_id', teacher.user_id);
-
-		const currentIds = new Set((currentLinks ?? []).map((link) => link.lesson_type_id));
-		const newIds = new Set(form.lesson_type_ids);
-
-		// Find IDs to add
-		const toAdd = form.lesson_type_ids.filter((id) => !currentIds.has(id));
-		// Find IDs to remove
-		const toRemove = Array.from(currentIds).filter((id) => !newIds.has(id));
-
-		// Add new links
-		if (toAdd.length > 0) {
-			const linksToAdd = toAdd.map((lesson_type_id) => ({
-				teacher_user_id: teacher.user_id,
-				lesson_type_id,
-			}));
-			const { error: addError } = await supabase.from('teacher_lesson_types').insert(linksToAdd);
-			if (addError) {
-				toast.error('Fout bij toevoegen lessoorten', {
-					description: addError.message,
-				});
-				return;
-			}
-		}
-
-		// Remove old links
-		if (toRemove.length > 0) {
-			const { error: removeError } = await supabase
-				.from('teacher_lesson_types')
-				.delete()
-				.eq('teacher_user_id', teacher.user_id)
-				.in('lesson_type_id', toRemove);
-			if (removeError) {
-				toast.error('Fout bij verwijderen lessoorten', {
-					description: removeError.message,
-				});
-				return;
-			}
-		}
-
-		toast.success('Docent bijgewerkt');
-		setForm(emptyForm);
-		onOpenChange(false);
-		onSuccess();
-	};
-
-	const dialogTitle = isEditMode ? 'Docent bewerken' : 'Nieuwe docent toevoegen';
-	const dialogDescription = isEditMode
-		? `Wijzig de gegevens van ${form.first_name || form.email}.`
-		: 'Voeg een nieuwe docent toe aan het systeem.';
-	const submitLabel = isEditMode ? 'Opslaan' : 'Toevoegen';
-	const savingLabel = isEditMode ? 'Opslaan...' : 'Toevoegen...';
+	const dialogCopy = resolveTeacherFormDialogCopy(isEditMode, form);
+	const submitLabels = resolveTeacherFormSubmitLabel(isEditMode);
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
 				<DialogHeader className="pb-2">
-					<DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
-					{dialogDescription && (
-						<DialogDescription className="text-sm">{dialogDescription}</DialogDescription>
+					<DialogTitle className="text-lg">{dialogCopy.title}</DialogTitle>
+					{dialogCopy.description && (
+						<DialogDescription className="text-sm">{dialogCopy.description}</DialogDescription>
 					)}
 				</DialogHeader>
 				<div className="space-y-3 py-2">
-					{/* Existing or new user for new teachers (new user via modal in component) */}
 					{!isEditMode && (
 						<ExistingOrNewUserSelect
 							value={selectedUserId}
-							onChange={(user) => {
-								setSelectedUserId(user?.user_id ?? null);
-								if (user) {
-									loadUserData(user.user_id);
+							onChange={(selectedUser) => {
+								setSelectedUserId(selectedUser?.user_id ?? null);
+								if (selectedUser) {
+									void loadTeacherFormUserData(selectedUser.user_id).then(setForm);
 								} else {
-									setForm(emptyForm);
+									setForm(EMPTY_TEACHER_FORM);
 								}
 							}}
 							filter="all"
@@ -349,65 +216,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 						/>
 					)}
 
-					{/* Name, email, phone - only in edit mode (new user comes from modal) */}
-					{isEditMode && (
-						<>
-							<div className="grid grid-cols-2 gap-3">
-								<div className="space-y-1.5">
-									<Label htmlFor="teacher-first-name" className="text-sm">
-										Voornaam
-									</Label>
-									<Input
-										id="teacher-first-name"
-										value={form.first_name}
-										onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-										className="h-9"
-										autoFocus
-									/>
-								</div>
-								<div className="space-y-1.5">
-									<Label htmlFor="teacher-last-name" className="text-sm">
-										Achternaam
-									</Label>
-									<Input
-										id="teacher-last-name"
-										value={form.last_name}
-										onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-										className="h-9"
-									/>
-								</div>
-							</div>
-							<div className="grid grid-cols-2 gap-3">
-								<div className="space-y-1.5">
-									<Label htmlFor="teacher-email" className="text-sm">
-										Email *
-									</Label>
-									<Input
-										id="teacher-email"
-										type="email"
-										value={form.email}
-										onChange={(e) => setForm({ ...form, email: e.target.value })}
-										placeholder="docent@voorbeeld.nl"
-										disabled={isEditMode}
-										className="h-9"
-									/>
-									{isEditMode && (
-										<p className="text-xs text-muted-foreground">
-											Email kan niet worden gewijzigd.
-										</p>
-									)}
-								</div>
-								<div className="space-y-1.5">
-									<PhoneInput
-										id="teacher-phone-number"
-										label="Telefoonnummer"
-										value={form.phone_number}
-										onChange={(value) => setForm({ ...form, phone_number: value })}
-									/>
-								</div>
-							</div>
-						</>
-					)}
+					{isEditMode && <TeacherEditFields form={form} setForm={setForm} isEditMode={isEditMode} />}
 
 					<div className="space-y-1.5">
 						<Label htmlFor="teacher-bio" className="text-sm">
@@ -416,7 +225,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 						<Textarea
 							id="teacher-bio"
 							value={form.bio}
-							onChange={(e) => setForm({ ...form, bio: e.target.value })}
+							onChange={(event) => setForm({ ...form, bio: event.target.value })}
 							placeholder="Korte beschrijving van de docent..."
 							rows={2}
 							className="min-h-[50px]"
@@ -424,21 +233,12 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 					</div>
 					<div className="space-y-1.5">
 						<Label className="text-sm">Lessoorten</Label>
-						{loadingLessonTypes ? (
-							<div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-								<LoadingSpinner size="md" label="Lessoorten laden..." />
-							</div>
-						) : lessonTypes.length === 0 ? (
-							<p className="text-sm text-muted-foreground py-2">Geen actieve lessoorten beschikbaar.</p>
-						) : (
-							<LessonTypeSelector
-								value={form.lesson_type_ids}
-								onChange={(selectedIds) => setForm({ ...form, lesson_type_ids: selectedIds })}
-								options={lessonTypes}
-								placeholder="Selecteer lessoorten..."
-								searchPlaceholder="Zoek lessoort..."
-							/>
-						)}
+						<TeacherLessonTypeSelector
+							loadingLessonTypes={loadingLessonTypes}
+							lessonTypes={lessonTypes}
+							selectedIds={form.lesson_type_ids}
+							onChange={(selectedIds) => setForm({ ...form, lesson_type_ids: selectedIds })}
+						/>
 					</div>
 				</div>
 				<DialogFooter>
@@ -449,10 +249,10 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 						variant="default"
 						onClick={handleSubmit}
 						loading={saving}
-						loadingLabel={savingLabel}
-						disabled={isEditMode ? !form.email : !selectedUserId}
+						loadingLabel={submitLabels.loading}
+						disabled={resolveTeacherFormSubmitDisabled(isEditMode, form, selectedUserId)}
 					>
-						{submitLabel}
+						{submitLabels.idle}
 					</SubmitButton>
 				</DialogFooter>
 			</DialogContent>

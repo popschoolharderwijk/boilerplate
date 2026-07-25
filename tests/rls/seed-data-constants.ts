@@ -1,17 +1,25 @@
 /**
  * Seed data constants for RLS tests.
- * These values reflect the exact counts from supabase/seed.sql.
+ * These values reflect the exact counts from supabase/seeds/test.sql (and bootstrap.sql for lesson types).
  * Update this file when seed data changes, and all tests will automatically use the new values.
  */
 
 /**
- * Lesson type options row counts (supabase/seed.sql).
+ * Lesson type options row counts (supabase/seeds/bootstrap.sql).
  * Full grid (e.g. guitar lesson type): 5 durations × 3 frequencies = 15 rows.
  * Saxophone lesson type (DB name `Saxofoonles`): 30 and 45 min only = 6 rows.
  */
+export const LESSON_TYPES = {
+	/** All lesson types in bootstrap.sql (all seeded active). */
+	TOTAL: 8,
+	ACTIVE: 8,
+} as const;
+
 export const LESSON_TYPE_OPTIONS = {
 	FULL_GRID_ROW_COUNT: 15,
 	SAXOPHONE_LESSON_ROW_COUNT: 6,
+	/** All option rows across lesson types in bootstrap.sql. */
+	TOTAL: 99,
 } as const;
 
 /**
@@ -22,7 +30,7 @@ export const LESSON_AGREEMENTS = {
 	// 8 (Bandcoaching) + 12 (Alice) + 12 (Bob) + 12 (Charlie) + 8 (Diana) + 12 (Frank) + 12 (Grace) + 12 (Henry) + 12 (Iris) = 100
 	TOTAL: 100,
 
-	// Per teacher (from seed.sql)
+	// Per teacher (from seeds/test.sql)
 	TEACHER_ALICE: 12, // students 009-020 (Gitaar 6, Drums 6)
 	TEACHER_BOB: 12, // students 021-032 (Bas 6, Keyboard 6)
 	TEACHER_CHARLIE: 12, // students 033-044 (Saxofoon 12)
@@ -33,7 +41,7 @@ export const LESSON_AGREEMENTS = {
 	TEACHER_HENRY: 12, // students 031-042 (Zang 12)
 	TEACHER_IRIS: 12, // students 043-054 (Bas 12)
 
-	// Per student (from seed.sql)
+	// Per student (from seeds/test.sql)
 	STUDENT_001: 1, // Bandcoaching with Teacher Eve
 	STUDENT_009: 2, // Gitaar with Teacher Alice, Gitaar with Teacher Frank
 	STUDENT_010: 2, // Gitaar with Teacher Alice, Gitaar with Teacher Frank
@@ -48,7 +56,7 @@ export const TEACHER_AVAILABILITY = {
 	// Alice: 3, Bob: 3, Charlie: 3, Diana: 3, Eve: 2, Frank: 3, Grace: 3, Henry: 3, Iris: 3, Jack: 2 = 28
 	TOTAL: 28,
 
-	// Per teacher (from seed.sql) - Extended availability slots
+	// Per teacher (from seeds/test.sql) - Extended availability slots
 	TEACHER_ALICE: 3, // Mon 08:00-18:00, Wed 10:00-20:00, Fri 09:00-13:00
 	TEACHER_BOB: 3, // Tue 09:00-18:00, Thu 08:00-18:00, Sat 10:00-14:00
 	TEACHER_CHARLIE: 3, // Mon 12:00-19:00, Wed 14:00-18:00, Fri 08:00-14:00
@@ -68,7 +76,7 @@ export const TEACHER_LESSON_TYPES = {
 	// Total number of teacher-lesson type links in seed data
 	TOTAL: 12, // 9 teachers: 3+2+1+1+1+1+1+1+1, teacher 10 has none
 
-	// Per teacher (from seed.sql)
+	// Per teacher (from seeds/test.sql)
 	TEACHER_ALICE: 3, // Gitaar, Drums, Zang
 	TEACHER_BOB: 2, // Bas, Keyboard
 	TEACHER_CHARLIE: 1, // Saxofoon
@@ -109,7 +117,7 @@ export const TEACHERS = {
 } as const;
 
 /**
- * Agenda events counts (from seed.sql)
+ * Agenda events counts (from seeds/test.sql)
  */
 export const AGENDA_EVENTS = {
 	// manual + lesson_agreement + project appointments (4 projects × 3 slots in seed)
@@ -150,7 +158,7 @@ export const USER_ROLES = {
 export const USERS = {
 	// Total number of users in seed data
 	TOTAL: 88, // 1 site_admin, 2 admins, 5 staff, 10 teachers, 60 students, 10 users without role
-	// Per role (from seed.sql)
+	// Per role (from seeds/test.sql)
 	SITE_ADMIN: 1,
 	ADMIN: 2,
 	STAFF: 5,
@@ -159,25 +167,4 @@ export const USERS = {
 	WITHOUT_ROLE: 80,
 	/** Profiles matching user-*.test.nl (no teacher/student row, no user_roles) */
 	PLAIN_USERS: 10,
-} as const;
-
-/**
- * Project domains counts
- */
-export const PROJECT_DOMAINS = {
-	TOTAL: 3,
-} as const;
-
-/**
- * Project labels counts
- */
-export const PROJECT_LABELS = {
-	TOTAL: 6,
-} as const;
-
-/**
- * Projects counts
- */
-export const PROJECTS = {
-	TOTAL: 4,
 } as const;

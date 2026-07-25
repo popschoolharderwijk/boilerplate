@@ -1,49 +1,84 @@
+import { ConfirmCancelDialogFooter } from '@/components/agenda/ConfirmCancelDialogFooter';
+import { ConfirmCancelGroupOptions } from '@/components/agenda/ConfirmCancelGroupOptions';
+import { ConfirmCancelTypeOptions } from '@/components/agenda/ConfirmCancelTypeOptions';
 import {
 	AlertDialog,
-	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useConfirmCancelDialogState } from '@/hooks/useConfirmCancelDialogState';
+import type { CancellationType } from '@/types/agenda-events';
+import type { User } from '@/types/users';
 
 interface ConfirmCancelDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onConfirm: () => void;
+	onConfirm: (cancellationType: CancellationType, cancelledParticipantIds: string[] | null) => void;
 	disabled?: boolean;
+	participants?: User[];
+	initialCancelledIds?: string[] | null;
 }
 
-export function ConfirmCancelDialog({ open, onOpenChange, onConfirm, disabled = false }: ConfirmCancelDialogProps) {
+function ConfirmCancelDialogDescription({ isGroup }: { isGroup: boolean }) {
+	return (
+		<AlertDialogDescription>
+			{isGroup
+				? 'Kies welke deelnemers afzeggen, of annuleer de hele les.'
+				: 'Geef aan wie de les heeft afgezegd. Bij afzegging door de docent wordt de les gemarkeerd als "inhalen vereist".'}
+		</AlertDialogDescription>
+	);
+}
+
+export function ConfirmCancelDialog({
+	open,
+	onOpenChange,
+	onConfirm,
+	disabled = false,
+	participants,
+	initialCancelledIds,
+}: ConfirmCancelDialogProps) {
+	const isGroup = Boolean(participants?.length);
+	const { cancellationType, selectedIds, cancelAll, setCancellationType, setCancelAll, toggleParticipant } =
+		useConfirmCancelDialogState(open, isGroup, initialCancelledIds);
+
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>Les annuleren?</AlertDialogTitle>
-					<AlertDialogDescription>
-						Weet je zeker dat je deze les wilt annuleren? De afspraak blijft zichtbaar in de agenda als
-						geannuleerd.
-					</AlertDialogDescription>
+					<ConfirmCancelDialogDescription isGroup={isGroup} />
 				</AlertDialogHeader>
+
+				{isGroup && participants && (
+					<ConfirmCancelGroupOptions
+						participants={participants}
+						selectedIds={selectedIds}
+						cancelAll={cancelAll}
+						onCancelAllChange={setCancelAll}
+						onToggleParticipant={toggleParticipant}
+					/>
+				)}
+
+				<ConfirmCancelTypeOptions
+					isGroup={isGroup}
+					cancelAll={cancelAll}
+					cancellationType={cancellationType}
+					onCancellationTypeChange={setCancellationType}
+				/>
+
 				<AlertDialogFooter>
-					<AlertDialogCancel asChild>
-						<Button variant="outline" disabled={disabled}>
-							Nee
-						</Button>
-					</AlertDialogCancel>
-					<Button
-						variant="destructive"
-						onClick={() => {
-							onOpenChange(false);
-							onConfirm();
-						}}
+					<ConfirmCancelDialogFooter
 						disabled={disabled}
-					>
-						{disabled ? <LoadingSpinner size="md" label="Bezig..." /> : 'Ja, les annuleren'}
-					</Button>
+						isGroup={isGroup}
+						cancelAll={cancelAll}
+						selectedIds={selectedIds}
+						cancellationType={cancellationType}
+						onOpenChange={onOpenChange}
+						onConfirm={onConfirm}
+					/>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

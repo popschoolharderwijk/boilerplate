@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useMemo, useState } from 'react';
 import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog';
-import { supabase } from '@/integrations/supabase/client';
-import { addDaysToDateStr, formatDateToDb, now } from '@/lib/date/date-format';
-import { formatTime, formatTimeFromDate, normalizeTime } from '@/lib/time/time-format';
-import type { AgendaEventInsert, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
-import type { LessonFrequency } from '@/types/lesson-agreements';
+import { useAgendaEventFormInit } from '@/hooks/useAgendaEventFormInit';
+import { useAgendaEventParticipantState } from '@/hooks/useAgendaEventParticipantState';
+import {
+	buildInitialFormSnapshot,
+	hasAgendaFormChanges,
+	type OccurrenceOverrides,
+} from '@/lib/agenda/agendaEventFormHelpers';
+import { runPerformAgendaEventSave } from '@/lib/agenda/agendaEventFormPerformSaveHelpers';
+import type { AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 
-/** Overrides from a deviation for a single occurrence (title/description/color). Null means use base event. */
-export interface OccurrenceOverrides {
-	title: string | null;
-	description: string | null;
-	color: string | null;
-}
+export type { OccurrenceOverrides };
 
 export interface UseAgendaEventFormOptions {
 	open: boolean;
@@ -23,177 +21,55 @@ export interface UseAgendaEventFormOptions {
 	occurrenceStartTime?: string | null;
 	occurrenceEndTime?: string | null;
 	occurrenceParticipantIds?: string[] | null;
-	/** When editing one occurrence that has a deviation, pass its title/description/color so the form shows them */
 	occurrenceOverrides?: OccurrenceOverrides | null;
 	readonlyParticipantIds?: string[];
-	/** When creating a project event, pass source info */
 	sourceType?: AgendaEventSourceType;
 	sourceId?: string | null;
 	onSuccess?: () => void;
 	onOpenChange: (open: boolean) => void;
 }
 
-export interface ParticipantProfile {
-	first_name: string | null;
-	last_name: string | null;
-	email: string | null;
-}
+export function useAgendaEventForm(options: UseAgendaEventFormOptions) {
+	const {
+		open,
+		event,
+		initialSlot,
+		userId,
+		occurrenceDate,
+		occurrenceStartTime,
+		occurrenceEndTime,
+		occurrenceParticipantIds,
+		occurrenceOverrides,
+		readonlyParticipantIds = [],
+		sourceType: externalSourceType,
+		sourceId: externalSourceId,
+		onSuccess,
+		onOpenChange,
+	} = options;
 
-/** Comparable snapshot of form fields for dirty-checking. */
-interface FormSnapshot {
-	title: string;
-	description: string;
-	startDate: string;
-	startTime: string;
-	endDate: string;
-	endTime: string;
-	isAllDay: boolean;
-	recurring: boolean;
-	recurringFrequency: string;
-	recurringEndDate: string | null;
-	color: string | null;
-	participantIds: string[];
-}
-
-function formSnapshotsEqual(a: FormSnapshot, b: FormSnapshot): boolean {
-	return (
-		a.title === b.title &&
-		a.description === b.description &&
-		a.startDate === b.startDate &&
-		a.startTime === b.startTime &&
-		a.endDate === b.endDate &&
-		a.endTime === b.endTime &&
-		a.isAllDay === b.isAllDay &&
-		a.recurring === b.recurring &&
-		a.recurringFrequency === b.recurringFrequency &&
-		a.recurringEndDate === b.recurringEndDate &&
-		a.color === b.color &&
-		a.participantIds.length === b.participantIds.length &&
-		a.participantIds.every((id, i) => id === b.participantIds[i])
-	);
-}
-
-export function useAgendaEventForm({
-	open,
-	event,
-	initialSlot,
-	userId,
-	occurrenceDate,
-	occurrenceStartTime,
-	occurrenceEndTime,
-	occurrenceParticipantIds,
-	occurrenceOverrides,
-	readonlyParticipantIds = [],
-	sourceType: externalSourceType,
-	sourceId: externalSourceId,
-	onSuccess,
-	onOpenChange,
-}: UseAgendaEventFormOptions) {
-	const [title, setTitle] = useState('');
-	const [description, setDescription] = useState('');
-	const [startDate, setStartDate] = useState<string | null>(null);
-	const [startTime, setStartTime] = useState('09:00');
-	const [endDate, setEndDate] = useState<string | null>(null);
-	const [endTime, setEndTime] = useState('10:00');
-	const [isAllDay, setIsAllDay] = useState(false);
-	const [recurring, setRecurring] = useState(false);
-	const [recurringFrequency, setRecurringFrequency] = useState<LessonFrequency>('weekly');
-	const [recurringEndDate, setRecurringEndDate] = useState<string | null>(null);
-	const [color, setColor] = useState<string | null>(null);
-	const [participantIds, setParticipantIds] = useState<string[]>([]);
-	const [initialParticipantIds, setInitialParticipantIds] = useState<string[]>([]);
-	const [participantAddId, setParticipantAddId] = useState<string | null>(null);
-	const [participantProfiles, setParticipantProfiles] = useState<Record<string, ParticipantProfile>>({});
-	const [showDescription, setShowDescription] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const {
+		participantIds,
+		setParticipantIds,
+		initialParticipantIds,
+		setInitialParticipantIds,
+		participantAddId,
+		setParticipantAddId,
+		participantProfiles,
+	} = useAgendaEventParticipantState(open, event?.id, occurrenceParticipantIds);
 
-	useEffect(() => {
-		if (!open) return;
-		if (event) {
-			const titleValue = occurrenceOverrides ? (occurrenceOverrides.title ?? event.title) : event.title;
-			const descriptionValue = occurrenceOverrides
-				? (occurrenceOverrides.description ?? event.description ?? '')
-				: (event.description ?? '');
-			const colorValue = occurrenceOverrides ? (occurrenceOverrides.color ?? event.color ?? null) : event.color;
-			setTitle(titleValue);
-			setDescription(descriptionValue);
-			setShowDescription(!!descriptionValue);
-			setStartDate(occurrenceDate ?? event.start_date);
-			setStartTime((occurrenceStartTime ?? event.start_time).substring(0, 5));
-			setEndDate(occurrenceDate ?? event.end_date ?? event.start_date);
-			setEndTime((occurrenceEndTime ?? event.end_time)?.substring(0, 5) ?? '10:00');
-			setIsAllDay(event.is_all_day);
-			setRecurring(event.recurring);
-			setRecurringFrequency((event.recurring_frequency as LessonFrequency) ?? 'weekly');
-			setRecurringEndDate(event.recurring_end_date);
-			setColor(colorValue);
-		} else {
-			const today = formatDateToDb(now());
-			if (initialSlot) {
-				setStartDate(formatDateToDb(initialSlot.start));
-				setStartTime(formatTimeFromDate(initialSlot.start));
-				setEndDate(formatDateToDb(initialSlot.end));
-				setEndTime(formatTimeFromDate(initialSlot.end));
-			} else {
-				setStartDate(today);
-				setStartTime('09:00');
-				setEndDate(today);
-				setEndTime('10:00');
-			}
-			setTitle('');
-			setDescription('');
-			setShowDescription(false);
-			setIsAllDay(false);
-			setRecurring(false);
-			setRecurringFrequency('weekly');
-			setRecurringEndDate(null);
-			setColor(null);
-			setParticipantIds(userId ? [userId] : []);
-			setInitialParticipantIds([]);
-		}
-	}, [open, event, userId, initialSlot, occurrenceDate, occurrenceStartTime, occurrenceEndTime, occurrenceOverrides]);
-
-	useEffect(() => {
-		const eventId = event?.id;
-		if (!open || !eventId) return;
-		if (occurrenceParticipantIds && occurrenceParticipantIds.length > 0) {
-			setParticipantIds(occurrenceParticipantIds);
-			setInitialParticipantIds(occurrenceParticipantIds);
-			return;
-		}
-		async function loadParticipants() {
-			const { data } = await supabase.from('agenda_participants').select('user_id').eq('event_id', eventId);
-			if (data) {
-				const ids = data.map((p) => p.user_id);
-				setParticipantIds(ids);
-				setInitialParticipantIds(ids);
-			}
-		}
-		loadParticipants();
-	}, [open, event?.id, occurrenceParticipantIds]);
-
-	useEffect(() => {
-		if (!open || participantIds.length === 0) {
-			setParticipantProfiles({});
-			return;
-		}
-		async function loadProfiles() {
-			const { data } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name, email')
-				.in('user_id', participantIds);
-			const map: Record<string, ParticipantProfile> = {};
-			for (const row of data ?? []) {
-				map[row.user_id] = {
-					first_name: row.first_name ?? null,
-					last_name: row.last_name ?? null,
-					email: row.email ?? null,
-				};
-			}
-			setParticipantProfiles(map);
-		}
-		loadProfiles();
-	}, [open, participantIds]);
+	const formFields = useAgendaEventFormInit({
+		open,
+		event,
+		initialSlot,
+		userId,
+		occurrenceDate,
+		occurrenceStartTime,
+		occurrenceEndTime,
+		occurrenceOverrides,
+		setParticipantIds,
+		setInitialParticipantIds,
+	});
 
 	const handleAddParticipant = useCallback(
 		(newUserId: string | null) => {
@@ -201,7 +77,7 @@ export function useAgendaEventForm({
 			setParticipantIds((prev) => [...prev, newUserId]);
 			setParticipantAddId(null);
 		},
-		[participantIds],
+		[participantIds, setParticipantIds, setParticipantAddId],
 	);
 
 	const handleRemoveParticipant = useCallback(
@@ -209,273 +85,56 @@ export function useAgendaEventForm({
 			if (readonlyParticipantIds.includes(removeUserId)) return;
 			setParticipantIds((prev) => prev.filter((id) => id !== removeUserId));
 		},
-		[readonlyParticipantIds],
+		[readonlyParticipantIds, setParticipantIds],
 	);
 
-	const initialSnapshot = useMemo((): FormSnapshot | null => {
+	const initialSnapshot = useMemo(() => {
 		if (!event) return null;
-		const origStart = (occurrenceStartTime ?? event.start_time).toString();
-		const origEnd = (occurrenceEndTime ?? event.end_time ?? event.start_time)?.toString() ?? '10:00';
-		const titleVal = occurrenceOverrides ? (occurrenceOverrides.title ?? event.title) : event.title;
-		const descriptionVal = occurrenceOverrides
-			? (occurrenceOverrides.description ?? event.description ?? '')
-			: (event.description ?? '');
-		const colorVal = occurrenceOverrides
-			? (occurrenceOverrides.color ?? event.color ?? null)
-			: (event.color ?? null);
-		return {
-			title: titleVal,
-			description: descriptionVal,
-			startDate: occurrenceDate ?? event.start_date,
-			startTime: normalizeTime(formatTime(origStart)),
-			endDate: occurrenceDate ?? event.end_date ?? event.start_date,
-			endTime: normalizeTime(formatTime(origEnd)),
-			isAllDay: event.is_all_day,
-			recurring: event.recurring,
-			recurringFrequency: (event.recurring_frequency as string) ?? 'weekly',
-			recurringEndDate: event.recurring_end_date ?? null,
-			color: colorVal,
-			participantIds: [...initialParticipantIds].sort(),
-		};
+		return buildInitialFormSnapshot(
+			event,
+			occurrenceDate,
+			occurrenceStartTime,
+			occurrenceEndTime,
+			occurrenceOverrides,
+			initialParticipantIds,
+		);
 	}, [event, occurrenceDate, occurrenceStartTime, occurrenceEndTime, occurrenceOverrides, initialParticipantIds]);
 
-	const currentSnapshot = useMemo(
-		(): FormSnapshot => ({
-			title: title.trim(),
-			description: description ?? '',
-			startDate: startDate ?? '',
-			startTime: normalizeTime(startTime),
-			endDate: endDate ?? startDate ?? '',
-			endTime: normalizeTime(endTime),
-			isAllDay,
-			recurring,
-			recurringFrequency: recurringFrequency as string,
-			recurringEndDate: recurring ? recurringEndDate : null,
-			color: color ?? null,
-			participantIds: [...participantIds].sort(),
-		}),
-		[
-			title,
-			description,
-			startDate,
-			startTime,
-			endDate,
-			endTime,
-			isAllDay,
-			recurring,
-			recurringFrequency,
-			recurringEndDate,
-			color,
-			participantIds,
-		],
-	);
-
-	const hasChanges = useMemo(
-		() => !initialSnapshot || !formSnapshotsEqual(initialSnapshot, currentSnapshot),
-		[initialSnapshot, currentSnapshot],
-	);
+	const hasChanges = hasAgendaFormChanges(initialSnapshot, {
+		title: formFields.title,
+		description: formFields.description,
+		startDate: formFields.startDate,
+		startTime: formFields.startTime,
+		endDate: formFields.endDate,
+		endTime: formFields.endTime,
+		isAllDay: formFields.isAllDay,
+		recurring: formFields.recurring,
+		recurringFrequency: formFields.recurringFrequency,
+		recurringEndDate: formFields.recurringEndDate,
+		color: formFields.color,
+		participantIds,
+	});
 
 	const performSave = useCallback(
-		async (scope: RecurrenceScope = 'all') => {
-			if (!userId || !startDate || !startTime) return;
-
-			const resolvedSourceType = externalSourceType ?? event?.source_type ?? 'manual';
-			const resolvedSourceId = externalSourceId ?? event?.source_id ?? null;
-
-			const payload: AgendaEventInsert = {
-				source_type: resolvedSourceType,
-				source_id: resolvedSourceId,
-				owner_user_id: userId,
-				title: title.trim(),
-				description: description.trim() || null,
-				start_date: startDate,
-				start_time: startTime + (startTime.length === 5 ? '' : ':00'),
-				end_date: endDate ?? startDate,
-				end_time: isAllDay ? null : endTime + (endTime.length === 5 ? '' : ':00'),
-				is_all_day: isAllDay,
-				recurring,
-				recurring_frequency: recurring ? recurringFrequency : null,
-				recurring_end_date: recurring ? recurringEndDate : null,
-				color: color || null,
-			};
-			setSaving(true);
-			try {
-				if (event?.id) {
-					if (scope === 'single' && occurrenceDate) {
-						const originalStartTime = normalizeTime(
-							(occurrenceStartTime ?? event.start_time).toString().slice(0, 5),
-						);
-						const actualStartTime = normalizeTime(startTime);
-						const actualDate = startDate ?? occurrenceDate;
-						const hasDateOrTimeChange =
-							actualDate !== occurrenceDate || actualStartTime !== originalStartTime;
-						const hasTitleChange = title.trim() !== event.title;
-						const hasDescriptionChange = (description ?? '') !== (event.description ?? '');
-						const hasColorChange = (color ?? null) !== (event.color ?? null);
-						const sortedCurrent = [...participantIds].sort();
-						const sortedInitial = [...initialParticipantIds].sort();
-						const hasParticipantChange =
-							sortedCurrent.length !== sortedInitial.length ||
-							sortedCurrent.some((id, i) => id !== sortedInitial[i]);
-						const hasAnyChange =
-							hasDateOrTimeChange ||
-							hasTitleChange ||
-							hasDescriptionChange ||
-							hasColorChange ||
-							hasParticipantChange;
-						if (!hasAnyChange) {
-							toast.error('Er zijn geen wijzigingen om op te slaan.');
-							return;
-						}
-						const deviationPayload = {
-							event_id: event.id,
-							original_date: occurrenceDate,
-							original_start_time: originalStartTime,
-							actual_date: actualDate,
-							actual_start_time: actualStartTime,
-							spans_future_occurrences: false,
-							is_cancelled: false,
-							title: hasTitleChange ? title.trim() : null,
-							description: hasDescriptionChange ? description?.trim() || null : null,
-							color: hasColorChange ? (color ?? null) : null,
-							participant_ids: hasParticipantChange ? participantIds : null,
-						};
-						const { error: deviationError } = await supabase
-							.from('agenda_event_deviations')
-							.upsert(deviationPayload, { onConflict: 'event_id,original_date' });
-						if (deviationError) throw deviationError;
-						onSuccess?.();
-						onOpenChange(false);
-					} else if (scope === 'thisAndFuture' && occurrenceDate) {
-						const newEndDate = addDaysToDateStr(occurrenceDate, -1);
-						const { error: endErr } = await supabase
-							.from('agenda_events')
-							.update({ recurring_end_date: newEndDate })
-							.eq('id', event.id);
-						if (endErr) throw endErr;
-						const { data: inserted, error: insertError } = await supabase
-							.from('agenda_events')
-							.insert({ ...payload, start_date: occurrenceDate, end_date: occurrenceDate })
-							.select('id')
-							.single();
-						if (insertError) throw insertError;
-						const newEventId = inserted?.id;
-						if (newEventId) {
-							for (const pId of participantIds) {
-								const { error: pErr } = await supabase
-									.from('agenda_participants')
-									.insert({ event_id: newEventId, user_id: pId });
-								if (pErr) throw pErr;
-							}
-						}
-					} else {
-						// scope === 'all': update series-wide fields only; keep base event start/end so all occurrences (past + future) stay visible
-						const baseStartDate = scope === 'all' && occurrenceDate ? event.start_date : payload.start_date;
-						const baseStartTime = scope === 'all' && occurrenceDate ? event.start_time : payload.start_time;
-						const baseEndDate =
-							scope === 'all' && occurrenceDate
-								? (event.end_date ?? event.start_date)
-								: (payload.end_date ?? payload.start_date);
-						const baseEndTime =
-							scope === 'all' && occurrenceDate ? (event.end_time ?? event.start_time) : payload.end_time;
-						const { error: updateError } = await supabase
-							.from('agenda_events')
-							.update({
-								title: payload.title,
-								description: payload.description,
-								start_date: baseStartDate,
-								start_time: baseStartTime,
-								end_date: baseEndDate,
-								end_time: baseEndTime,
-								is_all_day: payload.is_all_day,
-								recurring: payload.recurring,
-								recurring_frequency: payload.recurring_frequency,
-								recurring_end_date: payload.recurring_end_date,
-								color: payload.color,
-							})
-							.eq('id', event.id);
-						if (updateError) throw updateError;
-						// When scope is "all": apply same title/description/color/participants to all deviations so every occurrence shows the update
-						if (scope === 'all') {
-							const { error: devErr } = await supabase
-								.from('agenda_event_deviations')
-								.update({
-									title: payload.title,
-									description: payload.description,
-									color: payload.color,
-									participant_ids: participantIds.length > 0 ? participantIds : null,
-								})
-								.eq('event_id', event.id);
-							if (devErr) throw devErr;
-						}
-						const { data: existing } = await supabase
-							.from('agenda_participants')
-							.select('user_id')
-							.eq('event_id', event.id);
-						const existingIds = new Set((existing ?? []).map((p) => p.user_id));
-						const toAdd = participantIds.filter((id) => !existingIds.has(id));
-						const toRemove = [...existingIds].filter((id) => !participantIds.includes(id));
-						for (const id of toAdd) {
-							const { error: addErr } = await supabase
-								.from('agenda_participants')
-								.insert({ event_id: event.id, user_id: id });
-							if (addErr) throw addErr;
-						}
-						for (const id of toRemove) {
-							await supabase
-								.from('agenda_participants')
-								.delete()
-								.eq('event_id', event.id)
-								.eq('user_id', id);
-						}
-					}
-				} else {
-					const { data: inserted, error: insertError } = await supabase
-						.from('agenda_events')
-						.insert(payload)
-						.select('id')
-						.single();
-					if (insertError) throw insertError;
-					const eventId = inserted?.id;
-					if (eventId) {
-						for (const pId of participantIds) {
-							const { error: pErr } = await supabase
-								.from('agenda_participants')
-								.insert({ event_id: eventId, user_id: pId });
-							if (pErr) throw pErr;
-						}
-					}
-				}
-				onSuccess?.();
-				onOpenChange(false);
-			} catch (err: unknown) {
-				let message = 'Opslaan mislukt';
-				const errMessage = err instanceof Error ? err.message : (err as { message?: string })?.message;
-				if (errMessage) {
-					if (errMessage.includes('row-level security')) {
-						message = 'Je hebt geen toestemming om deze deelnemer toe te voegen';
-					} else {
-						message = errMessage;
-					}
-				}
-				toast.error(message);
-			} finally {
-				setSaving(false);
-			}
-		},
+		(scope: RecurrenceScope = 'all') =>
+			runPerformAgendaEventSave({
+				scope,
+				userId,
+				formFields,
+				participantIds,
+				initialParticipantIds,
+				event,
+				occurrenceDate,
+				occurrenceStartTime,
+				externalSourceType,
+				externalSourceId,
+				setSaving,
+				onSuccess,
+				onOpenChange,
+			}),
 		[
 			userId,
-			startDate,
-			startTime,
-			endDate,
-			endTime,
-			isAllDay,
-			recurring,
-			recurringFrequency,
-			recurringEndDate,
-			color,
-			title,
-			description,
+			formFields,
 			participantIds,
 			initialParticipantIds,
 			event,
@@ -490,30 +149,7 @@ export function useAgendaEventForm({
 
 	return {
 		formState: {
-			title,
-			setTitle,
-			description,
-			setDescription,
-			startDate,
-			setStartDate,
-			startTime,
-			setStartTime,
-			endDate,
-			setEndDate,
-			endTime,
-			setEndTime,
-			isAllDay,
-			setIsAllDay,
-			recurring,
-			setRecurring,
-			recurringFrequency,
-			setRecurringFrequency,
-			recurringEndDate,
-			setRecurringEndDate,
-			color,
-			setColor,
-			showDescription,
-			setShowDescription,
+			...formFields,
 			participantIds,
 			participantAddId,
 			setParticipantAddId,

@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { TeacherProfileForm } from '@/components/teachers/TeacherProfileForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { SectionSkeleton } from '@/components/ui/page-skeleton';
-import { PhoneInput } from '@/components/ui/phone-input';
-import { SubmitButton } from '@/components/ui/submit-button';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import {
+	resolveTeacherProfileSaveErrorLabel,
+	runTeacherProfileSave,
+} from '@/lib/teachers/teacherProfileSaveActionHelpers';
+import {
+	applyTeacherProfileInitials,
+	createTeacherProfileFormState,
+	mapLoadedTeacherProfile,
+	shouldFetchTeacherProfile,
+	shouldStartProfileLoading,
+	type TeacherProfileFormValues,
+	type TeacherProfileInitials,
+} from '@/lib/teachers/teacherProfileSectionHelpers';
 
 interface TeacherProfileSectionProps {
 	teacherUserId: string;
@@ -19,6 +28,39 @@ interface TeacherProfileSectionProps {
 	initialFirstName?: string | null;
 	initialLastName?: string | null;
 	initialPhoneNumber?: string | null;
+	initialHasVog?: boolean | null;
+	initialVogExpiresAt?: string | null;
+}
+
+async function loadTeacherProfileData(teacherUserId: string, userId: string) {
+	const { data: teacherData, error: teacherError } = await supabase
+		.from('teachers')
+		.select('bio')
+		.eq('user_id', teacherUserId)
+		.single();
+
+	if (teacherError) throw teacherError;
+
+	const { data: profileData, error: profileError } = await supabase
+		.from('profiles')
+		.select('first_name, last_name, phone_number')
+		.eq('user_id', userId)
+		.single();
+
+	if (profileError) throw profileError;
+
+	return mapLoadedTeacherProfile(teacherData, profileData);
+}
+
+function applyLoadedProfile(setForm: (values: TeacherProfileFormValues) => void, loaded: TeacherProfileFormValues) {
+	setForm({
+		bio: loaded.bio,
+		hasVog: loaded.hasVog,
+		vogExpiresAt: loaded.vogExpiresAt,
+		firstName: loaded.firstName,
+		lastName: loaded.lastName,
+		phoneNumber: loaded.phoneNumber,
+	});
 }
 
 export function TeacherProfileSection({
@@ -30,111 +72,68 @@ export function TeacherProfileSection({
 	initialFirstName,
 	initialLastName,
 	initialPhoneNumber,
+	initialHasVog,
+	initialVogExpiresAt,
 }: TeacherProfileSectionProps) {
 	const { user } = useAuth();
-	const [bio, setBio] = useState<string>(initialBio || '');
-	const [firstName, setFirstName] = useState<string>(initialFirstName || '');
-	const [lastName, setLastName] = useState<string>(initialLastName || '');
-	const [phoneNumber, setPhoneNumber] = useState<string>(initialPhoneNumber || '');
-	const [loading, setLoading] = useState(!initialBio && !initialFirstName); // Only show loading if no initial data
+	const profileInitials: TeacherProfileInitials = useMemo(
+		() => ({
+			initialBio,
+			initialFirstName,
+			initialLastName,
+			initialPhoneNumber,
+			initialHasVog,
+			initialVogExpiresAt,
+		}),
+		[initialBio, initialFirstName, initialLastName, initialPhoneNumber, initialHasVog, initialVogExpiresAt],
+	);
+
+	const [form, setForm] = useState<TeacherProfileFormValues>(() => createTeacherProfileFormState(profileInitials));
+	const [loading, setLoading] = useState(shouldStartProfileLoading(profileInitials));
 	const [saving, setSaving] = useState(false);
 
-	const loadProfile = useCallback(async () => {
-		if (!teacherUserId || !user_id) return;
+	useEffect(() => {
+		if (!shouldFetchTeacherProfile(profileInitials, teacherUserId, user_id)) return;
 
 		setLoading(true);
-
-		// Load bio
-		const { data: teacherData, error: teacherError } = await supabase
-			.from('teachers')
-			.select('bio')
-			.eq('user_id', teacherUserId)
-			.single();
-
-		if (teacherError) {
-			console.error('Error loading bio:', teacherError);
-			toast.error('Fout bij laden profiel');
-			setLoading(false);
-			return;
-		}
-
-		// Load profile data
-		const { data: profileData, error: profileError } = await supabase
-			.from('profiles')
-			.select('first_name, last_name, phone_number')
-			.eq('user_id', user_id)
-			.single();
-
-		if (profileError) {
-			console.error('Error loading profile:', profileError);
-			toast.error('Fout bij laden profiel');
-			setLoading(false);
-			return;
-		}
-
-		setBio(teacherData?.bio || '');
-		setFirstName(profileData?.first_name || '');
-		setLastName(profileData?.last_name || '');
-		setPhoneNumber(profileData?.phone_number || '');
-		setLoading(false);
-	}, [teacherUserId, user_id]);
-
-	// Only load profile if no initial data was provided
-	useEffect(() => {
-		if (!initialBio && !initialFirstName && !initialLastName && !initialPhoneNumber) {
-			loadProfile();
-		}
-	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber, loadProfile]);
-
-	// Update state when initial props change
-	useEffect(() => {
-		if (initialBio !== undefined) setBio(initialBio || '');
-		if (initialFirstName !== undefined) setFirstName(initialFirstName || '');
-		if (initialLastName !== undefined) setLastName(initialLastName || '');
-		if (initialPhoneNumber !== undefined) setPhoneNumber(initialPhoneNumber || '');
-	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber]);
-
-	const handleSave = async () => {
-		if (!teacherUserId || !user_id || !canEdit || !user) return;
-
-		setSaving(true);
-
-		// Update bio
-		const { error: bioError } = await supabase
-			.from('teachers')
-			.update({ bio: bio || null })
-			.eq('user_id', teacherUserId);
-
-		if (bioError) {
-			console.error('Error updating bio:', bioError);
-			toast.error('Fout bij bijwerken bio', {
-				description: bioError.message,
-			});
-			setSaving(false);
-			return;
-		}
-
-		// Update profile data (only first_name, last_name, phone_number - email cannot be changed)
-		const { error: profileError } = await supabase
-			.from('profiles')
-			.update({
-				first_name: firstName || null,
-				last_name: lastName || null,
-				phone_number: phoneNumber || null,
+		void loadTeacherProfileData(teacherUserId, user_id)
+			.then((loaded) => {
+				applyLoadedProfile(setForm, loaded);
+				setLoading(false);
 			})
-			.eq('user_id', user_id);
-
-		if (profileError) {
-			console.error('Error updating profile:', profileError);
-			toast.error('Fout bij bijwerken profiel', {
-				description: profileError.message,
+			.catch((error) => {
+				console.error('Error loading profile:', error);
+				toast.error('Fout bij laden profiel');
+				setLoading(false);
 			});
-			setSaving(false);
+	}, [profileInitials, teacherUserId, user_id]);
+
+	useEffect(() => {
+		setForm((current) => applyTeacherProfileInitials(current, profileInitials));
+	}, [profileInitials]);
+
+	const runAction = async () => {
+		setSaving(true);
+		const result = await runTeacherProfileSave({
+			supabase,
+			teacherUserId,
+			userId: user_id,
+			canEdit,
+			hasUser: !!user,
+			form,
+		});
+		setSaving(false);
+
+		if (!result.saved) {
+			if ('error' in result) {
+				console.error(`Error updating ${result.error}:`, result.message);
+				const label = resolveTeacherProfileSaveErrorLabel(result.error);
+				toast.error(`Fout bij bijwerken ${label}`, { description: result.message });
+			}
 			return;
 		}
 
 		toast.success('Profiel bijgewerkt');
-		setSaving(false);
 		onUpdate?.();
 	};
 
@@ -147,51 +146,24 @@ export function TeacherProfileSection({
 			<CardHeader className="pb-3">
 				<CardTitle>Persoonlijke gegevens</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-2">
-						<Label htmlFor="first-name">Voornaam</Label>
-						<Input
-							id="first-name"
-							value={firstName}
-							onChange={(e) => setFirstName(e.target.value)}
-							disabled={!canEdit}
-						/>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="last-name">Achternaam</Label>
-						<Input
-							id="last-name"
-							value={lastName}
-							onChange={(e) => setLastName(e.target.value)}
-							disabled={!canEdit}
-						/>
-					</div>
-				</div>
-				<PhoneInput
-					id="phone-number"
-					label="Telefoonnummer"
-					value={phoneNumber}
-					onChange={(value) => setPhoneNumber(value)}
-					disabled={!canEdit}
+			<CardContent>
+				<TeacherProfileForm
+					firstName={form.firstName}
+					lastName={form.lastName}
+					phoneNumber={form.phoneNumber}
+					bio={form.bio}
+					hasVog={form.hasVog}
+					vogExpiresAt={form.vogExpiresAt}
+					canEdit={canEdit}
+					saving={saving}
+					onFirstNameChange={(value) => setForm((current) => ({ ...current, firstName: value }))}
+					onLastNameChange={(value) => setForm((current) => ({ ...current, lastName: value }))}
+					onPhoneNumberChange={(value) => setForm((current) => ({ ...current, phoneNumber: value }))}
+					onBioChange={(value) => setForm((current) => ({ ...current, bio: value }))}
+					onHasVogChange={(value) => setForm((current) => ({ ...current, hasVog: value }))}
+					onVogExpiresAtChange={(value) => setForm((current) => ({ ...current, vogExpiresAt: value }))}
+					onSave={() => void runAction()}
 				/>
-				<div className="space-y-2">
-					<Label htmlFor="bio">Biografie</Label>
-					<Textarea
-						id="bio"
-						value={bio}
-						onChange={(e) => setBio(e.target.value)}
-						placeholder="Korte beschrijving van jezelf..."
-						rows={3}
-						disabled={!canEdit}
-						className="resize-none"
-					/>
-				</div>
-				{canEdit && (
-					<SubmitButton onClick={handleSave} loading={saving} size="sm" loadingLabel="Opslaan...">
-						Opslaan
-					</SubmitButton>
-				)}
 			</CardContent>
 		</Card>
 	);

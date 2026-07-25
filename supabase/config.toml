@@ -5,18 +5,21 @@ project_id = "jserlqacarlgtdzrblic"
 
 [remotes.test.db.seed]
 enabled = true
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]
 
 [remotes.dev]
 project_id = "zdvscmogkfyddnnxzkdu"
 
 [remotes.dev.db.seed]
 enabled = true
+sql_paths = ["./seeds/bootstrap.sql", "./seeds/test.sql"]
 
 [remotes.prod]
 project_id = "bnagepkxryauifzyoxgo"
 
 [remotes.prod.db.seed]
 enabled = false
+sql_paths = ["./seeds/bootstrap.sql"]
 
 [storage]
 enabled = true
@@ -27,8 +30,8 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173"]
+site_url = "https://mcp.mplifi.nl"
+additional_redirect_urls = ["https://mcp.mplifi.nl/**", "https://instant-setup-kit.lovable.app/**", "https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**", "http://localhost:5173/**"]
 minimum_password_length = 32
 password_requirements= "lower_upper_letters_digits_symbols"
 
@@ -43,6 +46,10 @@ enable_confirmations = true
 max_frequency = "1s"
 otp_length = 8
 otp_expiry = 1800
+
+[auth.email.template.magic_link]
+subject = "Je inloglink"
+content_path = "./docs/email-templates/magic-link.html"
 
 [auth.email.smtp]
 enabled = true
@@ -73,16 +80,16 @@ web3 = 30
 # These settings override [auth] defaults when pushing to remote projects
 
 [remotes.test.auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
+site_url = "https://mcp.mplifi.nl"
+additional_redirect_urls = ["https://mcp.mplifi.nl/**", "https://instant-setup-kit.lovable.app/**", "https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**", "http://localhost:5173/**"]
 
 [remotes.dev.auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
+site_url = "https://mcp.mplifi.nl"
+additional_redirect_urls = ["https://mcp.mplifi.nl/**", "https://instant-setup-kit.lovable.app/**", "https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**", "http://localhost:5173/**"]
 
 [remotes.prod.auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
+site_url = "https://mcp.mplifi.nl"
+additional_redirect_urls = ["https://mcp.mplifi.nl/**", "https://instant-setup-kit.lovable.app/**", "https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**", "http://localhost:5173/**"]
 
 [remotes.prod.auth.rate_limit]
 email_sent = 200
@@ -100,4 +107,14 @@ email_sent = 200
 verify_jwt = false
 
 [functions.create-user]
+verify_jwt = false
+
+[functions.generate-invoice]
+verify_jwt = false
+
+[functions.get-invoice-pdf]
+verify_jwt = false
+
+# Stripe webhook is publiek — signature wordt in de function geverifieerd
+[functions.stripe-webhook]
 verify_jwt = false

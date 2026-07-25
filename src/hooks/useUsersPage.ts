@@ -1,0 +1,73 @@
+import { useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useServerPaginatedListState } from '@/hooks/useServerPaginatedListState';
+import { useUsersPageController } from '@/hooks/useUsersPageController';
+import type { AppRole } from '@/lib/roles';
+import {
+	buildUserFormDialogOpenChangeHandler,
+	buildUsersDeleteDialogOpenChangeHandler,
+	buildUsersPageRowActions,
+	buildUsersPageShellState,
+	createUsersPageRoleFilterSetter,
+} from '@/lib/users/usersPageShellHelpers';
+
+export function useUsersPage() {
+	const { user, isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
+	const pagination = useServerPaginatedListState({
+		storageKey: 'users',
+		initialSortColumn: 'created_at',
+		initialSortDirection: 'desc',
+		initialFilters: { selectedRole: null },
+	});
+
+	const shell = buildUsersPageShellState({
+		isAdmin,
+		isSiteAdmin,
+		userId: user?.id,
+		selectedRoleFilter: pagination.filters.selectedRole as AppRole | null | 'none' | undefined,
+	});
+	const setSelectedRole = createUsersPageRoleFilterSetter(pagination.setFilters);
+
+	const controller = useUsersPageController({
+		hasAccess: shell.hasAccess,
+		authLoading,
+		isSiteAdmin: shell.isSiteAdmin,
+		currentUserId: shell.userId,
+		currentPage: pagination.currentPage,
+		rowsPerPage: pagination.rowsPerPage,
+		debouncedSearchQuery: pagination.debouncedSearchQuery,
+		selectedRole: shell.selectedRole,
+		sortColumn: pagination.sortColumn,
+		sortDirection: pagination.sortDirection,
+		setLoading: pagination.setLoading,
+		setTotalCount: pagination.setTotalCount,
+		setSelectedRole,
+	});
+
+	const rowActions = useMemo(
+		() =>
+			buildUsersPageRowActions({
+				isAdmin: shell.isAdmin,
+				isSiteAdmin: shell.isSiteAdmin,
+				currentUserId: shell.userId,
+				onEdit: controller.handleEdit,
+				onDelete: controller.handleDelete,
+			}),
+		[shell.isAdmin, shell.isSiteAdmin, shell.userId, controller.handleEdit, controller.handleDelete],
+	);
+
+	return {
+		hasAccess: shell.hasAccess,
+		isSiteAdmin: shell.isSiteAdmin,
+		isAdmin: shell.isAdmin,
+		userId: shell.userId,
+		pagination,
+		controller,
+		rowActions,
+		userFormDialogOpenChange: buildUserFormDialogOpenChangeHandler(
+			controller.userFormDialog,
+			controller.setUserFormDialog,
+		),
+		deleteDialogOpenChange: buildUsersDeleteDialogOpenChangeHandler(controller.setDeleteDialog),
+	};
+}

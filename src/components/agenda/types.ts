@@ -1,5 +1,5 @@
 import type { Event } from 'react-big-calendar';
-import type { AgendaEventSourceType } from '@/types/agenda-events';
+import type { AgendaEventSourceType, CancellationType } from '@/types/agenda-events';
 import type { User } from '@/types/users';
 
 export interface CalendarEventResource {
@@ -19,6 +19,8 @@ export interface CalendarEventResource {
 	hasTimeOrDateChange?: boolean;
 	isCancelled: boolean;
 	isGroupLesson: boolean;
+	/** True when this lesson_agreement event is part of a duo (two students share one event) */
+	isDuoLesson?: boolean;
 	studentCount?: number;
 	originalDate?: string;
 	originalStartTime?: string;
@@ -44,6 +46,16 @@ export interface CalendarEventResource {
 	projectId?: string;
 	/** Project name when source_type is 'project' */
 	projectName?: string;
+	/** Lesson group id when source_type is 'lesson_group' */
+	lessonGroupId?: string;
+	/** Lesson group name when source_type is 'lesson_group' */
+	lessonGroupName?: string;
+	/** Who cancelled: student or teacher */
+	cancellationType?: CancellationType;
+	/** True when teacher cancelled and lesson needs rescheduling */
+	needsReschedule?: boolean;
+	/** For group lessons: ids of participants whose attendance is cancelled for this occurrence */
+	cancelledParticipantIds?: string[];
 }
 
 export interface CalendarEvent extends Event {

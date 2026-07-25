@@ -96,13 +96,21 @@ describe('User deletion', () => {
 			// Try to delete the only site_admin - should fail
 			const { error: deleteError } = await adminClient.auth.admin.deleteUser(seedSiteAdminId);
 
-			// The trigger should prevent this (Supabase wraps trigger errors in generic message)
+			// Trigger raises; Auth surfaces a non-null error (exact message text varies by Auth version)
 			expect(deleteError).not.toBeNull();
-			expect(deleteError?.message).toContain('Database error deleting user');
 
 			// Verify the user still exists (deletion was actually blocked)
 			const { data: userStillExists } = await adminClient.auth.admin.getUserById(seedSiteAdminId);
 			expect(userStillExists.user).not.toBeNull();
+
+			// Role row must still be present (CASCADE delete rolled back with the auth.users delete)
+			const { data: roleStillExists } = await adminClient
+				.from('user_roles')
+				.select('user_id')
+				.eq('user_id', seedSiteAdminId)
+				.eq('role', 'site_admin')
+				.maybeSingle();
+			expect(roleStillExists).not.toBeNull();
 		});
 
 		it('should allow deleting a site_admin when another exists', async () => {

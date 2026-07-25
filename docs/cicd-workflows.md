@@ -61,7 +61,7 @@ Draait alle tests tegen **mcp-test** in GitHub Actions:
 
 - **Path filter**: Draait alleen bij wijzigingen in `supabase/**` of `tests/**` (rapporteert altijd status)
 - **Handmatige trigger**: Kan ook handmatig gestart worden via `workflow_dispatch`
-- **Project**: Link naar **mcp-test** via secret `SUPABASE_PROJECT_REF` (zie [secrets.md](./secrets.md)); daarna `supabase db reset --linked --yes` voor een schone database met seed
+- **Project**: Link naar **mcp-test** via secret `SUPABASE_PROJECT_REF` (zie [secrets.md](./secrets.md)); daarna `supabase db reset --linked --yes` voor een schone database met `seeds/bootstrap.sql` + `seeds/test.sql`
 - **Credentials**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `SUPABASE_SERVICE_ROLE_KEY` uit GitHub secrets (moeten van hetzelfde mcp-test project zijn)
 - **Vereiste secret**: `RESEND_API_KEY` voor e-mailtests (SMTP)
 

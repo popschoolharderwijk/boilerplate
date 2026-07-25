@@ -5,7 +5,7 @@ import { LuChevronDown } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DATE_INPUT_PLACEHOLDER, formatDbDateToUi } from '@/lib/date/date-format';
+import { DATE_FORMAT_UI, formatDbDateToUi } from '@/lib/date/date-format';
 import { cn } from '@/lib/utils';
 
 interface DatePickerProps {
@@ -27,7 +27,7 @@ interface DatePickerProps {
 export function DatePicker({
 	value,
 	onChange,
-	placeholder = DATE_INPUT_PLACEHOLDER,
+	placeholder = DATE_FORMAT_UI,
 	disabled = false,
 	id,
 	className,
@@ -53,7 +53,7 @@ export function DatePicker({
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
-					ref={triggerRef}
+					ref={triggerRef as React.Ref<HTMLButtonElement> | undefined}
 					id={id}
 					variant="outline"
 					disabled={disabled}

@@ -105,6 +105,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.validate_agenda_event_source() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.validate_agenda_event_source() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.validate_agenda_event_source() FROM authenticated;
 
 CREATE TRIGGER trg_validate_agenda_event_source
   BEFORE INSERT OR UPDATE ON public.agenda_events
@@ -129,6 +130,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM authenticated;
 
 CREATE TRIGGER trg_cascade_delete_agenda_events_project
   BEFORE DELETE ON public.projects
@@ -162,6 +164,8 @@ COMMENT ON TABLE public.agenda_participants IS 'Participants for agenda events. 
 -- SECTION 3: AGENDA_EVENT_DEVIATIONS TABLE
 -- =============================================================================
 
+CREATE TYPE public.cancellation_type AS ENUM ('student', 'teacher');
+
 CREATE TABLE IF NOT EXISTS public.agenda_event_deviations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES public.agenda_events(id) ON DELETE CASCADE,
@@ -177,6 +181,11 @@ CREATE TABLE IF NOT EXISTS public.agenda_event_deviations (
   description TEXT,
   color TEXT,
   participant_ids UUID[],
+  cancellation_type public.cancellation_type DEFAULT NULL,
+  needs_reschedule boolean NOT NULL DEFAULT false,
+  -- For lesson_group events: participant user_ids who cancelled this occurrence.
+  -- NULL = no per-participant cancellation; whole-lesson cancellation via is_cancelled.
+  cancelled_participant_ids UUID[],
 
   CONSTRAINT agenda_event_deviations_unique UNIQUE (event_id, original_date)
   -- No CHECK (actual_date >= CURRENT_DATE): validate in app or trigger to avoid timezone/backup issues
@@ -190,6 +199,10 @@ CREATE INDEX IF NOT EXISTS idx_agenda_event_deviations_spans_end_date ON public.
 CREATE INDEX IF NOT EXISTS idx_agenda_event_deviations_spans_future ON public.agenda_event_deviations(event_id) WHERE spans_future_occurrences = true;
 
 COMMENT ON COLUMN public.agenda_event_deviations.spans_future_occurrences IS 'True when this deviation applies to original_date and all future occurrences until spans_end_date (cf. agenda_events.recurring = event repeats).';
+COMMENT ON COLUMN public.agenda_event_deviations.cancellation_type IS 'Who cancelled: student or teacher. Only set when is_cancelled = true.';
+COMMENT ON COLUMN public.agenda_event_deviations.needs_reschedule IS 'True when teacher cancelled and lesson needs to be rescheduled.';
+COMMENT ON COLUMN public.agenda_event_deviations.cancelled_participant_ids IS
+  'For lesson_group events: list of participant user_ids who cancelled this occurrence. NULL = no per-participant cancellation; whole-lesson cancellation handled via is_cancelled.';
 COMMENT ON TABLE public.agenda_event_deviations IS 'Deviations for any recurring agenda event (move/cancel occurrences). Replaces lesson_appointment_deviations.';
 
 -- =============================================================================
@@ -272,6 +285,7 @@ $$;
 ALTER FUNCTION public.trigger_lesson_agreement_create_agenda_event() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM authenticated;
 
 CREATE TRIGGER lesson_agreement_insert_agenda_event_trigger
 AFTER INSERT ON public.lesson_agreements
@@ -485,6 +499,7 @@ $$;
 ALTER FUNCTION public.enforce_agenda_deviation_immutable_fields() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM authenticated;
 
 CREATE TRIGGER enforce_agenda_deviation_immutable_fields_trigger
 BEFORE UPDATE ON public.agenda_event_deviations
@@ -515,6 +530,7 @@ $$;
 ALTER FUNCTION public.auto_delete_noop_agenda_deviation() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM authenticated;
 
 CREATE TRIGGER auto_delete_noop_agenda_deviation_trigger
 BEFORE UPDATE ON public.agenda_event_deviations
@@ -565,6 +581,7 @@ $$;
 ALTER FUNCTION public.enforce_agenda_deviation_validity() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_validity() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_validity() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.enforce_agenda_deviation_validity() FROM authenticated;
 
 CREATE TRIGGER enforce_agenda_deviation_validity_trigger
 BEFORE INSERT ON public.agenda_event_deviations
@@ -596,6 +613,7 @@ $$;
 ALTER FUNCTION public.prevent_owner_participant_removal() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.prevent_owner_participant_removal() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_owner_participant_removal() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_owner_participant_removal() FROM authenticated;
 
 CREATE TRIGGER prevent_owner_participant_removal_trigger
 BEFORE DELETE ON public.agenda_participants

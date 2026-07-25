@@ -1,25 +1,15 @@
-import { LuChevronLeft, LuMusic, LuShieldCheck } from 'react-icons/lu';
+import { useLocation } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
-import { NavItem } from '@/components/layout/NavItem';
-import { Button } from '@/components/ui/button';
+import { SidebarBeheerSection } from '@/components/layout/SidebarBeheerSection';
+import { SidebarLogo } from '@/components/layout/SidebarLogo';
+import { SidebarMainNav } from '@/components/layout/SidebarMainNav';
+import { adminHrefs, financeHrefs, isPathInGroup, NAV_GAP } from '@/components/layout/sidebar-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
-import { useAuth } from '@/hooks/useAuth';
-import { useHasOwnedProjects } from '@/hooks/useHasOwnedProjects';
+import { useSidebarGroupState } from '@/hooks/useSidebarGroupState';
+import { useSidebarNavVisibility } from '@/hooks/useSidebarNavVisibility';
+import { resolveSidebarDevToolsContainerClass, resolveSidebarWidthClass } from '@/lib/layout/sidebarShellHelpers';
 import { cn } from '@/lib/utils';
-
-// Single value for all vertical spacing between nav items (padding + gap)
-const NAV_GAP = '1rem';
-
-// Admin-only navigation items
-const adminNavItems = [
-	{ href: '/users', label: NAV_LABELS.users, icon: NAV_ICONS.users },
-	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: NAV_ICONS.lessonTypes },
-	{ href: '/agreements', label: NAV_LABELS.agreements, icon: NAV_ICONS.agreements },
-	{ href: '/manual', label: NAV_LABELS.manual, icon: NAV_ICONS.manual },
-];
 
 interface SidebarProps {
 	collapsed?: boolean;
@@ -27,68 +17,22 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
-	const { isAdmin, isSiteAdmin, isPrivileged, isTeacher } = useAuth();
-	const { hasOwnedProjects, isLoading: ownedProjectsLoading } = useHasOwnedProjects();
-	const showAdminNav = isAdmin || isSiteAdmin;
-	const showTeachersNav = isAdmin || isSiteAdmin;
-	const showStudentsNav = isPrivileged;
-	const showReportsNav = isPrivileged || isTeacher;
-	// Admin/site_admin: always show. Others: only if they own at least one project (hide button when none).
-	const showProjectsNav =
-		isAdmin || isSiteAdmin || ((isTeacher || isPrivileged) && !ownedProjectsLoading && hasOwnedProjects);
+	const visibility = useSidebarNavVisibility();
+	const { pathname } = useLocation();
+	const isInBeheer = isPathInGroup(pathname, adminHrefs);
+	const isInFinance = isPathInGroup(pathname, financeHrefs);
+	const { beheerOpen, setBeheerOpen, financeOpen, setFinanceOpen } = useSidebarGroupState(isInBeheer, isInFinance);
 
 	return (
 		<TooltipProvider delayDuration={0}>
 			<aside
 				className={cn(
 					'relative flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300',
-					collapsed ? 'w-16' : 'w-64',
+					resolveSidebarWidthClass(collapsed),
 				)}
 			>
-				{/* Logo section */}
-				<div
-					className={cn(
-						'flex h-16 items-center border-b border-sidebar-border',
-						collapsed ? 'justify-center px-0' : 'gap-2 px-4',
-					)}
-				>
-					<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-						<LuMusic className="h-5 w-5" />
-					</div>
-					{!collapsed && (
-						<div className="flex flex-col">
-							<span className="text-lg font-bold leading-tight">
-								<span className="text-primary uppercase">POP</span>
-								<span className="text-sidebar-foreground lowercase">school</span>
-							</span>
-							<span className="text-[10px] uppercase tracking-widest text-muted-foreground leading-tight mt-0.5">
-								HARDERWIJK
-							</span>
-						</div>
-					)}
-					{!collapsed && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-							onClick={onToggle}
-						>
-							<LuChevronLeft className="h-4 w-4 transition-transform" />
-						</Button>
-					)}
-					{collapsed && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className="absolute right-2 top-4 h-8 w-8 text-muted-foreground hover:text-foreground"
-							onClick={onToggle}
-						>
-							<LuChevronLeft className="h-4 w-4 rotate-180 transition-transform" />
-						</Button>
-					)}
-				</div>
+				<SidebarLogo collapsed={collapsed} onToggle={onToggle} />
 
-				{/* Navigation – scrollable when content exceeds height */}
 				<div className="flex-1 min-h-0 w-full overflow-hidden">
 					<ScrollArea className="h-full">
 						<div
@@ -96,95 +40,23 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 							style={{ paddingTop: NAV_GAP, paddingBottom: NAV_GAP } as React.CSSProperties}
 						>
 							<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
-								{/* Main navigation - flat list */}
-								<NavItem
-									href="/"
-									label={NAV_LABELS.dashboard}
-									icon={NAV_ICONS.dashboard}
-									collapsed={collapsed}
-								/>
-								<NavItem
-									href="/agenda"
-									label={NAV_LABELS.agenda}
-									icon={NAV_ICONS.agenda}
-									collapsed={collapsed}
-								/>
-
-								{showTeachersNav && (
-									<NavItem
-										href="/teachers"
-										label={NAV_LABELS.teachers}
-										icon={NAV_ICONS.teachers}
+								<SidebarMainNav collapsed={collapsed} {...visibility} />
+								{visibility.showAdminNav && (
+									<SidebarBeheerSection
 										collapsed={collapsed}
+										beheerOpen={beheerOpen}
+										onBeheerOpenChange={setBeheerOpen}
+										financeOpen={financeOpen}
+										onFinanceOpenChange={setFinanceOpen}
+										isInFinance={isInFinance}
 									/>
-								)}
-
-								{/* Teacher-only: My Students (when not admin) */}
-								{isTeacher && !showTeachersNav && (
-									<NavItem
-										href="/students/my-students"
-										label={NAV_LABELS.myStudents}
-										icon={NAV_ICONS.myStudents}
-										collapsed={collapsed}
-									/>
-								)}
-
-								{showStudentsNav && (
-									<NavItem
-										href="/students"
-										label={NAV_LABELS.students}
-										icon={NAV_ICONS.students}
-										collapsed={collapsed}
-									/>
-								)}
-
-								{showReportsNav && (
-									<NavItem
-										href="/reports"
-										label={NAV_LABELS.reports}
-										icon={NAV_ICONS.reports}
-										collapsed={collapsed}
-									/>
-								)}
-
-								{showProjectsNav && (
-									<NavItem
-										href="/projects"
-										label={NAV_LABELS.projects}
-										icon={NAV_ICONS.projects}
-										collapsed={collapsed}
-									/>
-								)}
-
-								{/* Admin section (admin/site_admin only) */}
-								{showAdminNav && (
-									<>
-										{!collapsed && (
-											<div className="mt-4 mb-2 px-3">
-												<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-													<LuShieldCheck className="h-3.5 w-3.5" />
-													<span>Beheer</span>
-												</div>
-											</div>
-										)}
-										{collapsed && <Separator />}
-										{adminNavItems.map((item) => (
-											<NavItem key={item.href} {...item} collapsed={collapsed} />
-										))}
-									</>
 								)}
 							</nav>
 						</div>
 					</ScrollArea>
 				</div>
 
-				{/* Development tools */}
-				<div
-					className={cn(
-						'border-t border-sidebar-border',
-						collapsed ? 'flex justify-center p-2' : 'p-2 w-full',
-					)}
-				>
+				<div className={cn('border-t border-sidebar-border', resolveSidebarDevToolsContainerClass(collapsed))}>
 					<DevTools className={collapsed ? undefined : 'w-full'} collapsed={collapsed} />
 				</div>
 			</aside>

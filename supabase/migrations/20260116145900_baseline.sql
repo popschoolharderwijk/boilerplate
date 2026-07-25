@@ -122,8 +122,10 @@ $$;
 
 REVOKE ALL ON FUNCTION public.set_audit_fields() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_audit_fields() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.set_audit_fields() FROM authenticated;
 REVOKE ALL ON FUNCTION public.apply_audit_trail(regclass) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.apply_audit_trail(regclass) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.apply_audit_trail(regclass) FROM authenticated;
 
 -- =============================================================================
 -- SECTION 1c: PHONE NUMBER VALIDATION (single source of truth for CHECK constraints)
@@ -534,6 +536,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.prevent_user_id_change() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_user_id_change() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_user_id_change() FROM authenticated;
 
 CREATE TRIGGER prevent_profiles_user_id_change
 BEFORE UPDATE ON public.profiles
@@ -561,6 +564,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.prevent_profile_email_change() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_profile_email_change() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_profile_email_change() FROM authenticated;
 
 CREATE TRIGGER prevent_profiles_email_change
 BEFORE UPDATE ON public.profiles
@@ -595,6 +599,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM authenticated;
 
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
@@ -621,6 +626,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.handle_auth_user_email_update() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.handle_auth_user_email_update() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.handle_auth_user_email_update() FROM authenticated;
 
 CREATE TRIGGER on_auth_user_email_updated
 AFTER UPDATE OF email ON auth.users
@@ -662,7 +668,7 @@ EXECUTE FUNCTION public.handle_auth_user_email_update();
 -- 2. Then the original site_admin can be removed/demoted
 --
 -- FIRST SITE_ADMIN:
--- Must be created via direct database access (seed.sql or migration).
+-- Must be created via direct database access (seeds/test.sql or migration).
 
 CREATE OR REPLACE FUNCTION public.prevent_last_site_admin_removal()
 RETURNS TRIGGER
@@ -697,6 +703,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.prevent_last_site_admin_removal() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_last_site_admin_removal() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_last_site_admin_removal() FROM authenticated;
 
 -- Apply trigger to both UPDATE and DELETE operations
 CREATE TRIGGER protect_last_site_admin

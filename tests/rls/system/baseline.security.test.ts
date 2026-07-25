@@ -60,6 +60,8 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 	lesson_types: [
 		// SELECT policy - all authenticated users can view lesson types
 		'lesson_types_select_all',
+		// SELECT policy - anon can view active lesson types (public signup)
+		'lesson_types_select_active_public',
 		// INSERT policy - admin/site_admin can create lesson types
 		'lesson_types_insert_admin',
 		// UPDATE policy - admin/site_admin can update lesson types
@@ -98,6 +100,7 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 	],
 	lesson_type_options: [
 		'lesson_type_options_select_all',
+		'lesson_type_options_select_active_public',
 		'lesson_type_options_insert_admin',
 		'lesson_type_options_update_admin',
 		'lesson_type_options_delete_admin',
@@ -173,6 +176,7 @@ const EXPECTED_FUNCTIONS = [
 	'_has_role',
 	'apply_audit_trail',
 	'authenticated_has_execute_on',
+	'build_incasso_batch_items',
 	'can_delete_user',
 	'can_manage_agenda_event',
 	'check_rls_enabled',
@@ -183,9 +187,12 @@ const EXPECTED_FUNCTIONS = [
 	'ensure_student_exists',
 	'ensure_week_shows_original_slot',
 	'function_exists',
+	'get_accounting_report',
 	'get_agenda_event_owner',
+	'get_duo_partner_display_name',
 	'get_hours_report',
 	'get_lesson_agreements_paginated',
+	'get_lesson_group_teacher',
 	'get_public_function_pronames',
 	'get_public_table_names',
 	'get_public_views_security_mode',
@@ -197,14 +204,22 @@ const EXPECTED_FUNCTIONS = [
 	'get_users_paginated',
 	'is_admin',
 	'is_agenda_participant',
+	'is_lesson_group_member',
 	'is_privileged',
 	'is_site_admin',
 	'is_staff',
 	'is_student',
 	'is_teacher',
+	'is_valid_iban',
 	'is_valid_phone_number',
+	'mark_trial_lesson_completed',
+	'next_invoice_number',
+	'next_mandate_reference',
 	'policy_exists',
+	'recalc_incasso_batch',
 	'shift_recurring_deviation_to_next_week',
+	'submit_trial_decision',
+	'sync_lesson_group_event_participants',
 ];
 
 // Views that are INTENTIONALLY using SECURITY DEFINER semantics (security_invoker = false)

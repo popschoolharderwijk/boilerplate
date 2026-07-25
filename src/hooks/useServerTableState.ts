@@ -1,207 +1,78 @@
-import type { Dispatch, SetStateAction } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useState } from 'react';
 import type { SortDirection } from '@/components/ui/data-table';
-
-const STORAGE_PREFIX = 'table-state:';
-
-interface StoredTableState {
-	sortColumn: string | null;
-	sortDirection: SortDirection;
-	currentPage: number;
-	rowsPerPage: number;
-	searchQuery: string;
-	/** Active filters (e.g. statusFilter, selectedLessonTypeId) – table-specific keys */
-	filters?: Record<string, unknown>;
-}
-
-function readStoredState(storageKey: string): Partial<StoredTableState> | null {
-	try {
-		const raw = sessionStorage.getItem(STORAGE_PREFIX + storageKey);
-		if (!raw) return null;
-		return JSON.parse(raw) as Partial<StoredTableState>;
-	} catch {
-		return null;
-	}
-}
-
-function writeStoredState(storageKey: string, state: StoredTableState): void {
-	try {
-		sessionStorage.setItem(STORAGE_PREFIX + storageKey, JSON.stringify(state));
-	} catch {
-		// ignore quota / private mode
-	}
-}
-
-interface UseServerTableStateOptions {
-	initialSortColumn?: string;
-	initialSortDirection?: SortDirection;
-	searchDebounceMs?: number;
-	initialRowsPerPage?: number;
-	/** Unique key for this table; when set, sort/pagination/search/filters are persisted in sessionStorage */
-	storageKey?: string;
-	/** Default filter values when nothing is stored; also defines which filter keys exist (e.g. statusFilter, selectedLessonTypeId) */
-	initialFilters?: Record<string, unknown>;
-}
+import { applyTableStateAction, type TableStateAction } from '@/hooks/serverTableStateHelpers';
+import {
+	useDebouncedTableSearch,
+	usePersistTableState,
+	useResetTablePageOnFilterChange,
+} from '@/hooks/useServerTableStateEffects';
+import {
+	readStoredTableStateForKey,
+	resolveInitialTableState,
+	type UseServerTableStateOptions,
+} from '@/hooks/useServerTableStateHelpers';
 
 interface UseServerTableStateReturn {
-	// Search state
 	searchQuery: string;
 	debouncedSearchQuery: string;
 	handleSearchChange: (query: string) => void;
-
-	// Pagination state
 	currentPage: number;
 	rowsPerPage: number;
 	handlePageChange: (page: number) => void;
 	handleRowsPerPageChange: (newRowsPerPage: number) => void;
-
-	// Sorting state
 	sortColumn: string | null;
 	sortDirection: SortDirection;
 	handleSortChange: (column: string | null, direction: SortDirection) => void;
-
-	// Filter state (persisted when storageKey is set)
 	filters: Record<string, unknown>;
 	setFilters: Dispatch<SetStateAction<Record<string, unknown>>>;
 }
 
 /**
  * Custom hook for managing server-side table state (pagination, sorting, search).
- * Handles debouncing, state synchronization, and automatic page reset on filter/sort changes.
  */
 export function useServerTableState(options: UseServerTableStateOptions = {}): UseServerTableStateReturn {
-	const {
-		initialSortColumn,
-		initialSortDirection = 'asc',
-		searchDebounceMs = 300,
-		initialRowsPerPage = 20,
-		storageKey,
-		initialFilters = {},
-	} = options;
+	const { searchDebounceMs = 300, storageKey } = options;
+	const stored = readStoredTableStateForKey(storageKey);
+	const initial = resolveInitialTableState(stored, options);
 
-	// Restore from sessionStorage once on mount (lazy init)
-	const [searchQuery, setSearchQuery] = useState(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.searchQuery ?? '';
-	});
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.searchQuery ?? '';
-	});
-	const [currentPage, setCurrentPage] = useState(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.currentPage ?? 1;
-	});
-	const [rowsPerPage, setRowsPerPage] = useState(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.rowsPerPage ?? initialRowsPerPage;
-	});
-	const [sortColumn, setSortColumn] = useState<string | null>(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.sortColumn ?? initialSortColumn ?? null;
-	});
-	const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		return s?.sortDirection ?? (initialSortColumn ? initialSortDirection : null);
-	});
-	const [filters, setFilters] = useState<Record<string, unknown>>(() => {
-		const s = storageKey ? readStoredState(storageKey) : null;
-		const stored = s?.filters;
-		if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
-			return { ...initialFilters, ...stored };
-		}
-		return { ...initialFilters };
-	});
+	const [searchQuery, setSearchQuery] = useState(initial.searchQuery);
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initial.searchQuery);
+	const [currentPage, setCurrentPage] = useState(initial.currentPage);
+	const [rowsPerPage, setRowsPerPage] = useState(initial.rowsPerPage);
+	const [sortColumn, setSortColumn] = useState<string | null>(initial.sortColumn);
+	const [sortDirection, setSortDirection] = useState<SortDirection>(initial.sortDirection);
+	const [filters, setFilters] = useState<Record<string, unknown>>(initial.filters);
 
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, searchDebounceMs);
-		return () => clearTimeout(timer);
-	}, [searchQuery, searchDebounceMs]);
+	useDebouncedTableSearch(searchQuery, searchDebounceMs, setDebouncedSearchQuery);
 
-	// Handle search query change
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
-
-	// Handle sort change
-	const handleSortChange = useCallback((column: string | null, direction: SortDirection) => {
-		setSortColumn(column);
-		setSortDirection(direction);
-	}, []);
-
-	// Reset to page 1 when filters/sorting change
-	const prevStateRef = useRef({
-		debouncedSearchQuery,
-		sortColumn,
-		sortDirection,
-		filtersString: JSON.stringify(filters),
-	});
-
-	useEffect(() => {
-		const prev = prevStateRef.current;
-		const currentFiltersString = JSON.stringify(filters);
-		const hasChanged =
-			prev.debouncedSearchQuery !== debouncedSearchQuery ||
-			prev.sortColumn !== sortColumn ||
-			prev.sortDirection !== sortDirection ||
-			prev.filtersString !== currentFiltersString;
-
-		if (hasChanged) {
-			setCurrentPage(1);
-			prevStateRef.current = {
-				debouncedSearchQuery,
-				sortColumn,
-				sortDirection,
-				filtersString: currentFiltersString,
-			};
-		}
-	}, [debouncedSearchQuery, sortColumn, sortDirection, filters]);
-
-	// Persist to sessionStorage when storageKey is set
-	useEffect(() => {
-		if (!storageKey) return;
-		writeStoredState(storageKey, {
-			sortColumn,
-			sortDirection,
-			currentPage,
-			rowsPerPage,
-			searchQuery,
-			filters,
+	const dispatchTableAction = useCallback((action: TableStateAction) => {
+		applyTableStateAction(action, {
+			setSearchQuery,
+			setCurrentPage,
+			setRowsPerPage,
+			setSortColumn,
+			setSortDirection,
 		});
-	}, [storageKey, sortColumn, sortDirection, currentPage, rowsPerPage, searchQuery, filters]);
+	}, []);
+
+	const resetPage = useCallback(() => setCurrentPage(1), []);
+	useResetTablePageOnFilterChange(debouncedSearchQuery, sortColumn, sortDirection, filters, resetPage);
+
+	usePersistTableState(storageKey, sortColumn, sortDirection, currentPage, rowsPerPage, searchQuery, filters);
 
 	return {
-		// Search
 		searchQuery,
 		debouncedSearchQuery,
-		handleSearchChange,
-
-		// Pagination
+		handleSearchChange: (query: string) => dispatchTableAction({ type: 'search', query }),
 		currentPage,
 		rowsPerPage,
-		handlePageChange,
-		handleRowsPerPageChange,
-
-		// Sorting
+		handlePageChange: (page: number) => dispatchTableAction({ type: 'page', page }),
+		handleRowsPerPageChange: (newRowsPerPage: number) =>
+			dispatchTableAction({ type: 'rowsPerPage', rowsPerPage: newRowsPerPage }),
 		sortColumn,
 		sortDirection,
-		handleSortChange,
-
-		// Filters (persisted when storageKey is set)
+		handleSortChange: (column: string | null, direction: SortDirection) =>
+			dispatchTableAction({ type: 'sort', column, direction }),
 		filters,
 		setFilters,
 	};

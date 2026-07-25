@@ -1,159 +1,27 @@
-import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { DevTools } from '@/components/DevTools';
-import { Alert } from '@/components/ui/alert';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useLoginPage } from '@/hooks/useLoginPage';
+import { resolveLoginPageContent } from '@/lib/auth/loginPageHelpers';
+import { LoginPageBody } from '@/pages/LoginPageBody';
 
-type LoginState = 'idle' | 'sending' | 'sent' | 'verifying';
+function LoginLoadingScreen() {
+	return (
+		<div className="min-h-screen flex items-center justify-center">
+			<p className="text-muted-foreground">Laden...</p>
+		</div>
+	);
+}
 
 export default function Login() {
-	const { user, isLoading } = useAuth();
-	const [email, setEmail] = useState('');
-	const [otp, setOtp] = useState('');
-	const [state, setState] = useState<LoginState>('idle');
-	const [error, setError] = useState<string | null>(null);
+	const login = useLoginPage();
+	const pageContent = resolveLoginPageContent(login.shouldRedirect, login.showLoadingScreen);
 
-	// Redirect if already logged in
-	if (!isLoading && user) {
+	if (pageContent === 'redirect') {
 		return <Navigate to="/" replace />;
 	}
 
-	const handleSendMagicLink = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setError(null);
-		setState('sending');
-
-		await supabase.auth.signInWithOtp({
-			email,
-			options: {
-				shouldCreateUser: false,
-				emailRedirectTo: `${window.location.origin}/auth/callback`,
-			},
-		});
-
-		setState('sent');
-	};
-
-	const handleVerifyOtp = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setError(null);
-		setState('verifying');
-
-		const { error } = await supabase.auth.verifyOtp({
-			email,
-			token: otp,
-			type: 'email',
-		});
-
-		if (error) {
-			setError(error.message);
-			setState('sent');
-		}
-		// Success: onAuthStateChange will handle redirect
-	};
-
-	if (isLoading) {
-		return (
-			<div className="min-h-screen flex items-center justify-center">
-				<p className="text-muted-foreground">Laden...</p>
-			</div>
-		);
+	if (pageContent === 'loading') {
+		return <LoginLoadingScreen />;
 	}
 
-	return (
-		<div className="min-h-screen flex items-center justify-center p-4">
-			<div className="w-full max-w-sm space-y-6">
-				<div className="text-center">
-					<h1 className="text-2xl font-bold">Inloggen</h1>
-					<p className="text-muted-foreground mt-2">Geen wachtwoord nodig - we sturen je een link.</p>
-				</div>
-
-				{error && <Alert variant="error">{error}</Alert>}
-
-				{state === 'idle' || state === 'sending' ? (
-					<form onSubmit={handleSendMagicLink} className="space-y-4">
-						<div>
-							<label htmlFor="email" className="block text-sm font-medium mb-1">
-								Email
-							</label>
-							<input
-								id="email"
-								type="email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								placeholder="jouw@email.nl"
-								required
-								disabled={state === 'sending'}
-								className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-							/>
-						</div>
-						<button
-							type="submit"
-							disabled={state === 'sending'}
-							className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-						>
-							{state === 'sending' ? 'Versturen...' : 'Verstuur Magic Link'}
-						</button>
-					</form>
-				) : (
-					<div className="space-y-4">
-						<div className="bg-accent border border-border px-4 py-3 rounded">
-							<p className="font-medium text-foreground">Check je email!</p>
-							<p className="text-sm mt-1 text-muted-foreground">
-								Als het emailadres <strong className="text-foreground">{email}</strong> bij ons bekend
-								is, ontvang je een magic link om in te loggen.
-							</p>
-							<p className="text-sm mt-1 text-muted-foreground">
-								Klik op de link of voer de code hieronder in.
-							</p>
-						</div>
-
-						<form onSubmit={handleVerifyOtp} className="space-y-4">
-							<div>
-								<label htmlFor="otp" className="block text-sm font-medium mb-1">
-									Of voer de code in
-								</label>
-								<input
-									id="otp"
-									type="text"
-									inputMode="numeric"
-									pattern="[0-9]{6,8}"
-									maxLength={8}
-									value={otp}
-									onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-									placeholder="00000000"
-									disabled={state === 'verifying'}
-									className="w-full px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 text-center text-2xl tracking-widest"
-								/>
-							</div>
-							<button
-								type="submit"
-								disabled={state === 'verifying' || otp.length < 6}
-								className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-							>
-								{state === 'verifying' ? 'Verifiëren...' : 'Verifieer Code'}
-							</button>
-						</form>
-
-						<button
-							type="button"
-							onClick={() => {
-								setState('idle');
-								setOtp('');
-							}}
-							className="w-full py-2 px-4 text-muted-foreground hover:text-foreground"
-						>
-							← Ander emailadres gebruiken
-						</button>
-					</div>
-				)}
-			</div>
-
-			{/* Development tools */}
-			<div className="fixed bottom-4 left-4">
-				<DevTools defaultOpen />
-			</div>
-		</div>
-	);
+	return <LoginPageBody login={login} />;
 }
