@@ -1,10 +1,6 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse } from '../_shared/http.ts';
-import {
-	hasAdminRole,
-	isServiceRoleToken,
-	stripBearerToken,
-} from './invoiceHelpersPure.ts';
+import { hasAdminRole, isServiceRoleToken, stripBearerToken } from './invoiceHelpersPure.ts';
 
 export {
 	buildInvoiceEmailDeliveryContent,
