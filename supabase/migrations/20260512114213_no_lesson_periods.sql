@@ -31,6 +31,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.set_no_lesson_periods_updated_at();
 
 ALTER TABLE public.no_lesson_periods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.no_lesson_periods FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY no_lesson_periods_select_all
 ON public.no_lesson_periods
@@ -56,3 +57,11 @@ ON public.no_lesson_periods
 FOR DELETE
 TO authenticated
 USING (is_admin() OR is_site_admin());
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.no_lesson_periods TO authenticated;
+REVOKE ALL ON TABLE public.no_lesson_periods FROM anon;
+
+ALTER FUNCTION public.set_no_lesson_periods_updated_at() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.set_no_lesson_periods_updated_at() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_no_lesson_periods_updated_at() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.set_no_lesson_periods_updated_at() FROM authenticated;

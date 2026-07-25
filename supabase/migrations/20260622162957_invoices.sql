@@ -70,7 +70,9 @@ CREATE INDEX idx_invoices_issue_date ON public.invoices(issue_date);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.invoices TO authenticated;
 GRANT ALL ON public.invoices TO service_role;
+REVOKE ALL ON TABLE public.invoices FROM anon;
 ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoices FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY invoices_select ON public.invoices
   FOR SELECT TO authenticated
@@ -111,7 +113,9 @@ CREATE INDEX idx_invoice_lines_invoice ON public.invoice_lines(invoice_id);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.invoice_lines TO authenticated;
 GRANT ALL ON public.invoice_lines TO service_role;
+REVOKE ALL ON TABLE public.invoice_lines FROM anon;
 ALTER TABLE public.invoice_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoice_lines FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY invoice_lines_select ON public.invoice_lines
   FOR SELECT TO authenticated

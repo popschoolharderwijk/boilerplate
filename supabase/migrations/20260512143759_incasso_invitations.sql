@@ -10,6 +10,7 @@ CREATE TABLE public.incasso_invitations (
 CREATE INDEX idx_incasso_invitations_agreement ON public.incasso_invitations(lesson_agreement_id, sent_at DESC);
 
 ALTER TABLE public.incasso_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incasso_invitations FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY incasso_invitations_select ON public.incasso_invitations
 	FOR SELECT TO authenticated
@@ -22,3 +23,6 @@ CREATE POLICY incasso_invitations_select ON public.incasso_invitations
 			  AND la.student_user_id = current_user_id()
 		)
 	);
+
+GRANT SELECT ON public.incasso_invitations TO authenticated;
+REVOKE ALL ON TABLE public.incasso_invitations FROM anon;

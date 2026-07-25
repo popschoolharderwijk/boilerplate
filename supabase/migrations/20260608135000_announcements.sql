@@ -18,6 +18,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.announcements TO authenticated;
 GRANT ALL ON public.announcements TO service_role;
 
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.announcements FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS announcements_read_published ON public.announcements;
 CREATE POLICY announcements_read_published
@@ -56,12 +57,8 @@ ON CONFLICT (id) DO UPDATE SET
 	allowed_mime_types = excluded.allowed_mime_types;
 
 DROP POLICY IF EXISTS announcement_images_read_public ON storage.objects;
-CREATE POLICY announcement_images_read_public
-ON storage.objects
-AS PERMISSIVE
-FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'announcement-images');
+-- No SELECT policy on public announcement-images: public object URLs work without listing
+-- (Supabase lint 0025 public_bucket_allows_listing).
 
 DROP POLICY IF EXISTS announcement_images_insert_privileged ON storage.objects;
 CREATE POLICY announcement_images_insert_privileged

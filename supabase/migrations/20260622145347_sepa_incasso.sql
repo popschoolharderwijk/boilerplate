@@ -67,7 +67,9 @@ CREATE INDEX idx_sepa_mandates_student ON public.sepa_mandates(student_user_id);
 CREATE INDEX idx_sepa_mandates_status ON public.sepa_mandates(status);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.sepa_mandates TO authenticated;
 GRANT ALL ON public.sepa_mandates TO service_role;
+REVOKE ALL ON TABLE public.sepa_mandates FROM anon;
 ALTER TABLE public.sepa_mandates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sepa_mandates FORCE ROW LEVEL SECURITY;
 CREATE POLICY sepa_mandates_select ON public.sepa_mandates
   FOR SELECT TO authenticated
   USING (is_privileged() OR student_user_id = auth.uid());
@@ -109,7 +111,9 @@ CREATE INDEX idx_incasso_batches_status ON public.incasso_batches(status);
 CREATE INDEX idx_incasso_batches_collection_date ON public.incasso_batches(collection_date);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.incasso_batches TO authenticated;
 GRANT ALL ON public.incasso_batches TO service_role;
+REVOKE ALL ON TABLE public.incasso_batches FROM anon;
 ALTER TABLE public.incasso_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incasso_batches FORCE ROW LEVEL SECURITY;
 CREATE POLICY incasso_batches_select ON public.incasso_batches
   FOR SELECT TO authenticated USING (is_privileged());
 CREATE POLICY incasso_batches_insert ON public.incasso_batches
@@ -154,7 +158,9 @@ CREATE INDEX idx_incasso_items_mandate ON public.incasso_batch_items(mandate_id)
 CREATE INDEX idx_incasso_items_status ON public.incasso_batch_items(status);
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.incasso_batch_items TO authenticated;
 GRANT ALL ON public.incasso_batch_items TO service_role;
+REVOKE ALL ON TABLE public.incasso_batch_items FROM anon;
 ALTER TABLE public.incasso_batch_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incasso_batch_items FORCE ROW LEVEL SECURITY;
 CREATE POLICY incasso_items_select ON public.incasso_batch_items
   FOR SELECT TO authenticated
   USING (is_privileged() OR student_user_id = auth.uid());
@@ -182,12 +188,17 @@ CREATE INDEX IF NOT EXISTS idx_lesson_agreements_payment_method
 CREATE INDEX IF NOT EXISTS idx_lesson_agreements_sepa_mandate
   ON public.lesson_agreements(sepa_mandate_id);
 
--- next_mandate_reference
+-- next_mandate_reference (admin/site_admin client RPC; service_role for edge functions)
 CREATE OR REPLACE FUNCTION public.next_mandate_reference()
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE v_prefix text; v_seq integer;
 BEGIN
+  -- Null session = service_role / seed; authenticated callers must be admin or site_admin
+  IF public.current_user_id() IS NOT NULL
+     AND NOT (public.is_admin() OR public.is_site_admin()) THEN
+    RAISE EXCEPTION 'insufficient_privileges' USING ERRCODE = '42501';
+  END IF;
   UPDATE public.accounting_settings
      SET sepa_mandate_next_seq = sepa_mandate_next_seq + 1, updated_at = now()
    WHERE id = true
@@ -199,8 +210,9 @@ END;
 $$;
 REVOKE EXECUTE ON FUNCTION public.next_mandate_reference() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.next_mandate_reference() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.next_mandate_reference() TO service_role;
 
--- recalc_incasso_batch
+-- recalc_incasso_batch (called from build_incasso_batch_items / service_role; not a client RPC)
 CREATE OR REPLACE FUNCTION public.recalc_incasso_batch(p_batch_id uuid)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
@@ -210,8 +222,8 @@ AS $$
          updated_at = now()
    WHERE b.id = p_batch_id;
 $$;
-REVOKE EXECUTE ON FUNCTION public.recalc_incasso_batch(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.recalc_incasso_batch(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.recalc_incasso_batch(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.recalc_incasso_batch(uuid) TO service_role;
 
 -- build_incasso_batch_items
 CREATE OR REPLACE FUNCTION public.build_incasso_batch_items(p_batch_id uuid)

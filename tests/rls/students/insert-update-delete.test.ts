@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import type { StudentInsert } from '../../types';
-import { expectError, unwrap, unwrapError } from '../../utils';
+import { expectError, expectInsufficientPrivilege, unwrap, unwrapError } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
@@ -249,14 +249,12 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	});
 });
 
-describe('RLS: students INSERT/DELETE via RPC - privileged user allowed', () => {
-	it('staff can create student for another user via ensure_student_exists', async () => {
-		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
-
+describe('RLS: students INSERT/DELETE via RPC - service_role only (trigger helpers)', () => {
+	it('service_role can create student via ensure_student_exists', async () => {
 		const { data: studentsBefore } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(studentsBefore).toHaveLength(0);
 
-		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
+		unwrap(await dbNoRLS.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
 
 		const { data: studentsAfter } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(studentsAfter).toHaveLength(1);
@@ -264,50 +262,43 @@ describe('RLS: students INSERT/DELETE via RPC - privileged user allowed', () => 
 		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
 	});
 
-	it("staff can delete another user's student via cleanup_student_if_no_agreements when student has no agreements", async () => {
-		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
-
-		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
+	it('service_role can delete student via cleanup_student_if_no_agreements when no agreements', async () => {
+		unwrap(await dbNoRLS.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
 		const { data: afterEnsure } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterEnsure).toHaveLength(1);
 
-		unwrap(await staffDb.rpc('cleanup_student_if_no_agreements', { _user_id: rpcTestUserId }));
+		unwrap(await dbNoRLS.rpc('cleanup_student_if_no_agreements', { _user_id: rpcTestUserId }));
 
 		const { data: afterCleanup } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterCleanup).toHaveLength(0);
 	});
 });
 
-describe('RLS: students INSERT/DELETE via RPC - trigger-only, unprivileged user denied', () => {
-	it('unprivileged user (student) cannot create student for another user via ensure_student_exists', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_001);
-
-		const { data: studentsBefore } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
-		expect(studentsBefore).toHaveLength(0);
-
-		const ensureResult = await db.rpc('ensure_student_exists', { _user_id: rpcTestUserId });
-
-		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
-
-		const error = unwrapError(ensureResult);
-		expect(error.message).toContain('Permission denied');
+describe('RLS: students INSERT/DELETE via RPC - authenticated EXECUTE denied', () => {
+	it('staff cannot call ensure_student_exists (EXECUTE revoked)', async () => {
+		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
+		expectInsufficientPrivilege(
+			unwrapError(await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId })),
+		);
 	});
 
-	it("unprivileged user (student) cannot delete another user's student via cleanup_student_if_no_agreements", async () => {
-		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
-		const studentDb = await createClientAs(TestUsers.STUDENT_001);
+	it('student cannot call ensure_student_exists (EXECUTE revoked)', async () => {
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		expectInsufficientPrivilege(unwrapError(await db.rpc('ensure_student_exists', { _user_id: rpcTestUserId })));
+	});
 
-		const { error: ensureError } = await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId });
-		expect(ensureError).toBeNull();
-
+	it('student cannot call cleanup_student_if_no_agreements (EXECUTE revoked)', async () => {
+		unwrap(await dbNoRLS.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
 		const { data: afterEnsure } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterEnsure).toHaveLength(1);
 
-		const cleanupResult = await studentDb.rpc('cleanup_student_if_no_agreements', { _user_id: rpcTestUserId });
+		const studentDb = await createClientAs(TestUsers.STUDENT_001);
+		const cleanupResult = await studentDb.rpc('cleanup_student_if_no_agreements', {
+			_user_id: rpcTestUserId,
+		});
 
 		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
 
-		const error = unwrapError(cleanupResult);
-		expect(error.message).toContain('Permission denied');
+		expectInsufficientPrivilege(unwrapError(cleanupResult));
 	});
 });

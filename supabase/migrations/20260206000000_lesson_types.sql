@@ -180,6 +180,7 @@ ALTER FUNCTION public.check_lesson_type_has_no_agreements() OWNER TO postgres;
 -- No EXECUTE for authenticated: trigger runs as SECURITY DEFINER owner
 REVOKE ALL ON FUNCTION public.check_lesson_type_has_no_agreements() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.check_lesson_type_has_no_agreements() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.check_lesson_type_has_no_agreements() FROM authenticated;
 
 -- Trigger to enforce the constraint on DELETE
 CREATE TRIGGER check_lesson_type_has_no_agreements_trigger

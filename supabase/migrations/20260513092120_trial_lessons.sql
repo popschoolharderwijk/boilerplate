@@ -47,6 +47,7 @@ CREATE TRIGGER trg_audit_trial_lessons
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
 ALTER TABLE public.trial_lessons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trial_lessons FORCE ROW LEVEL SECURITY;
 
 -- Consolidated PERMISSIVE policies
 CREATE POLICY trial_lessons_select ON public.trial_lessons
@@ -166,6 +167,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.submit_trial_decision(uuid, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.submit_trial_decision(uuid, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.submit_trial_decision(uuid, text) TO authenticated;
 
 COMMENT ON TABLE public.trial_lessons IS 'Trial lessons (proeflessen) — optional step between signup and lesson agreement.';
@@ -213,4 +215,8 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.mark_trial_lesson_completed(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.mark_trial_lesson_completed(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.mark_trial_lesson_completed(uuid) TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.trial_lessons TO authenticated;
+REVOKE ALL ON TABLE public.trial_lessons FROM anon;

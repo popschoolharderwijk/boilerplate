@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, it } from 'bun:test';
 import { createClientAnon } from '../../db';
-import { expectInsufficientPrivilege, unwrap, unwrapError } from '../../utils';
+import { expectInsufficientPrivilege, unwrapError } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 
 let initialState: DatabaseState;
@@ -17,10 +17,9 @@ afterAll(async () => {
 const fakeUuid = '00000000-0000-0000-0000-000000000001';
 
 describe('RLS: anonymous – stripe_customers / subscriptions / subscription_invoices', () => {
-	it('anon select on stripe_customers returns no rows', async () => {
+	it('anon select on stripe_customers is privilege-denied', async () => {
 		const db = createClientAnon();
-		const data = unwrap(await db.from('stripe_customers').select('*'));
-		expect(data).toHaveLength(0);
+		expectInsufficientPrivilege(unwrapError(await db.from('stripe_customers').select('*').limit(1)));
 	});
 
 	it('anon cannot insert stripe_customers', async () => {
@@ -35,10 +34,9 @@ describe('RLS: anonymous – stripe_customers / subscriptions / subscription_inv
 		);
 	});
 
-	it('anon select on subscriptions returns no rows', async () => {
+	it('anon select on subscriptions is privilege-denied', async () => {
 		const db = createClientAnon();
-		const data = unwrap(await db.from('subscriptions').select('*'));
-		expect(data).toHaveLength(0);
+		expectInsufficientPrivilege(unwrapError(await db.from('subscriptions').select('*').limit(1)));
 	});
 
 	it('anon cannot insert subscriptions', async () => {
@@ -59,9 +57,8 @@ describe('RLS: anonymous – stripe_customers / subscriptions / subscription_inv
 		);
 	});
 
-	it('anon select on subscription_invoices returns no rows', async () => {
+	it('anon select on subscription_invoices is privilege-denied', async () => {
 		const db = createClientAnon();
-		const data = unwrap(await db.from('subscription_invoices').select('*'));
-		expect(data).toHaveLength(0);
+		expectInsufficientPrivilege(unwrapError(await db.from('subscription_invoices').select('*').limit(1)));
 	});
 });

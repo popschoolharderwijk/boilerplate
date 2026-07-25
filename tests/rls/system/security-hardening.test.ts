@@ -1,15 +1,15 @@
 /**
  * Security hardening contracts for migration gaps and Supabase linter WARN findings.
  *
- * Desired end state (fail until hardening migration is applied), except the duo
- * happy-path which must stay green across the fix.
- *
  * Strong contracts:
  * - anon SELECT privilege denied (lint 0026 / GraphQL exposure)
  * - anon EXECUTE grant denial with 42501 + "permission denied for function"
  * - FORCE RLS + authenticated EXECUTE catalog (migration checklist)
  * - get_duo_partner_display_name allow + deny (behavior + authz)
  * - public bucket listing: sentinel object visible to service_role, hidden from clients
+ *
+ * Note: next_mandate_reference stays EXECUTE-granted to authenticated (admin UI +
+ * service_role edge); authz is inside the function (admin/site_admin or null session).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAnon, createClientAs, createClientBypassRLS } from '../../db';
@@ -92,7 +92,6 @@ const AUTHENTICATED_MUST_NOT_EXECUTE: string[] = [
 	'public.ensure_student_exists(uuid)',
 	'public.handle_auth_user_email_update()',
 	'public.handle_new_user()',
-	'public.next_mandate_reference()',
 	'public.prevent_last_site_admin_removal()',
 	'public.prevent_owner_participant_removal()',
 	'public.prevent_profile_email_change()',
@@ -148,9 +147,7 @@ const ANON_MUST_NOT_EXECUTE_RPCS: {
 
 /** 1×1 PNG — enough for storage upload without depending on local fixtures. */
 const SENTINEL_PNG = Uint8Array.from(
-	atob(
-		'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-	),
+	atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
 	(c) => c.charCodeAt(0),
 );
 
@@ -179,8 +176,7 @@ async function createDuoFixture(): Promise<DuoFixture> {
 	const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_001);
 	const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_002);
 	const profileB = fixtures.requireProfile(TestUsers.STUDENT_002);
-	const partnerBDisplayName =
-		`${profileB.first_name ?? ''} ${profileB.last_name ?? ''}`.trim() || profileB.email;
+	const partnerBDisplayName = `${profileB.first_name ?? ''} ${profileB.last_name ?? ''}`.trim() || profileB.email;
 	const duoPairId = crypto.randomUUID();
 
 	const lessonType = requireRow(
@@ -277,8 +273,7 @@ async function assertClientCannotListSentinel(options: {
 	expect(serviceList.error).toBeNull();
 	expect(serviceList.data?.some((obj) => obj.name === path)).toBe(true);
 
-	const client =
-		options.listAs === 'anon' ? createClientAnon() : await createClientAs(TestUsers.STUDENT_001);
+	const client = options.listAs === 'anon' ? createClientAnon() : await createClientAs(TestUsers.STUDENT_001);
 	const clientList = await client.storage.from(options.bucket).list('', { search: path });
 
 	await dbNoRLS.storage.from(options.bucket).remove([path]);
@@ -335,7 +330,12 @@ describe('Security hardening: anon must not have SELECT privilege on sensitive t
 		it(`anon SELECT on ${table} is privilege-denied (not empty RLS)`, async () => {
 			const db = createClientAnon();
 			expectInsufficientPrivilege(
-				unwrapError(await db.from(table as 'invoices').select('*').limit(1)),
+				unwrapError(
+					await db
+						.from(table as 'invoices')
+						.select('*')
+						.limit(1),
+				),
 			);
 		});
 	}

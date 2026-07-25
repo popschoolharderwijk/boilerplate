@@ -56,6 +56,7 @@ CREATE TRIGGER trg_audit_lesson_signup_requests
 
 -- 3. RLS lesson_signup_requests
 ALTER TABLE public.lesson_signup_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lesson_signup_requests FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY lesson_signup_requests_insert_public
   ON public.lesson_signup_requests
@@ -94,6 +95,8 @@ CREATE POLICY lesson_signup_requests_delete_staff
 GRANT INSERT ON public.lesson_signup_requests TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_signup_requests TO authenticated;
 GRANT ALL ON public.lesson_signup_requests TO service_role;
+-- INSERT for anon is intentional (public signup); SELECT must not be granted (GraphQL lint 0026).
+REVOKE SELECT ON public.lesson_signup_requests FROM anon;
 
 -- 4. Sync trigger lesson_group_members -> lesson_agreements
 CREATE OR REPLACE FUNCTION public.sync_group_member_to_agreement()
@@ -101,6 +104,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 DECLARE
   v_group public.lesson_groups%ROWTYPE;
@@ -158,12 +162,18 @@ CREATE TRIGGER trg_sync_group_member_to_agreement
   AFTER INSERT OR UPDATE OR DELETE ON public.lesson_group_members
   FOR EACH ROW EXECUTE FUNCTION public.sync_group_member_to_agreement();
 
+ALTER FUNCTION public.sync_group_member_to_agreement() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.sync_group_member_to_agreement() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_group_member_to_agreement() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.sync_group_member_to_agreement() FROM authenticated;
+
 -- 5. Sync changes lesson_groups -> agreements
 CREATE OR REPLACE FUNCTION public.sync_group_to_agreements()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   IF NEW.teacher_user_id IS DISTINCT FROM OLD.teacher_user_id
@@ -192,3 +202,8 @@ DROP TRIGGER IF EXISTS trg_sync_group_to_agreements ON public.lesson_groups;
 CREATE TRIGGER trg_sync_group_to_agreements
   AFTER UPDATE ON public.lesson_groups
   FOR EACH ROW EXECUTE FUNCTION public.sync_group_to_agreements();
+
+ALTER FUNCTION public.sync_group_to_agreements() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.sync_group_to_agreements() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_group_to_agreements() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.sync_group_to_agreements() FROM authenticated;

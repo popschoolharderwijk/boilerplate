@@ -42,9 +42,7 @@ describe('RLS: anonymous user – lesson_types', () => {
 
 	it('anon update affects no lesson_types rows', async () => {
 		const db = createClientAnon();
-		const data = unwrap(
-			await db.from('lesson_types').update({ name: 'Hacked' }).neq('name', 'Hacked').select(),
-		);
+		const data = unwrap(await db.from('lesson_types').update({ name: 'Hacked' }).neq('name', 'Hacked').select());
 		expect(data).toHaveLength(0);
 	});
 

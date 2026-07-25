@@ -15,6 +15,7 @@ CREATE TABLE public.email_templates (
 );
 
 ALTER TABLE public.email_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_templates FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY email_templates_select ON public.email_templates
 	FOR SELECT TO authenticated USING (true);
@@ -33,5 +34,8 @@ CREATE POLICY email_templates_delete_admin ON public.email_templates
 CREATE TRIGGER email_templates_set_audit_fields
 	BEFORE INSERT OR UPDATE ON public.email_templates
 	FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.email_templates TO authenticated;
+REVOKE ALL ON TABLE public.email_templates FROM anon;
 
 -- (Default email template rows in supabase/seeds/bootstrap.sql)

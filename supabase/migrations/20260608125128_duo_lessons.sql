@@ -40,6 +40,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 DECLARE
   v_is_duo boolean;
@@ -106,15 +107,39 @@ CREATE TRIGGER trg_validate_duo_agreement
 BEFORE INSERT OR UPDATE ON public.lesson_agreements
 FOR EACH ROW EXECUTE FUNCTION public.validate_duo_agreement();
 
+ALTER FUNCTION public.validate_duo_agreement() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.validate_duo_agreement() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.validate_duo_agreement() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.validate_duo_agreement() FROM authenticated;
+
 -- 4. Helper RPC: get duo partner display name (privacy-safe).
--- profiles uses user_id (not id) as PK; use view_profiles_with_display_name for display_name.
+-- Caller must be the agreement's student or privileged. profiles PK is user_id.
 CREATE OR REPLACE FUNCTION public.get_duo_partner_display_name(_agreement_id uuid)
 RETURNS TABLE (partner_user_id uuid, display_name text)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
+BEGIN
+  IF public.current_user_id() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT (
+    public.is_privileged()
+    OR EXISTS (
+      SELECT 1
+      FROM public.lesson_agreements la
+      WHERE la.id = _agreement_id
+        AND la.student_user_id = public.current_user_id()
+    )
+  ) THEN
+    RAISE EXCEPTION 'Permission denied' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN QUERY
   WITH me AS (
     SELECT duo_pair_id, student_user_id
     FROM public.lesson_agreements
@@ -128,8 +153,12 @@ AS $$
     AND la.student_user_id <> me.student_user_id
     AND la.is_active = true
   LIMIT 1;
+END;
 $$;
 
+ALTER FUNCTION public.get_duo_partner_display_name(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.get_duo_partner_display_name(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_duo_partner_display_name(uuid) FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_duo_partner_display_name(uuid) TO authenticated;
 
 -- ============================================================
@@ -144,6 +173,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 DECLARE
   v_teacher_user_id UUID;
@@ -210,6 +240,11 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+ALTER FUNCTION public.trigger_lesson_agreement_create_agenda_event() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM authenticated;
 -- Hours report with duo lesson weighting (final definition)
 CREATE OR REPLACE FUNCTION public.get_hours_report(
   p_start_date date,

@@ -123,10 +123,9 @@ describe('RLS: lesson_signup_requests SELECT - email-matched access', () => {
 });
 
 describe('RLS: lesson_signup_requests anon access', () => {
-	it('anon select on lesson_signup_requests returns no rows', async () => {
+	it('anon select on lesson_signup_requests is privilege-denied', async () => {
 		const db = createClientAnon();
-		const data = unwrap(await db.from('lesson_signup_requests').select('*'));
-		expect(data).toHaveLength(0);
+		expectInsufficientPrivilege(unwrapError(await db.from('lesson_signup_requests').select('*').limit(1)));
 	});
 
 	it('anon CAN INSERT a pending request via the public signup form', async () => {

@@ -1141,6 +1141,13 @@ export type Database = {
 						referencedRelation: 'lesson_types';
 						referencedColumns: ['id'];
 					},
+					{
+						foreignKeyName: 'lesson_signup_requests_lesson_type_option_id_fkey';
+						columns: ['lesson_type_option_id'];
+						isOneToOne: false;
+						referencedRelation: 'lesson_type_options';
+						referencedColumns: ['id'];
+					},
 				];
 			};
 			lesson_type_options: {

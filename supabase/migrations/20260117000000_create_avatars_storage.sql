@@ -45,9 +45,5 @@ USING (
   AND name LIKE public.current_user_id()::text || '.%'
 );
 
--- Public bucket: authenticated users can view all avatars
--- The bucket is public for CDN/caching benefits, but we restrict API access to authenticated users
-CREATE POLICY "Authenticated users can view avatars"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'avatars');
+-- No SELECT policy on public avatars: public object URLs work without listing
+-- (Supabase lint 0025 public_bucket_allows_listing).

@@ -47,6 +47,7 @@ CREATE TRIGGER trg_validate_lesson_group_type
 
 SELECT public.apply_audit_trail('public.lesson_groups'::regclass);
 ALTER TABLE public.lesson_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lesson_groups FORCE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- 2. lesson_group_members
@@ -66,6 +67,7 @@ CREATE INDEX idx_lesson_group_members_student ON public.lesson_group_members(stu
 
 SELECT public.apply_audit_trail('public.lesson_group_members'::regclass);
 ALTER TABLE public.lesson_group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lesson_group_members FORCE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- 3. Helpers
@@ -224,7 +226,7 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.sync_lesson_group_event_participants(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.sync_lesson_group_event_participants(uuid) FROM anon;
-GRANT EXECUTE ON FUNCTION public.sync_lesson_group_event_participants(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_lesson_group_event_participants(uuid) FROM authenticated;
 
 CREATE OR REPLACE FUNCTION public.trg_sync_participants_on_event_insert()
 RETURNS trigger
@@ -272,3 +274,21 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_groups TO authenticated;
 GRANT ALL ON public.lesson_groups TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.lesson_group_members TO authenticated;
 GRANT ALL ON public.lesson_group_members TO service_role;
+
+REVOKE ALL ON TABLE public.lesson_groups FROM anon;
+REVOKE ALL ON TABLE public.lesson_group_members FROM anon;
+
+ALTER FUNCTION public.validate_lesson_group_type() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.validate_lesson_group_type() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.validate_lesson_group_type() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.validate_lesson_group_type() FROM authenticated;
+
+ALTER FUNCTION public.trg_sync_participants_on_event_insert() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.trg_sync_participants_on_event_insert() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trg_sync_participants_on_event_insert() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.trg_sync_participants_on_event_insert() FROM authenticated;
+
+ALTER FUNCTION public.trg_sync_participants_on_member_change() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.trg_sync_participants_on_member_change() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trg_sync_participants_on_member_change() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.trg_sync_participants_on_member_change() FROM authenticated;

@@ -15,8 +15,10 @@ CREATE INDEX legacy_ids_entity_type_idx ON public.legacy_ids (entity_type);
 
 GRANT SELECT ON public.legacy_ids TO authenticated;
 GRANT ALL ON public.legacy_ids TO service_role;
+REVOKE ALL ON TABLE public.legacy_ids FROM anon;
 
 ALTER TABLE public.legacy_ids ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.legacy_ids FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY legacy_ids_select_privileged ON public.legacy_ids
   FOR SELECT TO authenticated USING (is_privileged());
@@ -31,6 +33,11 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+ALTER FUNCTION public.set_legacy_ids_updated_at() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.set_legacy_ids_updated_at() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_legacy_ids_updated_at() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.set_legacy_ids_updated_at() FROM authenticated;
 
 CREATE TRIGGER set_legacy_ids_updated_at
   BEFORE UPDATE ON public.legacy_ids

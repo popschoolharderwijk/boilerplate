@@ -105,6 +105,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.validate_agenda_event_source() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.validate_agenda_event_source() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.validate_agenda_event_source() FROM authenticated;
 
 CREATE TRIGGER trg_validate_agenda_event_source
   BEFORE INSERT OR UPDATE ON public.agenda_events
@@ -129,6 +130,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.cascade_delete_agenda_events_for_source() FROM authenticated;
 
 CREATE TRIGGER trg_cascade_delete_agenda_events_project
   BEFORE DELETE ON public.projects
@@ -283,6 +285,7 @@ $$;
 ALTER FUNCTION public.trigger_lesson_agreement_create_agenda_event() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.trigger_lesson_agreement_create_agenda_event() FROM authenticated;
 
 CREATE TRIGGER lesson_agreement_insert_agenda_event_trigger
 AFTER INSERT ON public.lesson_agreements
@@ -496,6 +499,7 @@ $$;
 ALTER FUNCTION public.enforce_agenda_deviation_immutable_fields() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.enforce_agenda_deviation_immutable_fields() FROM authenticated;
 
 CREATE TRIGGER enforce_agenda_deviation_immutable_fields_trigger
 BEFORE UPDATE ON public.agenda_event_deviations
@@ -526,6 +530,7 @@ $$;
 ALTER FUNCTION public.auto_delete_noop_agenda_deviation() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.auto_delete_noop_agenda_deviation() FROM authenticated;
 
 CREATE TRIGGER auto_delete_noop_agenda_deviation_trigger
 BEFORE UPDATE ON public.agenda_event_deviations
@@ -576,6 +581,7 @@ $$;
 ALTER FUNCTION public.enforce_agenda_deviation_validity() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_validity() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.enforce_agenda_deviation_validity() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.enforce_agenda_deviation_validity() FROM authenticated;
 
 CREATE TRIGGER enforce_agenda_deviation_validity_trigger
 BEFORE INSERT ON public.agenda_event_deviations
@@ -607,6 +613,7 @@ $$;
 ALTER FUNCTION public.prevent_owner_participant_removal() OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.prevent_owner_participant_removal() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_owner_participant_removal() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_owner_participant_removal() FROM authenticated;
 
 CREATE TRIGGER prevent_owner_participant_removal_trigger
 BEFORE DELETE ON public.agenda_participants

@@ -28,8 +28,10 @@ CREATE TABLE public.accounting_settings (
 GRANT SELECT ON public.accounting_settings TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.accounting_settings TO authenticated;
 GRANT ALL ON public.accounting_settings TO service_role;
+REVOKE ALL ON TABLE public.accounting_settings FROM anon;
 
 ALTER TABLE public.accounting_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.accounting_settings FORCE ROW LEVEL SECURITY;
 
 -- Single PERMISSIVE policy per command, consolidated
 CREATE POLICY accounting_settings_select ON public.accounting_settings
