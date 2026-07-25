@@ -1,8 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getSafeErrorMessage } from '../_shared/errors.ts';
 import { beginAuthenticatedPostRequest, jsonResponse } from '../_shared/http.ts';
 import {
 	buildGenerateInvoiceSuccessPayload,
+	type GenerateInvoiceEnvConfig,
 	readGenerateInvoiceEnv,
 	resolveGenerateInvoiceIssueDate,
 	resolveGenerateInvoiceMissingBatchError,
@@ -13,17 +14,38 @@ import { loadBatchContext } from './loadBatchContext.ts';
 import { processStudentInvoice } from './processStudentInvoice.ts';
 import type { Body } from './types.ts';
 
-function createGenerateInvoiceAdminClient(env: ReturnType<typeof readGenerateInvoiceEnv>) {
+function createGenerateInvoiceAdminClient(env: GenerateInvoiceEnvConfig) {
 	return createClient(env.supabaseUrl, env.serviceKey, {
 		auth: { autoRefreshToken: false, persistSession: false },
 	});
 }
 
-async function processGenerateInvoiceBatch(
-	admin: ReturnType<typeof createGenerateInvoiceAdminClient>,
-	batchId: string,
-	body: Body,
-) {
+type GenerateInvoicePrep =
+	| { ok: true; admin: SupabaseClient; batchId: string; body: Body }
+	| { ok: false; response: Response };
+
+async function prepareGenerateInvoiceRequest(req: Request): Promise<GenerateInvoicePrep> {
+	const begun = await beginAuthenticatedPostRequest<Body>(req);
+	if (!begun.ok) return { ok: false, response: begun.response };
+
+	if (!begun.body.batch_id) {
+		const missingBatch = resolveGenerateInvoiceMissingBatchError();
+		return { ok: false, response: jsonResponse(missingBatch.status, { error: missingBatch.error }) };
+	}
+
+	const env = readGenerateInvoiceEnv((key) => Deno.env.get(key));
+	const authError = await verifyAdminAccess(begun.authHeader, env.supabaseUrl, env.anonKey, env.serviceKey);
+	if (authError) return { ok: false, response: authError };
+
+	return {
+		ok: true,
+		admin: createGenerateInvoiceAdminClient(env),
+		batchId: begun.body.batch_id,
+		body: begun.body,
+	};
+}
+
+async function processGenerateInvoiceBatch(admin: SupabaseClient, batchId: string, body: Body) {
 	const loaded = await loadBatchContext(admin, batchId);
 	if (!loaded.ok) return loaded.response;
 	const { context } = loaded;
@@ -56,20 +78,9 @@ async function processGenerateInvoiceBatch(
 
 export async function handleGenerateInvoiceRequest(req: Request): Promise<Response> {
 	try {
-		const begun = await beginAuthenticatedPostRequest<Body>(req);
-		if (!begun.ok) return begun.response;
-		const { authHeader, body } = begun;
-		if (!body.batch_id) {
-			const missingBatch = resolveGenerateInvoiceMissingBatchError();
-			return jsonResponse(missingBatch.status, { error: missingBatch.error });
-		}
-
-		const env = readGenerateInvoiceEnv((key) => Deno.env.get(key));
-		const authError = await verifyAdminAccess(authHeader, env.supabaseUrl, env.anonKey, env.serviceKey);
-		if (authError) return authError;
-
-		const admin = createGenerateInvoiceAdminClient(env);
-		return await processGenerateInvoiceBatch(admin, body.batch_id, body);
+		const prep = await prepareGenerateInvoiceRequest(req);
+		if (!prep.ok) return prep.response;
+		return await processGenerateInvoiceBatch(prep.admin, prep.batchId, prep.body);
 	} catch (err) {
 		console.error('generate-invoice failed', err);
 		return jsonResponse(500, { error: getSafeErrorMessage(err) });
