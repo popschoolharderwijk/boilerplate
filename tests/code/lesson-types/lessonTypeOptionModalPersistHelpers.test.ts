@@ -23,7 +23,7 @@ describe('lessonTypeOptionModalPersistHelpers', () => {
 			error: null,
 		};
 		spyOn(lessonTypeOptionPersistence, 'buildOptionFormRow').mockImplementation(
-			(editing: { _newId: string }, _modalForm: unknown, priceAdult: number) =>
+			(editing, _modalForm, priceAdult) =>
 				({
 					_newId: editing._newId,
 					duration_minutes: '45',
