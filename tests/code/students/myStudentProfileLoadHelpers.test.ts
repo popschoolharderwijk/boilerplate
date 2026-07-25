@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import * as signupRequestMappers from '../../../src/lib/signup-requests/signupRequestMappers';
 
 let studentResult: { data: unknown; error: { message: string } | null } = { data: null, error: null };
 let profileResult: { data: unknown; error: { message: string } | null } = { data: null, error: null };
@@ -24,10 +25,6 @@ mock.module('../../../src/integrations/supabase/client', () => ({
 mock.module('../../../src/lib/students/fetchStudentAgreements', () => ({
 	fetchStudentAgreementsForProfile: async () => [{ id: 'agreement-1' }],
 	fetchStudentAgreementsWithRelations: async () => [{ id: 'agreement-1' }],
-}));
-
-mock.module('../../../src/lib/signup-requests/signupRequestMappers', () => ({
-	fetchSignupRequestsByEmail: async () => [{ id: 'request-1' }],
 }));
 
 describe('loadMyStudentProfileData', () => {
@@ -62,6 +59,11 @@ describe('loadMyStudentProfileData', () => {
 			},
 			error: null,
 		};
+		spyOn(signupRequestMappers, 'fetchSignupRequestsByEmail').mockResolvedValue([{ id: 'request-1' } as never]);
+	});
+
+	afterEach(() => {
+		mock.restore();
 	});
 
 	it('loads profile, agreements, and signup requests', async () => {

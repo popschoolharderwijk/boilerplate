@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import * as agendaEventFormSave from '../../../src/lib/agenda/agendaEventFormSave';
 
 const toastCalls: { kind: 'error'; message: string }[] = [];
 let saveShouldThrow = false;
@@ -10,16 +11,6 @@ mock.module('sonner', () => ({
 			toastCalls.push({ kind: 'error', message });
 		},
 	},
-}));
-
-mock.module('../../../src/lib/agenda/agendaEventFormSave', () => ({
-	saveAgendaEventForm: async () => {
-		saveCalled = true;
-		if (saveShouldThrow) {
-			throw new Error('save failed');
-		}
-	},
-	formatAgendaEventSaveError: (error: unknown) => (error instanceof Error ? error.message : 'Save failed'),
 }));
 
 const baseParams = {
@@ -60,6 +51,19 @@ describe('runPerformAgendaEventSave', () => {
 		toastCalls.length = 0;
 		saveCalled = false;
 		saveShouldThrow = false;
+		spyOn(agendaEventFormSave, 'saveAgendaEventForm').mockImplementation(async () => {
+			saveCalled = true;
+			if (saveShouldThrow) {
+				throw new Error('save failed');
+			}
+		});
+		spyOn(agendaEventFormSave, 'formatAgendaEventSaveError').mockImplementation((error: unknown) =>
+			error instanceof Error ? error.message : 'Save failed',
+		);
+	});
+
+	afterEach(() => {
+		mock.restore();
 	});
 
 	it('returns early when required fields are missing', async () => {

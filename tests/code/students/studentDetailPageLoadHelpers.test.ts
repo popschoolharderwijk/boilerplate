@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { SignupRequestDetail } from '../../../src/components/students/SignupRequestDialog';
+import * as signupRequestMappers from '../../../src/lib/signup-requests/signupRequestMappers';
 import type { LessonAgreementWithTeacher } from '../../../src/types/lesson-agreements';
 
 let profileResult: { data: unknown; error: unknown } = { data: null, error: null };
@@ -61,11 +62,6 @@ mock.module('../../../src/lib/students/fetchStudentAgreements', () => ({
 	fetchStudentAgreementsWithRelations: async () => [mockAgreement],
 }));
 
-mock.module('../../../src/lib/signup-requests/signupRequestMappers', () => ({
-	fetchSignupRequestsByEmail: async () => [mockSignupRequest],
-	fetchSignupRequestsByEmails: async () => new Map(),
-}));
-
 describe('runStudentDetailPageLoad', () => {
 	let runStudentDetailPageLoad: typeof import('../../../src/lib/students/studentDetailPageLoadHelpers').runStudentDetailPageLoad;
 
@@ -85,6 +81,12 @@ describe('runStudentDetailPageLoad', () => {
 			},
 			error: null,
 		};
+		spyOn(signupRequestMappers, 'fetchSignupRequestsByEmail').mockResolvedValue([mockSignupRequest]);
+		spyOn(signupRequestMappers, 'fetchSignupRequestsByEmails').mockResolvedValue(new Map());
+	});
+
+	afterEach(() => {
+		mock.restore();
 	});
 
 	it('returns profile agreements and signup requests', async () => {

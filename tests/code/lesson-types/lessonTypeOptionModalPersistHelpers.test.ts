@@ -1,4 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import * as lessonTypeOptionPersistence from '../../../src/pages/lesson-type-info/lessonTypeOptionPersistence';
 
 let insertResult: { data: unknown; error: unknown } = {
 	data: { id: 'option-new', duration_minutes: 45, frequency: 'weekly', price_per_lesson: 25 },
@@ -7,17 +8,6 @@ let insertResult: { data: unknown; error: unknown } = {
 
 mock.module('sonner', () => ({
 	toast: { error: () => {}, success: () => {} },
-}));
-
-mock.module('../../../src/pages/lesson-type-info/lessonTypeOptionPersistence', () => ({
-	buildOptionFormRow: (editing: { _newId: string }, _modalForm: unknown, priceAdult: number) => ({
-		_newId: editing._newId,
-		duration_minutes: '45',
-		frequency: 'weekly',
-		price_per_lesson: String(priceAdult),
-	}),
-	persistNewOptionInsert: async () => insertResult.data,
-	persistExistingOptionUpdate: async () => true,
 }));
 
 describe('lessonTypeOptionModalPersistHelpers', () => {
@@ -32,6 +22,23 @@ describe('lessonTypeOptionModalPersistHelpers', () => {
 			data: { id: 'option-new', duration_minutes: 45, frequency: 'weekly', price_per_lesson: 25 },
 			error: null,
 		};
+		spyOn(lessonTypeOptionPersistence, 'buildOptionFormRow').mockImplementation(
+			(editing: { _newId: string }, _modalForm: unknown, priceAdult: number) =>
+				({
+					_newId: editing._newId,
+					duration_minutes: '45',
+					frequency: 'weekly',
+					price_per_lesson: String(priceAdult),
+				}) as never,
+		);
+		spyOn(lessonTypeOptionPersistence, 'persistNewOptionInsert').mockImplementation(
+			async () => insertResult.data as never,
+		);
+		spyOn(lessonTypeOptionPersistence, 'persistExistingOptionUpdate').mockResolvedValue(true);
+	});
+
+	afterEach(() => {
+		mock.restore();
 	});
 
 	const editing = { _newId: 'new-1' } as const;

@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import type { SignupRequestDetail } from '../../../src/components/students/SignupRequestDialog';
+import * as signupRequestMappers from '../../../src/lib/signup-requests/signupRequestMappers';
 import type { StudentWithAgreementsRaw } from '../../../src/types/students';
 
 const studentRowFields = {
@@ -57,11 +58,6 @@ mock.module('@/integrations/supabase/client', () => ({
 	},
 }));
 
-mock.module('../../../src/lib/signup-requests/signupRequestMappers', () => ({
-	fetchSignupRequestsByEmail: async () => [],
-	fetchSignupRequestsByEmails: async () => new Map<string, SignupRequestDetail[]>(),
-}));
-
 describe('studentsPageControllerHelpers', () => {
 	let applyStudentsPageLoadOutcome: typeof import('../../../src/lib/students/studentsPageControllerHelpers').applyStudentsPageLoadOutcome;
 	let executeStudentsPageLoad: typeof import('../../../src/lib/students/studentsPageControllerHelpers').executeStudentsPageLoad;
@@ -81,6 +77,14 @@ describe('studentsPageControllerHelpers', () => {
 			},
 			error: null,
 		};
+		spyOn(signupRequestMappers, 'fetchSignupRequestsByEmail').mockResolvedValue([]);
+		spyOn(signupRequestMappers, 'fetchSignupRequestsByEmails').mockResolvedValue(
+			new Map<string, SignupRequestDetail[]>(),
+		);
+	});
+
+	afterEach(() => {
+		mock.restore();
 	});
 
 	describe('applyStudentsPageLoadOutcome', () => {

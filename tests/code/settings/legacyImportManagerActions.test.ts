@@ -1,20 +1,22 @@
-import { describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import {
 	runLegacyImportExecution,
 	runLegacyImportTemplateDownload,
 	runLegacyImportValidation,
 } from '../../../src/lib/settings/legacyImportManagerActions';
-
-mock.module('../../../src/lib/settings/legacyImportManagerHelpers', () => ({
-	fileToBase64: async () => 'dGVzdA==',
-	downloadBlobFile: () => {},
-	fetchLegacyImportTemplate: async () => new Blob(),
-	resolveLegacyValidationToast: () => undefined,
-	resolveLegacyImportToast: () => undefined,
-	toErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
-}));
+import * as legacyImportManagerHelpers from '../../../src/lib/settings/legacyImportManagerHelpers';
 
 describe('runLegacyImportTemplateDownload', () => {
+	beforeEach(() => {
+		spyOn(legacyImportManagerHelpers, 'fileToBase64').mockResolvedValue('dGVzdA==');
+		spyOn(legacyImportManagerHelpers, 'downloadBlobFile').mockImplementation(() => {});
+		spyOn(legacyImportManagerHelpers, 'fetchLegacyImportTemplate').mockResolvedValue(new Blob());
+	});
+
+	afterEach(() => {
+		mock.restore();
+	});
+
 	it('returns error when not logged in', async () => {
 		const result = await runLegacyImportTemplateDownload(async () => null);
 		expect(result).toEqual({
@@ -26,6 +28,14 @@ describe('runLegacyImportTemplateDownload', () => {
 });
 
 describe('runLegacyImportValidation', () => {
+	beforeEach(() => {
+		spyOn(legacyImportManagerHelpers, 'fileToBase64').mockResolvedValue('dGVzdA==');
+	});
+
+	afterEach(() => {
+		mock.restore();
+	});
+
 	it('returns error when validation throws', async () => {
 		const file = new File(['test'], 'import.xlsx');
 		const result = await runLegacyImportValidation(
@@ -45,6 +55,14 @@ describe('runLegacyImportValidation', () => {
 });
 
 describe('runLegacyImportExecution', () => {
+	beforeEach(() => {
+		spyOn(legacyImportManagerHelpers, 'fileToBase64').mockResolvedValue('dGVzdA==');
+	});
+
+	afterEach(() => {
+		mock.restore();
+	});
+
 	it('returns error when import throws', async () => {
 		const file = new File(['test'], 'import.xlsx');
 		const result = await runLegacyImportExecution(
