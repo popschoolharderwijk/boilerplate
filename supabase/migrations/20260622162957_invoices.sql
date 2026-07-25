@@ -140,6 +140,14 @@ CREATE TRIGGER trg_audit_invoice_lines
   BEFORE INSERT OR UPDATE ON public.invoice_lines
   FOR EACH ROW EXECUTE FUNCTION public.set_audit_fields();
 
+-- Private invoices bucket (policies below assume this exists)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('invoices', 'invoices', false, 10485760, ARRAY['application/pdf'])
+ON CONFLICT (id) DO UPDATE SET
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 -- Storage policies for private invoices bucket
 CREATE POLICY "invoices_storage_admin_all"
   ON storage.objects

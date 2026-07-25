@@ -270,6 +270,20 @@ END;
 $$;
 REVOKE EXECUTE ON FUNCTION public.build_incasso_batch_items(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.build_incasso_batch_items(uuid) TO authenticated;
+-- Private sepa-batches bucket (policies below assume this exists)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'sepa-batches',
+  'sepa-batches',
+  false,
+  10485760,
+  ARRAY['application/xml', 'text/xml', 'application/pdf']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 -- Storage policies for private sepa-batches bucket
 CREATE POLICY sepa_batches_objects_select ON storage.objects
   FOR SELECT TO authenticated
