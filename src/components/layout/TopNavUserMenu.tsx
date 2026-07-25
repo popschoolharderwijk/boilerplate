@@ -11,7 +11,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getNextTheme } from '@/lib/layout/topNavHelpers';
+import { getNextTheme, resolveThemeToggleIcon, shouldShowTopNavVersion } from '@/lib/layout/topNavHelpers';
 
 interface TopNavUserMenuProps {
 	displayName: string;
@@ -28,6 +28,119 @@ interface TopNavUserMenuProps {
 	onToggleTheme: () => void;
 }
 
+function TopNavThemeToggleButton({
+	resolvedTheme,
+	onToggleTheme,
+}: {
+	resolvedTheme: string;
+	onToggleTheme: () => void;
+}) {
+	const iconByTheme = { moon: LuMoon, sun: LuSun } as const;
+	const ThemeIcon = iconByTheme[resolveThemeToggleIcon(resolvedTheme)];
+	return (
+		<Button variant="ghost" size="icon" className="h-9 w-9" onClick={onToggleTheme}>
+			<ThemeIcon className="h-5 w-5" />
+			<span className="sr-only">Thema wisselen</span>
+		</Button>
+	);
+}
+
+function TopNavUserAvatarButton({
+	userInitials,
+	avatarUrl,
+}: {
+	userInitials: string;
+	avatarUrl: string | null | undefined;
+}) {
+	return (
+		<Button variant="ghost" className="relative h-9 w-9 rounded-full">
+			<Avatar className="h-9 w-9">
+				<AvatarImage src={avatarUrl ?? undefined} alt="Avatar" />
+				<AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
+			</Avatar>
+		</Button>
+	);
+}
+
+function TopNavUserMenuHeader({
+	displayName,
+	email,
+	roleLabel,
+}: {
+	displayName: string;
+	email: string | null | undefined;
+	roleLabel: string | null;
+}) {
+	return (
+		<DropdownMenuLabel className="font-normal">
+			<div className="flex flex-col space-y-1">
+				<p className="text-sm font-medium leading-none">{displayName}</p>
+				<p className="text-xs leading-none text-muted-foreground">{email}</p>
+				{roleLabel ? (
+					<p className="text-xs leading-none text-muted-foreground capitalize mt-0.5">{roleLabel}</p>
+				) : null}
+			</div>
+		</DropdownMenuLabel>
+	);
+}
+
+function TopNavVersionMenuItem({
+	showVersion,
+	appVersion,
+	onOpenChangelog,
+}: {
+	showVersion: boolean;
+	appVersion: string | undefined;
+	onOpenChangelog: () => void;
+}) {
+	if (!showVersion || !appVersion) {
+		return null;
+	}
+
+	return (
+		<>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem
+				className="justify-center text-xs text-muted-foreground tabular-nums"
+				onSelect={onOpenChangelog}
+				aria-label={`Versie ${appVersion}, bekijk changelog`}
+			>
+				v{appVersion}
+			</DropdownMenuItem>
+		</>
+	);
+}
+
+function TopNavChangelogHost({
+	showVersion,
+	open,
+	onClose,
+}: {
+	showVersion: boolean;
+	open: boolean;
+	onClose: () => void;
+}) {
+	if (!showVersion) {
+		return null;
+	}
+
+	return <ChangelogDialog open={open} onClose={onClose} />;
+}
+
+function useTopNavChangelogState(showAppVersion: boolean) {
+	const [changelogOpen, setChangelogOpen] = useState(false);
+	const appVersion = import.meta.env.VITE_APP_VERSION;
+	const showVersion = shouldShowTopNavVersion(showAppVersion, appVersion);
+
+	return {
+		showVersion,
+		appVersion,
+		changelogOpen,
+		openChangelog: () => setChangelogOpen(true),
+		closeChangelog: () => setChangelogOpen(false),
+	};
+}
+
 export function TopNavUserMenu({
 	displayName,
 	email,
@@ -42,40 +155,18 @@ export function TopNavUserMenu({
 	onSignOut,
 	onToggleTheme,
 }: TopNavUserMenuProps) {
-	const [changelogOpen, setChangelogOpen] = useState(false);
-	const appVersion = import.meta.env.VITE_APP_VERSION;
-	const showVersion = showAppVersion && Boolean(appVersion);
+	const changelog = useTopNavChangelogState(showAppVersion);
 
 	return (
 		<>
-			<Button variant="ghost" size="icon" className="h-9 w-9" onClick={onToggleTheme}>
-				{resolvedTheme === 'dark' ? <LuMoon className="h-5 w-5" /> : <LuSun className="h-5 w-5" />}
-				<span className="sr-only">Thema wisselen</span>
-			</Button>
+			<TopNavThemeToggleButton resolvedTheme={resolvedTheme} onToggleTheme={onToggleTheme} />
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" className="relative h-9 w-9 rounded-full">
-						<Avatar className="h-9 w-9">
-							<AvatarImage src={avatarUrl || undefined} alt="Avatar" />
-							<AvatarFallback className="bg-primary text-primary-foreground text-sm">
-								{userInitials}
-							</AvatarFallback>
-						</Avatar>
-					</Button>
+					<TopNavUserAvatarButton userInitials={userInitials} avatarUrl={avatarUrl} />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className="w-56" align="end" forceMount>
-					<DropdownMenuLabel className="font-normal">
-						<div className="flex flex-col space-y-1">
-							<p className="text-sm font-medium leading-none">{displayName}</p>
-							<p className="text-xs leading-none text-muted-foreground">{email}</p>
-							{roleLabel && (
-								<p className="text-xs leading-none text-muted-foreground capitalize mt-0.5">
-									{roleLabel}
-								</p>
-							)}
-						</div>
-					</DropdownMenuLabel>
+					<TopNavUserMenuHeader displayName={displayName} email={email} roleLabel={roleLabel} />
 					<DropdownMenuSeparator />
 					<DropdownMenuItem onClick={onNavigateProfile}>
 						<LuUser className="mr-2 h-4 w-4" />
@@ -94,22 +185,19 @@ export function TopNavUserMenu({
 						<LuLogOut className="mr-2 h-4 w-4" />
 						<span>Uitloggen</span>
 					</DropdownMenuItem>
-					{showVersion && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="justify-center text-xs text-muted-foreground tabular-nums"
-								onSelect={() => setChangelogOpen(true)}
-								aria-label={`Versie ${appVersion}, bekijk changelog`}
-							>
-								v{appVersion}
-							</DropdownMenuItem>
-						</>
-					)}
+					<TopNavVersionMenuItem
+						showVersion={changelog.showVersion}
+						appVersion={changelog.appVersion}
+						onOpenChangelog={changelog.openChangelog}
+					/>
 				</DropdownMenuContent>
 			</DropdownMenu>
 
-			{showVersion && <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />}
+			<TopNavChangelogHost
+				showVersion={changelog.showVersion}
+				open={changelog.changelogOpen}
+				onClose={changelog.closeChangelog}
+			/>
 		</>
 	);
 }

@@ -43,6 +43,16 @@ export function getNextTheme(resolvedTheme: string): 'light' | 'dark' {
 	return resolvedTheme === 'dark' ? 'light' : 'dark';
 }
 
+export function shouldShowTopNavVersion(showAppVersion: boolean, appVersion: string | undefined | null): boolean {
+	return showAppVersion && Boolean(appVersion);
+}
+
+export type ThemeToggleIcon = 'moon' | 'sun';
+
+export function resolveThemeToggleIcon(resolvedTheme: string): ThemeToggleIcon {
+	return resolvedTheme === 'dark' ? 'moon' : 'sun';
+}
+
 export interface TopNavUserInitialsInput {
 	first_name: string | null;
 	last_name: string | null;

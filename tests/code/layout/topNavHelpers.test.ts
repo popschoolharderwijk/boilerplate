@@ -6,6 +6,8 @@ import {
 	formatTopNavDisplayName,
 	formatTopNavRoleLabel,
 	getNextTheme,
+	resolveThemeToggleIcon,
+	shouldShowTopNavVersion,
 } from '../../../src/lib/layout/topNavHelpers';
 
 describe('buildQuickNavItems', () => {
@@ -64,6 +66,33 @@ describe('getNextTheme', () => {
 
 	it('switches light to dark', () => {
 		expect(getNextTheme('light')).toBe('dark');
+	});
+});
+
+describe('shouldShowTopNavVersion', () => {
+	it('requires both permission and a version string', () => {
+		expect(shouldShowTopNavVersion(true, '1.2.3')).toBe(true);
+	});
+
+	it('hides version when permission is false', () => {
+		expect(shouldShowTopNavVersion(false, '1.2.3')).toBe(false);
+	});
+
+	it('hides version when version string is missing', () => {
+		expect(shouldShowTopNavVersion(true, undefined)).toBe(false);
+		expect(shouldShowTopNavVersion(true, null)).toBe(false);
+		expect(shouldShowTopNavVersion(true, '')).toBe(false);
+	});
+});
+
+describe('resolveThemeToggleIcon', () => {
+	it('returns moon for dark theme', () => {
+		expect(resolveThemeToggleIcon('dark')).toBe('moon');
+	});
+
+	it('returns sun for light and other themes', () => {
+		expect(resolveThemeToggleIcon('light')).toBe('sun');
+		expect(resolveThemeToggleIcon('system')).toBe('sun');
 	});
 });
 
